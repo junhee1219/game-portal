@@ -74,8 +74,15 @@ async def health():
 
 
 @app.get("/", response_class=HTMLResponse)
-async def portal_index():
-    return (PORTAL_DIR / "index.html").read_text(encoding="utf-8")
+async def portal_index(request: Request):
+    html = (PORTAL_DIR / "index.html").read_text(encoding="utf-8")
+    base = str(request.base_url).rstrip("/")
+    return HTMLResponse(html.replace("{{BASE}}", base))
+
+
+@app.get("/og.png")
+async def portal_og():
+    return FileResponse(PORTAL_DIR / "og.png", media_type="image/png")
 
 
 @app.get("/portal.js")

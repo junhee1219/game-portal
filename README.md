@@ -48,6 +48,40 @@ cd ~/game-portal && ./restart.sh
 
 게임 HTML 응답에 `portal.js`가 주입되어:
 - 방문(visit) / 세션 길이(end, pagehide beacon) 자동 기록 → D1/D7 리텐션 산출 가능
-- `window.GamePortal.reportScore(score)` 호출 시 점수 기록 (게임별 연동은 선택)
+- **자동 점수 캡처**: 게임이 localStorage에 쓰는 신기록(`gatewayBest`,
+  `cubeSnakeBest`, `vaseMaxClear`)을 `setItem` 가로채기로 자동 기록.
+  게임 코드 수정 없음. 새 게임 추가 시 `portal.js`의 `SCORE_KEYS`에 키만 등록.
+- `window.GamePortal.reportScore(score)` 직접 호출도 가능
 
 지표 확인: `GET /api/stats`
+
+## 점수 공유 루프
+
+```
+플레이 → 신기록 자동 기록 → /rank 기록실 → 공유 버튼
+  → /s/{id} (카톡 미리보기에 게임명+기록 OG 렌더) → "나도 한판" → 플레이
+```
+
+## 카카오 로그인 (잠금 상태)
+
+코드는 완성, 키만 없음. 활성화 절차:
+1. developers.kakao.com에서 앱 생성
+2. 플랫폼 Web 도메인 등록 + Redirect URI = `{BASE_URL}/auth/kakao/callback`
+3. 서버 `.env`에 `KAKAO_REST_API_KEY=`, `KAKAO_CLIENT_SECRET=` 추가
+4. `sudo systemctl restart game-portal`
+
+로그인하면 익명 visitor에 kakao_id/닉네임이 연결되고 리더보드에 닉네임 표시.
+
+## 게임 업데이트 반영
+
+원본(`~/game`)이 바뀌면 로컬에서:
+```bash
+./sync-games.sh        # games/ 스냅샷 교체 (.git 제외)
+git diff --stat && git add games/ && git commit && git push
+ssh oracle-server "cd ~/game-portal && ./restart.sh"
+```
+
+## 도메인 연결 (도메인 구매 후)
+
+`deploy/nginx-game-portal.conf` 머리말의 6단계 그대로. 핵심: DNS A 레코드 →
+nginx server block → `sudo nginx -t` → certbot → `.env`의 `BASE_URL` 교체.
