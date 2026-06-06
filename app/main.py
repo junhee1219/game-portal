@@ -77,7 +77,7 @@ async def health():
 async def portal_index(request: Request):
     html = (PORTAL_DIR / "index.html").read_text(encoding="utf-8")
     base = str(request.base_url).rstrip("/")
-    return HTMLResponse(html.replace("{{BASE}}", base))
+    return HTMLResponse(html.replace("{{BASE}}", base), headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/og.png")
@@ -178,7 +178,7 @@ async def serve_game(game: str, path: str = ""):
     if not target.is_file():
         raise HTTPException(status_code=404)
 
-    # HTML에는 계측 스크립트 주입
+    # HTML에는 계측 스크립트 주입. 캐시 금지 — 게임 업데이트 즉시 반영
     if target.suffix == ".html":
         html = target.read_text(encoding="utf-8")
         snippet = INJECT_SNIPPET.format(game=game)
@@ -186,7 +186,10 @@ async def serve_game(game: str, path: str = ""):
             html = html.replace("</body>", f"{snippet}\n</body>", 1)
         else:
             html += snippet
-        return HTMLResponse(html)
+        return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
 
     media_type = mimetypes.guess_type(str(target))[0] or "application/octet-stream"
-    return FileResponse(target, media_type=media_type)
+    # 에셋은 짧게만 캐시 (10분) — 교체 후 "반영 안 됨" 혼란 방지
+    return FileResponse(
+        target, media_type=media_type, headers={"Cache-Control": "public, max-age=600"}
+    )
