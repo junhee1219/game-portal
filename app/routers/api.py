@@ -3,7 +3,7 @@ import logging
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import desc, func, select
+from sqlalchemy import desc, func, select, text
 
 from app import database
 from app.database import kst_now
@@ -126,6 +126,38 @@ async def leaderboard(game: str, limit: int = 10):
     except Exception:
         logger.exception("leaderboard 조회 실패")
         return {"game": game, "entries": []}
+
+
+@router.get("/stats/daily")
+async def stats_daily(days: int = 14):
+    """일별 게임별 방문자 수 — 어느 게임이 사는지 보는 핵심 지표."""
+    if database.async_session is None:
+        return {"ok": False, "reason": "no-db"}
+    days = max(1, min(days, 60))
+    try:
+        async with database.async_session() as db:
+            rows = (
+                await db.execute(
+                    select(
+                        func.date(Event.created_at).label("day"),
+                        Event.game,
+                        func.count(func.distinct(Event.visitor_id)).label("visitors"),
+                    )
+                    .where(
+                        Event.type == "visit",
+                        Event.created_at >= func.date_sub(func.now(), text(f"INTERVAL {days} DAY")),
+                    )
+                    .group_by(func.date(Event.created_at), Event.game)
+                    .order_by(func.date(Event.created_at))
+                )
+            ).all()
+        out: dict[str, dict[str, int]] = {}
+        for day, game, visitors in rows:
+            out.setdefault(str(day), {})[game] = int(visitors)
+        return {"ok": True, "days": out}
+    except Exception:
+        logger.exception("stats/daily 조회 실패")
+        return {"ok": False, "reason": "db-error"}
 
 
 @router.get("/stats")

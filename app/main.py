@@ -100,6 +100,12 @@ async def rank_page():
     return (PORTAL_DIR / "rank.html").read_text(encoding="utf-8")
 
 
+@app.get("/dash", response_class=HTMLResponse)
+async def dash_page():
+    """운영 지표 대시보드 (noindex). 어느 게임이 사는지 보는 곳."""
+    return (PORTAL_DIR / "dash.html").read_text(encoding="utf-8")
+
+
 @app.get("/s/{score_id}", response_class=HTMLResponse)
 async def share_page(score_id: int, request: Request):
     """점수 공유 페이지 — 카톡 미리보기용 OG 태그를 점수별로 렌더."""
