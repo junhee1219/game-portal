@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<!-- 앱 아이콘 생성용 (스크린샷 → icon-512.png). 배포 파일 아님 -->
+<html>
+<head><style>body { margin: 0; }</style></head>
+<body>
+<svg id="icon" width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- 배경 -->
+  <rect width="512" height="512" fill="#fdf6e3"/>
+  <circle cx="256" cy="256" r="230" fill="#fff3cf"/>
+
+  <!-- 아이소메트릭 큐브 -->
+  <g stroke="#fff" stroke-width="10" stroke-linejoin="round">
+    <!-- 윗면 (핑크) -->
+    <polygon points="256,64 428,150 256,236 84,150" fill="#fcd7e3"/>
+    <!-- 왼쪽 면 (초록 풀밭) -->
+    <polygon points="84,150 256,236 256,420 84,334" fill="#b8e0a0"/>
+    <!-- 오른쪽 면 (하늘) -->
+    <polygon points="256,236 428,150 428,334 256,420" fill="#aad6ef"/>
+  </g>
+  <!-- 면 체커보드 힌트 -->
+  <polygon points="170,193 256,236 256,328 170,285" fill="#a8d48e" opacity=".6"/>
+  <polygon points="342,193 428,236 428,328 342,285" fill="#97c9e8" opacity=".0"/>
+  <polygon points="342,193 428,150 428,242 342,285" fill="#97c9e8" opacity=".6"/>
+  <polygon points="256,110 342,153 256,196 170,153" fill="#f6c4d5" opacity=".6"/>
+
+  <!-- 사과 (윗면 위) -->
+  <g transform="translate(330, 96)">
+    <circle cx="0" cy="10" r="26" fill="#ef5350"/>
+    <circle cx="-9" cy="2" r="8" fill="#ff8a80" opacity=".7"/>
+    <path d="M 0 -14 Q 2 -26 10 -30" stroke="#8d6e63" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <ellipse cx="14" cy="-26" rx="10" ry="6" fill="#81c784" transform="rotate(-25 14 -26)"/>
+  </g>
+
+  <!-- 뱀 머리 (왼쪽 면 위) -->
+  <g transform="translate(170, 320)">
+    <rect x="-62" y="-62" width="124" height="124" rx="34" fill="#4caf85" stroke="#fff" stroke-width="10"/>
+    <!-- 눈 -->
+    <ellipse cx="-24" cy="-18" rx="14" ry="17" fill="#fff"/>
+    <ellipse cx="24" cy="-18" rx="14" ry="17" fill="#fff"/>
+    <circle cx="-20" cy="-15" r="7.5" fill="#33291f"/>
+    <circle cx="28" cy="-15" r="7.5" fill="#33291f"/>
+    <circle cx="-17" cy="-19" r="2.5" fill="#fff"/>
+    <circle cx="31" cy="-19" r="2.5" fill="#fff"/>
+    <!-- 볼터치 -->
+    <ellipse cx="-38" cy="12" rx="10" ry="6" fill="#f8a5a5" opacity=".85"/>
+    <ellipse cx="38" cy="12" rx="10" ry="6" fill="#f8a5a5" opacity=".85"/>
+    <!-- 입 + 혀 -->
+    <path d="M -10 22 Q 0 30 10 22" stroke="#33291f" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M 0 28 L 0 44 M 0 44 L -6 52 M 0 44 L 6 52" stroke="#ef5350" stroke-width="5" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- 몸통 꼬랑지 (오른쪽 면으로 넘어가는 느낌) -->
+  <g fill="#5fb593" stroke="#fff" stroke-width="8">
+    <rect x="290" y="300" width="76" height="76" rx="24"/>
+    <rect x="350" y="260" width="64" height="64" rx="20"/>
+  </g>
+
+  <!-- 반짝이 -->
+  <g fill="#ffd54f">
+    <path d="M 90 80 l 6 16 16 6 -16 6 -6 16 -6 -16 -16 -6 16 -6 z"/>
+    <path d="M 440 400 l 5 13 13 5 -13 5 -5 13 -5 -13 -13 -5 13 -5 z"/>
+    <circle cx="60" cy="260" r="7"/>
+    <circle cx="460" cy="100" r="6"/>
+  </g>
+</svg>
+</body>
+</html>

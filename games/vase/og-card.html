@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<!-- OG 카드 생성용: #card(1200×630)를 스크린샷 → og/main.png -->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Gowun+Dodum&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:#222;display:flex;align-items:center;justify-content:center;min-height:100vh;}
+  #card{
+    width:1200px;height:630px;position:relative;overflow:hidden;
+    background:
+      radial-gradient(130% 100% at 50% 0%, #232c39 0%, #1a212c 55%, #151b24 100%);
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 90px;
+  }
+  .glow{display:none;}
+  .glow.a{width:380px;height:380px;background:#ff5e9c;top:-130px;left:-90px;}
+  .glow.b{width:360px;height:360px;background:#2bd9ff;bottom:-110px;right:-80px;}
+  .txt{position:relative;z-index:2;}
+  h1{
+    font-family:'Fredoka',sans-serif;font-weight:700;font-size:92px;letter-spacing:-2px;
+    background:linear-gradient(135deg,#ffd6e8,#bdeaff 50%,#e0caff);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    margin-bottom:18px;
+  }
+  .sub{font-family:'Gowun Dodum',sans-serif;font-size:34px;color:#c9bfe8;line-height:1.5;}
+  .stars{font-size:40px;margin-top:26px;letter-spacing:6px;}
+  .tubes{display:flex;gap:26px;align-items:flex-end;position:relative;z-index:2;}
+  .tube{
+    width:92px;height:300px;position:relative;
+    border:6px solid rgba(255,255,255,.4);border-top:none;
+    border-radius:10px 10px 40px 40px;
+    background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.02));
+    box-shadow:inset 0 0 26px rgba(255,255,255,.07), 0 18px 44px rgba(0,0,0,.5);
+    overflow:hidden;
+  }
+  .tube.t2{transform:rotate(-7deg) translateY(-28px);}
+  .seg{position:absolute;left:0;right:0;height:68px;}
+  .surf{position:absolute;top:0;left:0;right:0;height:6px;background:rgba(255,255,255,.5);border-radius:50% 50% 0 0;}
+  .shine{position:absolute;top:16px;left:9px;width:11px;height:240px;background:linear-gradient(180deg,rgba(255,255,255,.6),rgba(255,255,255,0));border-radius:8px;z-index:5;}
+</style>
+</head>
+<body>
+  <div id="card">
+    <div class="glow a"></div>
+    <div class="glow b"></div>
+    <div class="txt">
+      <h1>물병 정렬</h1>
+      <div class="sub">한 병에는 한 가지 색만!<br>출렁이는 물을 옮겨 담는 중독성 퍼즐</div>
+      <div class="stars">⭐⭐⭐ <span style="font-family:'Gowun Dodum',sans-serif;font-size:26px;color:#9d93c2;">봇보다 잘하면 별 셋</span></div>
+    </div>
+    <div class="tubes">
+      <div class="tube">
+        <div class="seg" style="bottom:0;height:74px;background:linear-gradient(180deg,#4d95ff,#2563c8);border-radius:0 0 32px 32px;"></div>
+        <div class="seg" style="bottom:74px;background:linear-gradient(180deg,#ffd84d,#e0a812);"></div>
+        <div class="seg" style="bottom:142px;background:linear-gradient(180deg,#ff6b81,#d93a55);"><div class="surf"></div></div>
+        <div class="shine"></div>
+      </div>
+      <div class="tube t2">
+        <div class="seg" style="bottom:0;height:74px;background:linear-gradient(180deg,#52e8a0,#1fb86e);border-radius:0 0 32px 32px;"></div>
+        <div class="seg" style="bottom:74px;background:linear-gradient(180deg,#c084fc,#8b3fd9);"><div class="surf"></div></div>
+        <div class="shine"></div>
+      </div>
+      <div class="tube">
+        <div class="seg" style="bottom:0;height:280px;background:linear-gradient(180deg,#ff8c52,#e05c1a);border-radius:0 0 32px 32px;"><div class="surf"></div></div>
+        <div class="shine"></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<!-- OG 카드 생성용 (배포 불필요) — 1200x630 스크린샷 → og/main.png -->
+<html>
+<head><meta charset="UTF-8"><style>*{margin:0;padding:0}body{background:#000}</style></head>
+<body>
+<canvas id="c" width="1200" height="630"></canvas>
+<script>
+const ctx = document.getElementById('c').getContext('2d');
+const W = 1200, H = 630;
+
+// 배경 — 밤거리 포장마차
+const bg = ctx.createLinearGradient(0, 0, 0, H);
+bg.addColorStop(0, '#180d07');
+bg.addColorStop(1, '#41200e');
+ctx.fillStyle = bg;
+ctx.fillRect(0, 0, W, H);
+
+// 홍등 3개
+['#ff6b6b', '#ffa94d', '#ffe066'].forEach((c, i) => {
+  const x = 720 + i * 170, y = 80;
+  const g = ctx.createRadialGradient(x, y, 4, x, y, 110);
+  g.addColorStop(0, c + 'cc');
+  g.addColorStop(1, c + '00');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(x, y, 110, 0, 7); ctx.fill();
+  ctx.fillStyle = c;
+  ctx.beginPath(); ctx.ellipse(x, y, 20, 26, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,240,200,0.5)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x, y - 26); ctx.lineTo(x, 0); ctx.stroke();
+});
+
+// 손님 줄 (얼굴 달린 동그라미들, 점점 화남)
+function customer(x, y, r, color, mood) { // mood: 0 happy, 1 flat, 2 rage
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(60,30,10,0.4)';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.stroke();
+  ctx.fillStyle = '#3b2a1a';
+  ctx.strokeStyle = '#3b2a1a';
+  if (mood === 2) {
+    ctx.lineWidth = r * 0.12;
+    ctx.beginPath(); ctx.moveTo(x - r * 0.5, y - r * 0.34); ctx.lineTo(x - r * 0.14, y - r * 0.12); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + r * 0.5, y - r * 0.34); ctx.lineTo(x + r * 0.14, y - r * 0.12); ctx.stroke();
+  } else {
+    ctx.beginPath(); ctx.arc(x - r * 0.3, y - r * 0.18, r * 0.1, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + r * 0.3, y - r * 0.18, r * 0.1, 0, 7); ctx.fill();
+  }
+  ctx.lineWidth = r * 0.1;
+  ctx.beginPath();
+  if (mood === 2) ctx.arc(x, y + r * 0.45, r * 0.22, Math.PI, 0);
+  else if (mood === 1) { ctx.moveTo(x - r * 0.2, y + r * 0.3); ctx.lineTo(x + r * 0.2, y + r * 0.3); }
+  else ctx.arc(x, y + r * 0.16, r * 0.28, 0.25, Math.PI - 0.25);
+  ctx.stroke();
+  if (mood === 2) {
+    ctx.font = `${Math.round(r * 0.6)}px serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('💢', x + r * 0.95, y - r * 0.75);
+  }
+}
+// 세 줄
+customer(720, 230, 40, '#ffd43b', 0);
+customer(722, 320, 44, '#ff922b', 1);
+customer(718, 415, 50, '#ff6b6b', 2);
+customer(890, 250, 44, '#ffd43b', 1);
+customer(892, 350, 52, '#ff6b6b', 2);
+customer(1060, 235, 40, '#ffe16b', 0);
+ctx.font = '36px serif'; ctx.textAlign = 'center'; ctx.fillText('⭐', 1060, 180);
+customer(1062, 330, 46, '#ff922b', 2);
+
+// 그릇 + 김 (좌하단 포인트)
+ctx.font = '120px serif';
+ctx.textAlign = 'center';
+ctx.fillText('🍜', 1010, 560);
+
+// 좌측 타이틀
+ctx.textAlign = 'left';
+ctx.font = '900 96px -apple-system, "Apple SD Gothic Neo", sans-serif';
+const tg = ctx.createLinearGradient(80, 0, 660, 0);
+tg.addColorStop(0, '#ff6b6b');
+tg.addColorStop(0.5, '#ffa94d');
+tg.addColorStop(1, '#ffe066');
+ctx.fillStyle = tg;
+ctx.shadowColor = 'rgba(255,150,60,0.6)'; ctx.shadowBlur = 24;
+ctx.fillText('라면집 사장님', 80, 280);
+ctx.shadowBlur = 0;
+
+ctx.font = '700 40px -apple-system, "Apple SD Gothic Neo", sans-serif';
+ctx.fillStyle = '#ffe9d0';
+ctx.fillText('밀려드는 손님, 사장은 하나.', 84, 360);
+ctx.font = '500 30px -apple-system, "Apple SD Gothic Neo", sans-serif';
+ctx.fillStyle = '#d8b294';
+ctx.fillText('연타로 빨리빨리! 줄이 터지면 가게도 끝.', 84, 412);
+ctx.fillText('화난 손님들 사이에서 살아남는 원터치 장사 게임', 84, 458);
+</script>
+</body>
+</html>

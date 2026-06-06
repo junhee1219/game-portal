@@ -1,0 +1,18 @@
+# secrets
+.env
+
+# python
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# os/editor
+.DS_Store
+.idea/
+.vscode/
+
+# local artifacts
+*.log
+qa-*.png
+.playwright-mcp/

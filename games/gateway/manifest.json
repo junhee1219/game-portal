@@ -1,0 +1,15 @@
+{
+  "name": "라면집 사장님 — 밀려드는 손님, 사장은 하나",
+  "short_name": "라면집 사장님",
+  "description": "세 줄로 밀려드는 손님, 서빙은 한 줄씩만. 연타로 빨리빨리! 화난 손님들 사이에서 살아남는 원터치 장사 게임",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#150c08",
+  "theme_color": "#150c08",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

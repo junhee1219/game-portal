@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>한 판 하고 가요 — 미니게임</title>
+  <meta name="description" content="설치 없이 바로 하는 웹 미니게임. 물병 정렬, 라면집 사장님, Cube Snake.">
+  <meta property="og:title" content="한 판 하고 가요">
+  <meta property="og:description" content="설치 없이 바로 하는 웹 미니게임 모음. 새 게임이 계속 추가됩니다.">
+  <meta property="og:type" content="website">
+  <link rel="stylesheet" href="/portal.css">
+  <link rel="icon" href="/vase/icon-192.png">
+</head>
+<body>
+  <main class="wrap">
+    <header class="hero">
+      <p class="kicker">GAME PORTAL</p>
+      <h1>한 판 하고<br>가요</h1>
+      <p class="sub">설치 없음. 로그인 없음. 누르면 바로 시작.</p>
+    </header>
+
+    <section class="list" aria-label="게임 목록">
+      <a class="card" href="/vase/">
+        <img src="/vase/icon-192.png" alt="" width="64" height="64" loading="lazy">
+        <span class="meta">
+          <span class="name">물병 정렬</span>
+          <span class="desc">알록달록 물을 옮겨 담는 퍼즐. 봇보다 적게 움직이면 별 셋.</span>
+        </span>
+        <span class="go" aria-hidden="true">&rarr;</span>
+      </a>
+
+      <a class="card" href="/gateway/">
+        <img src="/gateway/icon-192.png" alt="" width="64" height="64" loading="lazy">
+        <span class="meta">
+          <span class="name">라면집 사장님</span>
+          <span class="desc">세 줄로 밀려드는 손님, 서빙은 한 줄씩. 줄이 터지면 가게도 끝.</span>
+        </span>
+        <span class="go" aria-hidden="true">&rarr;</span>
+      </a>
+
+      <a class="card" href="/cube/">
+        <img src="/cube/icon-192.png" alt="" width="64" height="64" loading="lazy">
+        <span class="meta">
+          <span class="name">Cube Snake</span>
+          <span class="desc">3D 큐브 표면을 기어다니는 스네이크. 모서리를 넘으면 세상이 돌아간다.</span>
+        </span>
+        <span class="go" aria-hidden="true">&rarr;</span>
+      </a>
+    </section>
+
+    <footer class="foot">
+      <p>새 게임이 계속 추가됩니다.</p>
+    </footer>
+  </main>
+  <script src="/portal.js" data-game="portal"></script>
+</body>
+</html>

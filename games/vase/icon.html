@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<!-- 아이콘 생성용: #icon(512×512)을 스크린샷 → icon-512.png, sips로 192/180 축소 -->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:#222;display:flex;align-items:center;justify-content:center;min-height:100vh;}
+  #icon{
+    width:512px;height:512px;position:relative;overflow:hidden;
+    background:
+      radial-gradient(130% 100% at 50% 0%, #232c39 0%, #1a212c 55%, #151b24 100%);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .glow{display:none;}
+  .glow.a{width:240px;height:240px;background:#ff5e9c;top:-70px;left:-50px;}
+  .glow.b{width:220px;height:220px;background:#2bd9ff;bottom:-60px;right:-40px;}
+  /* 병: maskable 안전영역(80%) 안에 들어가게 */
+  .tube{
+    width:150px;height:330px;position:relative;
+    border:10px solid rgba(255,255,255,.45);border-top:none;
+    border-radius:14px 14px 64px 64px;
+    background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.02));
+    box-shadow:inset 0 0 40px rgba(255,255,255,.08), 0 24px 60px rgba(0,0,0,.5);
+    overflow:hidden;
+  }
+  .lip{position:absolute;top:36px;left:50%;transform:translateX(-50%);width:186px;height:20px;border:10px solid rgba(255,255,255,.45);border-bottom:none;border-radius:14px 14px 0 0;}
+  .seg{position:absolute;left:0;right:0;height:72px;}
+  .s1{bottom:0;height:78px;background:linear-gradient(180deg,#4d95ff,#2563c8);border-radius:0 0 54px 54px;}
+  .s2{bottom:78px;background:linear-gradient(180deg,#ffd84d,#e0a812);}
+  .s3{bottom:150px;background:linear-gradient(180deg,#ff6b81,#d93a55);}
+  .s4{bottom:222px;background:linear-gradient(180deg,#52e8a0,#1fb86e);}
+  .s4::before{ /* 출렁이는 수면 하이라이트 */
+    content:'';position:absolute;top:0;left:0;right:0;height:8px;
+    background:rgba(255,255,255,.55);border-radius:50% 50% 0 0;
+  }
+  .shine{position:absolute;top:30px;left:16px;width:18px;height:250px;background:linear-gradient(180deg,rgba(255,255,255,.65),rgba(255,255,255,0));border-radius:12px;z-index:5;}
+  .drop{position:absolute;font-size:64px;top:48px;right:62px;transform:rotate(12deg);filter:drop-shadow(0 6px 14px rgba(0,0,0,.4));}
+</style>
+</head>
+<body>
+  <div id="icon">
+    <div class="glow a"></div>
+    <div class="glow b"></div>
+    <div class="tube">
+      <div class="seg s1"></div>
+      <div class="seg s2"></div>
+      <div class="seg s3"></div>
+      <div class="seg s4"></div>
+      <div class="shine"></div>
+    </div>
+    <div class="lip" style="position:absolute;top:calc(50% - 165px);"></div>
+  </div>
+</body>
+</html>

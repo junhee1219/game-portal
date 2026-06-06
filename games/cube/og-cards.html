@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<!-- OG 공유 카드 생성용 (스크린샷 → og/*.png). 배포 파일 아님 -->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>body { margin: 0; } .card { display: block; }</style>
+</head>
+<body>
+<script>
+const CARDS = [
+  { id: 'main',   bg: '#fdf6e3', bg2: '#fff3cf', emoji: '🐍', title: 'Cube Snake',       sub: '큐브 위를 달리는 귀여운 스네이크', deco: '🍎🍓🍒' },
+  { id: 'egg',    bg: '#f6f1e7', bg2: '#efe7d8', emoji: '🥚', title: '음… 시작이 반!',    sub: '과일 0개… 그래도 큐브는 돌았다',   deco: '🥲' },
+  { id: 'sprout', bg: '#eaf6df', bg2: '#dff0d0', emoji: '🌱', title: '냠냠 입문 완료',     sub: '이제 진짜 실력을 보여줄 시간',     deco: '🍎' },
+  { id: 'clover', bg: '#e3f2da', bg2: '#d5eac8', emoji: '🍀', title: '제법인데요?',       sub: '큐브가 슬슬 만만해 보임',          deco: '🍓🍎' },
+  { id: 'fire',   bg: '#fdeede', bg2: '#fbe2c9', emoji: '🔥', title: '고수의 향기',       sub: '모서리 넘나드는 폼이 미쳤음',      deco: '⭐🍒' },
+  { id: 'crown',  bg: '#fdf3d6', bg2: '#fbecbe', emoji: '👑', title: '큐브 마스터 직전',   sub: '150점이면 좋은 일이 생긴다던데…',  deco: '⭐✨' },
+  { id: 'trophy', bg: '#fdf0c8', bg2: '#fae5a8', emoji: '🏆', title: '전설의 큐브 지배자', sub: '이건 개발자도 못 깬 기록',  deco: '🎉✨🎊' },
+];
+
+// 게임 아이콘과 같은 아이소메트릭 큐브 + 뱀 아트
+function cubeArt(x, y, s) {
+  return `
+  <g transform="translate(${x},${y}) scale(${s})">
+    <g stroke="#fff" stroke-width="10" stroke-linejoin="round">
+      <polygon points="256,64 428,150 256,236 84,150" fill="#fcd7e3"/>
+      <polygon points="84,150 256,236 256,420 84,334" fill="#b8e0a0"/>
+      <polygon points="256,236 428,150 428,334 256,420" fill="#aad6ef"/>
+    </g>
+    <polygon points="170,193 256,236 256,328 170,285" fill="#a8d48e" opacity=".6"/>
+    <polygon points="342,193 428,150 428,242 342,285" fill="#97c9e8" opacity=".6"/>
+    <polygon points="256,110 342,153 256,196 170,153" fill="#f6c4d5" opacity=".6"/>
+    <g transform="translate(330, 96)">
+      <circle cx="0" cy="10" r="26" fill="#ef5350"/>
+      <circle cx="-9" cy="2" r="8" fill="#ff8a80" opacity=".7"/>
+      <path d="M 0 -14 Q 2 -26 10 -30" stroke="#8d6e63" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <ellipse cx="14" cy="-26" rx="10" ry="6" fill="#81c784" transform="rotate(-25 14 -26)"/>
+    </g>
+    <g transform="translate(170, 320)">
+      <rect x="-62" y="-62" width="124" height="124" rx="34" fill="#4caf85" stroke="#fff" stroke-width="10"/>
+      <ellipse cx="-24" cy="-18" rx="14" ry="17" fill="#fff"/>
+      <ellipse cx="24" cy="-18" rx="14" ry="17" fill="#fff"/>
+      <circle cx="-20" cy="-15" r="7.5" fill="#33291f"/>
+      <circle cx="28" cy="-15" r="7.5" fill="#33291f"/>
+      <circle cx="-17" cy="-19" r="2.5" fill="#fff"/>
+      <circle cx="31" cy="-19" r="2.5" fill="#fff"/>
+      <ellipse cx="-38" cy="12" rx="10" ry="6" fill="#f8a5a5" opacity=".85"/>
+      <ellipse cx="38" cy="12" rx="10" ry="6" fill="#f8a5a5" opacity=".85"/>
+      <path d="M -10 22 Q 0 30 10 22" stroke="#33291f" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <path d="M 0 28 L 0 44 M 0 44 L -6 52 M 0 44 L 6 52" stroke="#ef5350" stroke-width="5" fill="none" stroke-linecap="round"/>
+    </g>
+    <g fill="#5fb593" stroke="#fff" stroke-width="8">
+      <rect x="290" y="300" width="76" height="76" rx="24"/>
+      <rect x="350" y="260" width="64" height="64" rx="20"/>
+    </g>
+  </g>`;
+}
+
+function sparkles() {
+  return `
+  <g fill="#ffd54f">
+    <path d="M 90 90 l 8 20 20 8 -20 8 -8 20 -8 -20 -20 -8 20 -8 z"/>
+    <path d="M 1090 480 l 7 17 17 7 -17 7 -7 17 -7 -17 -17 -7 17 -7 z"/>
+    <circle cx="1130" cy="120" r="9"/>
+    <circle cx="70" cy="520" r="8"/>
+  </g>`;
+}
+
+for (const c of CARDS) {
+  const isMain = c.id === 'main';
+  const svg = `
+<svg id="card-${c.id}" class="card" width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="${c.bg}"/>
+  <circle cx="280" cy="330" r="290" fill="${c.bg2}"/>
+  ${cubeArt(60, 90, 0.92)}
+  ${sparkles()}
+  <text x="560" y="195" font-family="Apple SD Gothic Neo, sans-serif" font-size="84">${c.emoji}</text>
+  <text x="560" y="${isMain ? 310 : 300}" font-family="Apple SD Gothic Neo, sans-serif" font-size="${isMain ? 92 : 60}" font-weight="800" fill="#8d6e63">${c.title}</text>
+  <text x="564" y="378" font-family="Apple SD Gothic Neo, sans-serif" font-size="32" font-weight="600" fill="#a1887f">${c.sub}</text>
+  <text x="564" y="452" font-family="Apple SD Gothic Neo, sans-serif" font-size="42">${c.deco}</text>
+  <text x="564" y="545" font-family="Apple SD Gothic Neo, sans-serif" font-size="30" font-weight="700" fill="#bcaaa4">${isMain ? '지금 바로 플레이 →' : '🐍 Cube Snake — 나를 이겨봐!'}</text>
+</svg>`;
+  document.body.insertAdjacentHTML('beforeend', svg);
+}
+</script>
+</body>
+</html>

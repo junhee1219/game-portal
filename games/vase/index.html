@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#14112b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="물병 정렬">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="kit.css">
+<meta property="og:type" content="website">
+<meta property="og:title" content="물병 정렬 — 한 병에는 한 가지 색만!">
+<meta property="og:description" content="알록달록 물을 옮겨 담는 중독성 퍼즐. 봇보다 적게 움직이면 별 3개! 출렁이는 물과 폭죽까지 🎆">
+<meta property="og:image" content="https://junhee1219.github.io/vase/og/main.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://junhee1219.github.io/vase/">
+<meta name="twitter:card" content="summary_large_image">
+<title>물병 정렬</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Gowun+Dodum&display=swap');
+  :root{
+    --glass:rgba(255,255,255,0.07);
+    --glass-border:rgba(255,255,255,0.16);
+    --gold:#ffd66b;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    font-family:'Gowun Dodum',sans-serif;
+    height:100vh;height:100dvh;width:100vw;overflow:hidden;
+    /* 단일 색조 + 위가 살짝 밝은 비네트 — 차분한 보드게임 테이블 느낌 */
+    background:radial-gradient(130% 100% at 50% 0%, var(--base,#222b38) 0%, var(--deep,#1a212c) 55%, var(--vig,#161c26) 100%);
+    color:#f1edff;display:flex;flex-direction:column;align-items:center;
+    padding:calc(8px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));
+    position:relative;
+    user-select:none;-webkit-user-select:none;touch-action:manipulation;
+    overscroll-behavior:none;
+  }
+  /* 미세 도트 질감 — 그라데이션 밴딩을 깨고 "재질"을 만든다 */
+  body::before{
+    content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:radial-gradient(rgba(255,255,255,.05) 1px, transparent 1.3px);
+    background-size:23px 23px;
+  }
+
+  /* ── 상단 바 ── */
+  .topbar{display:flex;align-items:center;gap:8px;z-index:2;width:100%;max-width:560px;flex:0 0 auto;}
+  .topbar.sub{margin-top:6px;}
+  h1{
+    font-family:'Fredoka',sans-serif;font-weight:600;font-size:20px;letter-spacing:-.3px;
+    color:#f3efe6;margin-right:auto;white-space:nowrap;
+    display:flex;align-items:center;gap:7px;
+  }
+  h1 .logo{width:21px;height:21px;fill:#9fb4c8;}
+  .pill{background:var(--glass);border:1px solid var(--glass-border);backdrop-filter:blur(10px);padding:6px 12px;border-radius:999px;font-size:12px;font-family:'Fredoka',sans-serif;display:flex;align-items:center;gap:5px;white-space:nowrap;}
+  button.pill{cursor:pointer;color:#f1edff;transition:transform .12s;}
+  button.pill:active{transform:scale(.93);}
+  #evo-icon{width:16px;height:16px;}
+  .pill .k-star{width:14px;height:14px;stroke-width:24;filter:none;}
+  .pill .par{opacity:.65;margin-left:2px;display:inline-flex;align-items:center;gap:3px;}
+  .pill .par .ki{width:12px;height:12px;opacity:.8;}
+  .spacer{margin-left:auto;}
+  /* 상단 버튼: 키트 캔디 버튼의 컴팩트 변형 */
+  .topbar .k-btn.sq{min-height:42px;min-width:48px;width:48px;border-radius:14px;}
+  .topbar .k-btn .ki,.topbar .k-btn .ki-o{width:21px;height:21px;}
+
+  /* ── 보드 ── */
+  #board{flex:1 1 auto;display:grid;grid-template-columns:repeat(4,1fr);justify-items:center;align-items:center;gap:12px;z-index:2;width:100%;max-width:420px;min-height:0;padding:8px 0;}
+  .tube{
+    width:var(--w,42px);height:calc(var(--w,42px)*3.4);
+    border:2px solid rgba(255,255,255,.32);border-top:none;border-radius:6px 6px 20px 20px;
+    cursor:pointer;position:relative;transition:transform .2s cubic-bezier(.34,1.56,.64,1);
+    background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.02));
+    box-shadow:inset 0 0 14px rgba(255,255,255,.06), 0 8px 20px rgba(0,0,0,.4);
+  }
+  .tube::before{content:'';position:absolute;top:-2px;left:-6px;right:-6px;height:6px;border:2px solid rgba(255,255,255,.32);border-bottom:none;border-radius:6px 6px 0 0;z-index:3;}
+  .tube::after{content:'';position:absolute;top:8%;left:5px;width:5px;height:78%;background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0));border-radius:4px;opacity:.5;pointer-events:none;z-index:4;}
+  .tube.selected{transform:translateY(-12px) scale(1.05);border-color:#ffe27a;box-shadow:inset 0 0 14px rgba(255,226,122,.25),0 0 22px rgba(255,226,122,.55);}
+  .tube.hint-target{border-color:#6ef0ff;box-shadow:inset 0 0 14px rgba(110,240,255,.25),0 0 22px rgba(110,240,255,.6);}
+  .tube.complete{animation:pop .55s ease;border-color:rgba(255,214,107,.55);box-shadow:inset 0 0 16px rgba(255,214,107,.18),0 0 18px rgba(255,214,107,.35);cursor:default;}
+  /* ── 마개: 한 색으로 꽉 찬 병은 코르크로 봉인 ── */
+  .tube .cork{
+    position:absolute;top:-16px;left:50%;transform:translateX(-50%);
+    width:62%;height:20px;z-index:5;
+    background:linear-gradient(180deg,#d8ac76 0%,#b9854e 55%,#96693c 100%);
+    border-radius:6px 6px 4px 4px;
+    box-shadow:inset 0 -3px 5px rgba(0,0,0,.28), inset 0 2px 3px rgba(255,255,255,.35), 0 3px 8px rgba(0,0,0,.45);
+    animation:cork-in .38s cubic-bezier(.3,1.5,.5,1);
+  }
+  .tube .cork::after{ /* 코르크 질감 점 */
+    content:'';position:absolute;left:18%;top:30%;width:3px;height:3px;border-radius:50%;
+    background:rgba(90,60,30,.5);
+    box-shadow:8px 5px 0 rgba(90,60,30,.4), 16px 1px 0 rgba(90,60,30,.45), 4px 10px 0 rgba(90,60,30,.35);
+  }
+  @keyframes cork-in{0%{transform:translateX(-50%) translateY(-16px);opacity:0;}65%{transform:translateX(-50%) translateY(3px);opacity:1;}100%{transform:translateX(-50%) translateY(0);}}
+  .tube.shake{animation:shake .4s;}
+  .tube canvas.liq{position:absolute;inset:0;width:100%;height:100%;border-radius:4px 4px 18px 18px;z-index:1;pointer-events:none;}
+  @keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.1)}100%{transform:scale(1)}}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+
+  #fx{position:fixed;inset:0;width:100vw;height:100vh;z-index:50;pointer-events:none;}
+
+  /* ── 토스트 ── */
+  #toast{
+    position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
+    background:rgba(20,15,40,.92);border:1px solid var(--glass-border);backdrop-filter:blur(12px);
+    padding:11px 20px;border-radius:999px;font-size:14px;z-index:60;opacity:0;pointer-events:none;
+    transition:opacity .25s,transform .25s;white-space:nowrap;
+  }
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* ── 클리어 오버레이 (탭해서 진행 — 자동 넘어가지 않음) ── */
+  #clear{
+    position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;
+    background:rgba(8,6,20,.55);backdrop-filter:blur(6px);
+    opacity:0;pointer-events:none;transition:opacity .3s;
+  }
+  #clear.show{opacity:1;pointer-events:auto;}
+  .clear-card{
+    background:rgba(24,18,48,.92);border:1px solid var(--glass-border);
+    border-radius:26px;padding:28px 26px 22px;text-align:center;width:min(330px,88vw);
+    box-shadow:0 24px 60px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08);
+    transform:scale(.8);transition:transform .35s cubic-bezier(.2,1.4,.4,1);
+  }
+  #clear.show .clear-card{transform:scale(1);}
+  .clear-card h2{font-family:'Fredoka',sans-serif;font-size:26px;margin-bottom:4px;background:linear-gradient(135deg,#ffd6e8,#bdeaff 60%,#e0caff);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  #stars{display:flex;justify-content:center;gap:12px;margin:14px 0 6px;height:56px;align-items:center;}
+  #stars .k-star{width:42px;height:42px;fill:#3c3852;stroke:#23203a;filter:none;transform:scale(.75);}
+  #stars .k-star:nth-child(2){width:54px;height:54px;}
+  #stars .k-star.on{
+    fill:#ffc24b;stroke:#8a4d12;
+    filter:drop-shadow(0 0 12px rgba(255,200,80,.55));
+    animation:star-pop .5s cubic-bezier(.2,1.6,.4,1) forwards;
+  }
+  @keyframes star-pop{0%{transform:scale(.2) rotate(-30deg);}60%{transform:scale(1.25) rotate(8deg);}100%{transform:scale(1) rotate(0);}}
+  #clear-stats{font-size:14px;opacity:.85;margin-bottom:2px;display:flex;align-items:center;justify-content:center;gap:5px;}
+  #clear-stats .ki{width:14px;height:14px;opacity:.8;}
+  #clear-record{
+    display:none;font-family:'Fredoka',sans-serif;font-size:13px;color:#1c1233;font-weight:700;
+    background:linear-gradient(135deg,#ffe27a,#ffb45e);border-radius:999px;padding:3px 12px;margin-top:6px;
+  }
+  #clear-record.show{display:inline-flex;align-items:center;gap:4px;animation:pop .5s ease;}
+  #clear-record .ki{width:13px;height:13px;}
+  #btn-next{margin-top:16px;}
+
+  /* ── 레벨 선택 모달 ── */
+  #levels{
+    position:fixed;inset:0;z-index:80;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(8,6,20,.6);backdrop-filter:blur(5px);
+    animation:fadein .2s ease;
+  }
+  #levels.hidden{display:none;}
+  .levels-card{
+    background:#1d1738;border:1px solid var(--glass-border);
+    border-radius:26px;padding:22px 20px;width:min(350px,90vw);max-height:80dvh;
+    display:flex;flex-direction:column;text-align:center;
+    box-shadow:0 18px 50px rgba(0,0,0,.5);
+    animation:pop-in .3s cubic-bezier(.2,1.2,.4,1);
+  }
+  .levels-card h2{font-family:'Fredoka',sans-serif;font-size:20px;color:#ffd6e8;margin-bottom:12px;}
+  #evo-box{
+    display:flex;align-items:center;gap:14px;justify-content:center;
+    background:var(--glass);border:1px solid var(--glass-border);
+    border-radius:16px;padding:10px 16px;margin-bottom:14px;
+  }
+  #evo-emoji{font-size:40px;filter:drop-shadow(0 0 10px rgba(120,200,255,.5));}
+  #evo-text{font-size:12.5px;color:#c9bfe8;text-align:left;line-height:1.5;}
+  #level-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;overflow-y:auto;padding:2px;min-height:0;}
+  .lv-chip{
+    border:1px solid var(--glass-border);background:var(--glass);border-radius:12px;
+    color:#f1edff;font-family:'Fredoka',sans-serif;font-size:15px;font-weight:600;
+    padding:7px 0 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;
+    transition:transform .12s;
+  }
+  .lv-chip .chip-stars{font-size:9px;color:#ffd66b;letter-spacing:1px;min-height:11px;}
+  .lv-chip.cur{border-color:#ffe27a;box-shadow:0 0 10px rgba(255,226,122,.4);}
+  .lv-chip.lock{opacity:.35;cursor:default;}
+  .lv-chip:active:not(.lock){transform:scale(.94);}
+  #levels-close{
+    margin-top:14px;font-size:15px;font-weight:700;padding:11px 0;font-family:'Fredoka',sans-serif;
+    border:none;border-radius:999px;cursor:pointer;
+    background:linear-gradient(135deg,#7c5bef,#1aa6ff);color:#fff;
+    box-shadow:0 5px 16px rgba(60,80,220,.4);
+  }
+  #levels-close:active{transform:scale(.96);}
+
+  /* ── 비밀 작업실 (타이틀 5연타) ── */
+  #secret{
+    position:fixed;inset:0;z-index:85;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(8,6,20,.65);backdrop-filter:blur(5px);
+    animation:fadein .2s ease;
+  }
+  #secret.hidden{display:none;}
+  .secret-card{
+    background:#1d1738;border:1px solid var(--glass-border);
+    border-radius:26px;padding:22px 20px;width:min(340px,90vw);max-height:84dvh;overflow-y:auto;
+    box-shadow:0 18px 50px rgba(0,0,0,.5);
+    animation:pop-in .3s cubic-bezier(.2,1.2,.4,1);
+    display:flex;flex-direction:column;gap:14px;text-align:left;
+  }
+  .secret-card h2{font-family:'Fredoka',sans-serif;font-size:19px;color:#ffd6e8;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px;}
+  .secret-sec{display:flex;flex-direction:column;gap:7px;}
+  .secret-label{font-size:12px;color:#9d93c2;font-family:'Fredoka',sans-serif;}
+  .secret-card textarea{
+    width:100%;height:54px;resize:none;border-radius:12px;padding:9px 11px;
+    background:var(--glass);border:1px solid var(--glass-border);color:#f1edff;
+    font-size:11px;font-family:monospace;word-break:break-all;
+  }
+  .secret-card textarea:focus{outline:1px solid #6e9fff;}
+  .secret-row{display:flex;gap:8px;}
+  .secret-row input{
+    flex:1;min-width:0;border-radius:12px;padding:9px 11px;font-size:14px;
+    background:var(--glass);border:1px solid var(--glass-border);color:#f1edff;
+  }
+  .secret-btn{
+    flex:1;border:none;border-radius:12px;padding:10px 0;cursor:pointer;
+    font-family:'Fredoka',sans-serif;font-size:13px;font-weight:600;color:#fff;
+    background:linear-gradient(135deg,#5b8def,#7c5bef);
+  }
+  .secret-btn.wide{width:100%;}
+  .secret-btn:active{transform:scale(.96);}
+  #secret-close{
+    font-size:14px;font-weight:700;padding:11px 0;font-family:'Fredoka',sans-serif;
+    border:none;border-radius:999px;cursor:pointer;
+    background:var(--glass);border:1px solid var(--glass-border);color:#c9bfe8;
+  }
+
+  @keyframes fadein{from{opacity:0;}to{opacity:1;}}
+  @keyframes pop-in{from{transform:scale(.7);opacity:0;}to{transform:scale(1);opacity:1;}}
+
+  /* 가로모드(낮은 화면): 8열×2행으로 펼쳐서 잘림 방지 */
+  @media (max-height:520px){
+    #board{grid-template-columns:repeat(8,1fr);max-width:760px;}
+  }
+  /* 좁은 화면 */
+  @media (max-width:380px){
+    h1{font-size:18px;}
+    .pill{padding:5px 9px;font-size:11px;}
+    button.btn{min-width:38px;padding:6px 10px;font-size:14px;}
+  }
+</style>
+</head>
+<body>
+  <div class="glow a"></div>
+  <div class="glow b"></div>
+
+  <div class="topbar">
+    <h1><svg class="logo"><use href="#g-corked-tube"/></svg>물병 정렬</h1>
+    <button class="pill" id="level-btn" aria-label="레벨 선택">
+      <svg class="ki" id="evo-icon" style="fill:#6fc3ff"><use href="#g-drop"/></svg>
+      Lv <b id="level">1</b>
+      <svg class="ki" style="width:10px;height:10px;opacity:.6"><use href="#p-caret-down"/></svg>
+    </button>
+    <div class="pill"><svg class="k-star"><use href="#p-star"/></svg> <b id="total-stars">0</b></div>
+    <button class="k-btn k-slate sq" id="mute" aria-label="소리 켜기/끄기">
+      <svg class="ki-o" id="mute-icon"><use href="#p-speaker-high"/></svg>
+    </button>
+  </div>
+  <div class="topbar sub">
+    <div class="pill">이동 <b id="moves">0</b><span class="par"><svg class="ki"><use href="#p-target"/></svg><b id="par">-</b></span></div>
+    <div class="spacer"></div>
+    <button class="k-btn k-blue sq" id="undo" aria-label="되돌리기"><svg class="ki-o"><use href="#p-arrow-counter-clockwise"/></svg></button>
+    <button class="k-btn k-teal sq" id="hint" aria-label="힌트"><svg class="ki-o"><use href="#p-lightbulb"/></svg></button>
+    <button class="k-btn k-coral sq" id="new" aria-label="새 게임"><svg class="ki-o"><use href="#p-arrows-clockwise"/></svg></button>
+  </div>
+
+  <div id="board"></div>
+  <canvas id="fx"></canvas>
+  <div id="toast"></div>
+
+  <!-- 클리어 오버레이: 버튼을 눌러야 다음 레벨 (간식 버튼이 머물 시간 확보) -->
+  <div id="clear">
+    <div class="clear-card">
+      <h2>레벨 <span id="clear-level">1</span> 클리어!</h2>
+      <div id="stars">
+        <svg class="k-star"><use href="#p-star"/></svg>
+        <svg class="k-star"><use href="#p-star"/></svg>
+        <svg class="k-star"><use href="#p-star"/></svg>
+      </div>
+      <div id="clear-stats">
+        <svg class="ki"><use href="#p-timer"/></svg><b id="clear-time">0초</b>
+        <span>· 이동 <b id="clear-moves">0</b> ·</span>
+        <svg class="ki"><use href="#p-target"/></svg><span id="clear-par">0</span>
+      </div>
+      <span id="clear-record"><svg class="ki"><use href="#p-trophy"/></svg>신기록!</span>
+      <button id="btn-next" class="k-btn k-violet lg">다음 레벨 <svg class="ki-o" style="width:20px;height:20px"><use href="#p-arrow-right"/></svg></button>
+      <div id="snack-mount"></div>
+    </div>
+  </div>
+
+  <!-- 레벨 선택: 깬 레벨까지 자유롭게, 물친구 진화 전시 -->
+  <div id="levels" class="hidden">
+    <div class="levels-card">
+      <h2>레벨 선택</h2>
+      <div id="evo-box">
+        <svg class="ki" id="evo-emoji" style="width:40px;height:40px;flex:0 0 auto;fill:#6fc3ff"><use href="#g-drop"/></svg>
+        <div id="evo-text"></div>
+      </div>
+      <div id="level-grid"></div>
+      <button id="levels-close">닫기</button>
+      <div class="k-credit">Icons: <a href="https://game-icons.net" target="_blank" rel="noopener">game-icons.net</a> (CC BY 3.0) · Phosphor</div>
+    </div>
+  </div>
+
+  <!-- 비밀 작업실 (타이틀 5연타로 열림): 진행 옮기기 + 레벨 점프 -->
+  <div id="secret" class="hidden">
+    <div class="secret-card">
+      <h2><svg class="ki" style="width:17px;height:17px;opacity:.85"><use href="#p-wrench"/></svg> 비밀 작업실</h2>
+      <div class="secret-sec">
+        <div class="secret-label">내 진행 내보내기</div>
+        <textarea id="exp-code" readonly placeholder="[코드 만들기]를 누르면 여기 코드가 나와요"></textarea>
+        <div class="secret-row">
+          <button class="secret-btn" id="btn-export">코드 만들기</button>
+          <button class="secret-btn" id="btn-copy">복사</button>
+        </div>
+      </div>
+      <div class="secret-sec">
+        <div class="secret-label">진행 가져오기</div>
+        <textarea id="imp-code" placeholder="다른 기기에서 만든 코드를 붙여넣기"></textarea>
+        <button class="secret-btn wide" id="btn-import">가져오기</button>
+      </div>
+      <div class="secret-sec">
+        <div class="secret-label">레벨 점프</div>
+        <div class="secret-row">
+          <input type="number" id="jump-lv" min="1" max="999" placeholder="레벨">
+          <button class="secret-btn" id="btn-jump">이동</button>
+        </div>
+      </div>
+      <button id="secret-close">닫기</button>
+    </div>
+  </div>
+
+<script>
+  // 아이콘 심볼 시트 주입 — <use href="#..."> 해석용 (game-kit sprite 서브셋)
+  fetch('sprite.svg').then((r) => r.text()).then((t) => {
+    const d = document.createElement('div');
+    d.innerHTML = t;
+    document.body.prepend(d.firstChild);
+  });
+</script>
+<script src="core.js"></script>
+<script src="audio.js"></script>
+<script src="snack.js"></script>
+<script src="game.js"></script>
+<script>
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('./sw.js');
+  }
+</script>
+</body>
+</html>

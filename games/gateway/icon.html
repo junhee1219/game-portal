@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<!-- 아이콘 생성용 (배포 불필요) — 512x512 캔버스를 스크린샷 → sips로 192/180 다운스케일 -->
+<html>
+<head><meta charset="UTF-8"><style>*{margin:0;padding:0}body{background:#000}canvas{display:block}</style></head>
+<body>
+<canvas id="c" width="512" height="512"></canvas>
+<script>
+const ctx = document.getElementById('c').getContext('2d');
+const S = 512, cx = S / 2;
+
+// 배경 — 밤거리 포장마차 온기
+const bg = ctx.createLinearGradient(0, 0, 0, S);
+bg.addColorStop(0, '#1c0f08');
+bg.addColorStop(1, '#3a1a0c');
+ctx.fillStyle = bg;
+ctx.fillRect(0, 0, S, S);
+
+// 등불 글로우
+const lg = ctx.createRadialGradient(cx, 150, 10, cx, 150, 260);
+lg.addColorStop(0, 'rgba(255,180,80,0.5)');
+lg.addColorStop(1, 'rgba(255,180,80,0)');
+ctx.fillStyle = lg;
+ctx.fillRect(0, 0, S, S);
+
+// 김 (그릇 위 두 줄기)
+ctx.strokeStyle = 'rgba(255,250,235,0.65)';
+ctx.lineCap = 'round';
+ctx.lineWidth = 13;
+[-46, 38].forEach((dx, i) => {
+  ctx.beginPath();
+  ctx.moveTo(cx + dx, 196);
+  ctx.bezierCurveTo(cx + dx - 26, 156, cx + dx + 26, 122, cx + dx - 12, 78);
+  ctx.stroke();
+});
+
+// 그릇 (빨간 사발)
+ctx.fillStyle = '#e8453c';
+ctx.beginPath();
+ctx.moveTo(cx - 158, 256);
+ctx.quadraticCurveTo(cx, 230, cx + 158, 256);
+ctx.quadraticCurveTo(cx + 142, 408, cx, 420);
+ctx.quadraticCurveTo(cx - 142, 408, cx - 158, 256);
+ctx.fill();
+// 그릇 무늬 띠
+ctx.strokeStyle = '#fff3df';
+ctx.lineWidth = 12;
+ctx.beginPath();
+ctx.moveTo(cx - 132, 300);
+ctx.quadraticCurveTo(cx, 322, cx + 132, 300);
+ctx.stroke();
+// 굽
+ctx.fillStyle = '#c93128';
+ctx.beginPath();
+ctx.ellipse(cx, 424, 62, 16, 0, 0, 7);
+ctx.fill();
+
+// 국물
+ctx.fillStyle = '#ffb23e';
+ctx.beginPath();
+ctx.ellipse(cx, 252, 150, 34, 0, 0, 7);
+ctx.fill();
+
+// 면발 (구불구불)
+ctx.strokeStyle = '#ffe9a8';
+ctx.lineWidth = 10;
+for (let i = -3; i <= 3; i++) {
+  ctx.beginPath();
+  ctx.moveTo(cx + i * 34 - 8, 246);
+  ctx.quadraticCurveTo(cx + i * 34 + 12, 258, cx + i * 34 - 6, 268);
+  ctx.stroke();
+}
+
+// 계란 노른자 + 파
+ctx.fillStyle = '#fff6e0';
+ctx.beginPath(); ctx.ellipse(cx + 76, 248, 34, 20, 0, 0, 7); ctx.fill();
+ctx.fillStyle = '#ffae27';
+ctx.beginPath(); ctx.ellipse(cx + 76, 248, 17, 11, 0, 0, 7); ctx.fill();
+ctx.fillStyle = '#5fae53';
+[-90, -52, -16].forEach((dx) => {
+  ctx.beginPath(); ctx.ellipse(cx + dx, 244 + (dx % 3) * 2, 11, 6, 0.4, 0, 7); ctx.fill();
+});
+
+// 젓가락 (면 들어올림)
+ctx.strokeStyle = '#a86a32';
+ctx.lineWidth = 13;
+ctx.beginPath(); ctx.moveTo(cx + 38, 96); ctx.lineTo(cx - 28, 238); ctx.stroke();
+ctx.beginPath(); ctx.moveTo(cx + 74, 102); ctx.lineTo(cx + 6, 240); ctx.stroke();
+// 들린 면발
+ctx.strokeStyle = '#ffe9a8';
+ctx.lineWidth = 8;
+[-16, 0, 14].forEach((dx) => {
+  ctx.beginPath();
+  ctx.moveTo(cx - 10 + dx, 224);
+  ctx.quadraticCurveTo(cx - 4 + dx, 252, cx - 14 + dx, 262);
+  ctx.stroke();
+});
+</script>
+</body>
+</html>

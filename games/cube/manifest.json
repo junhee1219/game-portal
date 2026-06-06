@@ -1,0 +1,15 @@
+{
+  "name": "Cube Snake — 큐브 스네이크",
+  "short_name": "Cube Snake",
+  "description": "3D 큐브 표면을 기어다니는 귀여운 스네이크 게임",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fdf6e3",
+  "theme_color": "#fdf6e3",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
