@@ -85,6 +85,11 @@ async def portal_og():
     return FileResponse(PORTAL_DIR / "og.png", media_type="image/png")
 
 
+@app.get("/favicon.ico")
+async def favicon():
+    return FileResponse(GAMES_DIR / "vase" / "icon-192.png", media_type="image/png")
+
+
 @app.get("/portal.js")
 async def portal_js():
     return Response((PORTAL_DIR / "portal.js").read_bytes(), media_type="text/javascript")
