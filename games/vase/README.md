@@ -28,6 +28,12 @@
 - 📱 PWA — 홈 화면에 설치하면 오프라인에서도 플레이 가능
 - 🍩 재밌었다면 클리어 화면에서 개발자 간식 사주기
 - 🤫 숨겨진 기능이 어딘가에... 👀
+- 살아 움직이는 배경(도트 드리프트 + 빛 숨쉬기) — 빈 병과 검정 액체가 한눈에 구분됨
+- UI는 game-kit 공용 컴포넌트 (캔디 버튼 + Phosphor/game-icons 2층 아이콘)
+
+## 크레딧
+
+Icons: [game-icons.net](https://game-icons.net) (CC BY 3.0, by Lorc·Delapouite) · [Phosphor Icons](https://phosphoricons.com) (MIT)
 
 ## 구조
 

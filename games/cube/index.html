@@ -11,15 +11,16 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="kit.css">
 <meta property="og:type" content="website">
-<meta property="og:title" content="🐍 Cube Snake — 큐브 위를 달리는 스네이크">
+<meta property="og:title" content="Cube Snake — 큐브 위를 달리는 스네이크">
 <meta property="og:description" content="3D 큐브 표면을 기어다니는 귀여운 스네이크 게임. 모서리를 넘으면 세상이 돌아간다!">
 <meta property="og:image" content="https://junhee1219.github.io/cube-game/og/main.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:url" content="https://junhee1219.github.io/cube-game/">
 <meta name="twitter:card" content="summary_large_image">
-<title>🐍 Cube Snake</title>
+<title>Cube Snake</title>
 <style>
   :root {
     --cube: 312px;       /* 한 면 크기 (6칸 × 52px) */
@@ -364,6 +365,29 @@
   }
   #thanks-close:active { transform: translateY(3px); box-shadow: 0 2px 0 #94bf69; }
 
+  /* ── game-kit 2층 아이콘 (UI 크롬은 전부 SVG로) ──
+     cube는 밝은 파스텔 테마 → 흰색이 채워지는 .ki-o 대신 단색 .ki만 사용.
+     아이콘 색은 cube 팔레트(다크브라운/포인트색)에 맞춰 직접 지정. */
+  .ki { display: inline-block; vertical-align: -0.15em; }
+  /* HUD: 점수 별·최고기록 왕관 (골드 — 흰 배경에서 또렷) */
+  #hud .hud-i { width: 0.95em; height: 0.95em; vertical-align: -0.12em; }
+  #hud #hud-star { fill: #ffc24b; }
+  #hud #hud-crown { fill: #f5b03e; }
+  /* 음소거: 기존 버튼 색(브라운) 유지, 글리프만 SVG */
+  #mute .ki { width: 22px; height: 22px; fill: #8d6e63; }
+  /* 회전 버튼: 글리프만 교체, 기존 핑크/블루 색(color) 상속 */
+  .turn-btn .ki { width: 1em; height: 1em; fill: currentColor; }
+  /* 타이틀 로고: 스네이크 심볼 */
+  #overlay h1 .h1-logo { width: 0.95em; height: 0.95em; vertical-align: -0.1em; fill: #7ec8a9; }
+  /* 안내문 화살표 (버튼 글리프와 동일) */
+  #overlay p .ins-i { width: 1.05em; height: 1.05em; vertical-align: -0.18em; fill: #a1887f; }
+  /* 자랑하기 공유 아이콘 */
+  #btn-share .ki { width: 1em; height: 1em; vertical-align: -0.14em; fill: currentColor; }
+  /* 간식 도넛 */
+  #snack .snack-donut { width: 1.25em; height: 1.25em; vertical-align: -0.28em; fill: #c98a5e; }
+  /* 고마워요 모달 커피 */
+  .thanks-emoji .ki { width: 56px; height: 56px; fill: #a1887f; }
+
   @media (max-width: 480px) {
     :root { --cube: 270px; }
     .cell .fruit { font-size: 22px; }
@@ -372,34 +396,43 @@
 </style>
 </head>
 <body>
+  <script>
+    // 아이콘 심볼 시트 주입 — <use href="#..."> 해석용 (game-kit sprite 서브셋)
+    fetch('sprite.svg').then((r) => r.text()).then((t) => {
+      const d = document.createElement('div');
+      d.innerHTML = t;
+      document.body.prepend(d.firstChild);
+    });
+  </script>
   <div id="bg"></div>
-  <div id="hud">🍎 <span id="fruits-n">0</span><span class="sep">·</span>⭐ <span id="score">0</span><span class="sep">·</span>👑 <span id="best">0</span></div>
+  <div id="hud">🍎 <span id="fruits-n">0</span><span class="sep">·</span><svg class="ki hud-i" id="hud-star"><use href="#p-star"/></svg> <span id="score">0</span><span class="sep">·</span><svg class="ki hud-i" id="hud-crown"><use href="#p-crown"/></svg> <span id="best">0</span></div>
   <div id="combo">🔥 x<span id="combo-n">2</span></div>
-  <button id="mute" aria-label="소리 켜기/끄기">🔊</button>
+  <button id="mute" aria-label="소리 켜기/끄기"><svg class="ki" id="mute-icon"><use href="#p-speaker-high"/></svg></button>
   <div id="scene"><div id="cube"></div></div>
   <div id="controls">
-    <button class="turn-btn ccw" id="btn-left" aria-label="좌회전">↺</button>
-    <button class="turn-btn cw" id="btn-right" aria-label="우회전">↻</button>
+    <button class="turn-btn ccw" id="btn-left" aria-label="좌회전"><svg class="ki"><use href="#p-arrow-counter-clockwise"/></svg></button>
+    <button class="turn-btn cw" id="btn-right" aria-label="우회전"><svg class="ki"><use href="#p-arrow-clockwise"/></svg></button>
   </div>
   <div id="fx"></div>
   <div id="overlay">
-    <h1>🐍 Cube Snake</h1>
-    <p>큐브 위를 기어다니며 과일을 냠냠!<br>↺ ↻ 버튼이나 ← → 키로 방향을 바꿔요</p>
+    <h1><svg class="ki h1-logo" id="title-logo"><use href="#g-snake"/></svg> Cube Snake</h1>
+    <p>큐브 위를 기어다니며 과일을 냠냠!<br><svg class="ki ins-i"><use href="#p-arrow-counter-clockwise"/></svg> <svg class="ki ins-i"><use href="#p-arrow-clockwise"/></svg> 버튼이나 ← → 키로 방향을 바꿔요</p>
     <button id="btn-start">시작!</button>
-    <button id="btn-share">📤 친구에게 자랑하기</button>
+    <button id="btn-share"><svg class="ki" id="share-icon"><use href="#p-share-network"/></svg> <span class="btn-share-label">친구에게 자랑하기</span></button>
     <div id="snack">
-      <span class="snack-label">재밌었다면 개발자 간식 사주기</span> 🍩
+      <span class="snack-label">재밌었다면 개발자 간식 사주기</span> <svg class="ki snack-donut"><use href="#g-donut"/></svg>
       <span class="snack-btns">
         <a class="toss" href="supertoss://send?bank=토스뱅크&accountNo=100025266940&amount=3000">토스</a>
         <a class="kakao" href="https://qr.kakaopay.com/FP0dZW9ip" target="_blank" rel="noopener">카카오페이</a>
       </span>
     </div>
+    <div class="k-credit">Icons: <a href="https://game-icons.net" target="_blank" rel="noopener">game-icons.net</a> (CC BY 3.0) · Phosphor</div>
   </div>
 
   <!-- PC에서 앱 딥링크가 안 열릴 때 띄우는 "마음만으로도 고마워요" 모달 -->
   <div id="thanks" class="hidden">
     <div class="thanks-card">
-      <div class="thanks-emoji">🥹☕</div>
+      <div class="thanks-emoji"><svg class="ki" id="thanks-icon"><use href="#p-coffee"/></svg></div>
       <h2>마음만으로도 감동이에요!</h2>
       <p>송금은 폰에서 열어야 동작하지만,<br>여기까지 눌러주신 것만으로도<br>개발자는 이미 커피 한 잔 마신 기분이에요 💛</p>
       <p class="thanks-sub">정 보내고 싶다면 폰으로 접속해서 눌러주세요!</p>
@@ -1025,11 +1058,13 @@ if (typeof module !== 'undefined') {
     record() { [523, 659, 784, 1046, 1318].forEach((f, i) => tone(f, .16, { type: 'triangle', vol: .14, when: i * .09 })); },
   };
   const muteBtn = document.getElementById('mute');
-  muteBtn.textContent = muted ? '🔇' : '🔊';
+  const refreshMute = () => document.querySelector('#mute-icon use')
+    .setAttribute('href', muted ? '#p-speaker-slash' : '#p-speaker-high');
+  refreshMute();
   muteBtn.addEventListener('click', () => {
     muted = !muted;
     localStorage.setItem('cubeSnakeMuted', muted ? '1' : '0');
-    muteBtn.textContent = muted ? '🔇' : '🔊';
+    refreshMute();
     if (muted) {
       // 재생 중·예약된 소리까지 전부 즉시 끔
       if (masterGain) masterGain.gain.value = 0;
@@ -1167,6 +1202,7 @@ if (typeof module !== 'undefined') {
     return 'egg';
   }
   const shareBtn = document.getElementById('btn-share');
+  const shareLabel = shareBtn.querySelector('.btn-share-label');
   shareBtn.addEventListener('click', async () => {
     const url = `${SITE}/share/${shareTier()}.html`;
     const text = `🐍 큐브스네이크 ${score}점 (과일 ${fruits}개)! 나를 이겨봐 ㅋㅋ`;
@@ -1175,8 +1211,8 @@ if (typeof module !== 'undefined') {
         await navigator.share({ title: 'Cube Snake', text, url }); // 모바일: 네이티브 공유창 (카톡 바로 선택)
       } else {
         await navigator.clipboard.writeText(`${text}\n${url}`);
-        shareBtn.textContent = '✅ 복사 완료! 카톡에 붙여넣기';
-        setTimeout(() => { shareBtn.textContent = '📤 친구에게 자랑하기'; }, 2000);
+        shareLabel.textContent = '복사 완료! 카톡에 붙여넣기 ✅';
+        setTimeout(() => { shareLabel.textContent = '친구에게 자랑하기'; }, 2000);
       }
     } catch (e) { /* 공유 취소 시 무시 */ }
   });
