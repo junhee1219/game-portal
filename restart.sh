@@ -19,8 +19,8 @@ sudo systemctl restart game-portal
 echo "[4/4] 헬스체크"
 sleep 2
 for i in 1 2 3 4 5; do
-  if curl -sf http://127.0.0.1:8200/health > /dev/null; then
-    echo "OK — game-portal 기동 완료 (port 8200)"
+  if curl -sf http://127.0.0.1:8080/health > /dev/null; then
+    echo "OK — game-portal 기동 완료 (port 8080)"
     exit 0
   fi
   sleep 2

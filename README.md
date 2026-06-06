@@ -31,7 +31,7 @@ portal/               # 메인 목록 페이지 + 주입용 portal.js
 ```bash
 python3 -m venv venv && venv/bin/pip install -r requirements.txt
 cp .env.example .env   # DATABASE_URL 채우기 (비우면 계측 없이 동작)
-venv/bin/uvicorn app.main:app --reload --port 8200
+venv/bin/uvicorn app.main:app --reload --port 8080
 ```
 
 ## 배포 (오라클 서버)
@@ -41,8 +41,8 @@ ssh oracle-server
 cd ~/game-portal && ./restart.sh
 ```
 
-- systemd 서비스: `game-portal` (uvicorn, 127.0.0.1:8200)
-- 도메인 연결: DNS A 레코드 → nginx server block(`proxy_pass http://127.0.0.1:8200`) → certbot
+- systemd 서비스: `game-portal` (uvicorn, 127.0.0.1:8080)
+- 도메인 연결: DNS A 레코드 → nginx server block(`proxy_pass http://127.0.0.1:8080`) → certbot
 
 ## 계측
 
