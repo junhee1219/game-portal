@@ -110,13 +110,19 @@
             .then(function (data) {
               if (!data.share_url) return;
               var url = location.origin + data.share_url;
+              // http(비보안) origin에선 share/clipboard 둘 다 없을 수 있다 —
+              // 마지막 폴백은 공유 페이지로 직접 이동 (브라우저 메뉴로 공유 가능)
               if (navigator.share) {
                 navigator.share({ url: url }).catch(function () {});
-              } else {
-                navigator.clipboard.writeText(url).then(function () {
-                  alert('공유 링크를 복사했습니다.');
-                });
+                return;
               }
+              if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url).then(function () {
+                  alert('공유 링크를 복사했습니다.\n' + url);
+                }).catch(function () { location.href = url; });
+                return;
+              }
+              location.href = url;
             })
             .catch(function () {});
         });
