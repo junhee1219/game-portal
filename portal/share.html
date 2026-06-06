@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{{TITLE}}</title>
+  <meta property="og:title" content="{{OG_TITLE}}">
+  <meta property="og:description" content="{{OG_DESC}}">
+  <meta property="og:image" content="{{OG_IMAGE}}">
+  <meta property="og:type" content="website">
+  <link rel="stylesheet" href="/portal.css">
+  <link rel="icon" href="/{{GAME}}/icon-192.png">
+  <style>
+    .share-hero { text-align: center; padding-top: 24px; }
+    .share-hero img.gicon {
+      width: 88px; height: 88px; border-radius: 20px; background: #000;
+      margin-bottom: 20px;
+    }
+    .share-hero .gname { font-size: 15px; color: var(--dim); margin-bottom: 6px; }
+    .share-hero .record {
+      font-size: clamp(40px, 13vw, 64px); font-weight: 800; letter-spacing: -0.02em;
+      line-height: 1.1;
+    }
+    .share-hero .unit { font-size: 17px; color: var(--accent); font-weight: 700; margin-top: 8px; }
+    .cta { display: flex; flex-direction: column; gap: 10px; margin-top: 40px; }
+    .btn {
+      display: block; text-align: center; padding: 16px; border-radius: 14px;
+      text-decoration: none; font-weight: 700; font-size: 16px;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: var(--accent); color: #14110a; }
+    .btn-ghost { background: var(--panel); color: var(--text); border: 1px solid var(--line); }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="hero" style="margin-bottom:8px">
+      <p class="kicker">RECORD</p>
+    </header>
+    <section class="share-hero">
+      <img class="gicon" src="/{{GAME}}/icon-192.png" alt="">
+      <p class="gname">{{GAME_TITLE}}</p>
+      <p class="record">{{SCORE}}</p>
+      <p class="unit">{{UNIT}}</p>
+    </section>
+    <div class="cta">
+      <a class="btn btn-primary" href="/{{GAME}}/">나도 한판</a>
+      <a class="btn btn-ghost" href="/">다른 게임 보기</a>
+    </div>
+  </main>
+  <script src="/portal.js" data-game="portal"></script>
+</body>
+</html>

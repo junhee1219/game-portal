@@ -17,6 +17,8 @@ class Visitor(Base):
     last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=kst_now)
     user_agent: Mapped[str | None] = mapped_column(String(512), nullable=True)
     first_referrer: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    kakao_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
+    nickname: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
 
 class Event(Base):

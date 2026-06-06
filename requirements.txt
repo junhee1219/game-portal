@@ -4,3 +4,5 @@ sqlalchemy[asyncio]>=2.0
 aiomysql>=0.2
 pydantic-settings>=2.0
 cryptography>=42.0
+httpx>=0.27
+

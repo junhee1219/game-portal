@@ -66,4 +66,30 @@
       }).catch(function () {});
     }
   };
+
+  // 자동 점수 캡처 — 게임이 localStorage에 쓰는 신기록을 가로채 보고한다.
+  // 게임 원본 무수정 원칙: 키 이름만 알면 게임 코드는 그대로.
+  var SCORE_KEYS = {
+    gateway: { key: 'gatewayBest', metric: 'best' },
+    cube: { key: 'cubeSnakeBest', metric: 'best' },
+    vase: { key: 'vaseMaxClear', metric: 'level' }
+  };
+  var conf = SCORE_KEYS[game];
+  if (conf) {
+    var last = 0;
+    try { last = parseInt(localStorage.getItem(conf.key) || '0', 10) || 0; } catch (e) {}
+    var origSet = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (k, v) {
+      origSet.apply(this, arguments);
+      try {
+        if (this === window.localStorage && k === conf.key) {
+          var n = parseInt(v, 10);
+          if (!isNaN(n) && n > last) {
+            last = n;
+            window.GamePortal.reportScore(n, { metric: conf.metric, auto: true });
+          }
+        }
+      } catch (e) {}
+    };
+  }
 })();

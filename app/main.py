@@ -10,11 +10,13 @@ import mimetypes
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
+from app import database
 from app.database import init_db
 from app.routers.api import router as api_router
+from app.routers.auth import router as auth_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -27,14 +29,17 @@ GAMES = {
     "cube": {
         "title": "Cube Snake",
         "tagline": "3D 큐브 표면을 기어다니는 스네이크. 모서리를 넘으면 세상이 돌아간다.",
+        "unit": "점",
     },
     "gateway": {
         "title": "라면집 사장님",
         "tagline": "세 줄로 밀려드는 손님, 서빙은 한 줄씩. 줄이 터지면 가게도 끝.",
+        "unit": "점",
     },
     "vase": {
         "title": "물병 정렬",
         "tagline": "알록달록 물을 옮겨 담는 퍼즐. 봇보다 적게 움직이면 별 셋.",
+        "unit": "레벨",
     },
 }
 
@@ -60,6 +65,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title="game-portal", lifespan=lifespan)
 app.include_router(api_router)
+app.include_router(auth_router)
 
 
 @app.get("/health")
@@ -80,6 +86,42 @@ async def portal_js():
 @app.get("/portal.css")
 async def portal_css():
     return Response((PORTAL_DIR / "portal.css").read_bytes(), media_type="text/css")
+
+
+@app.get("/rank", response_class=HTMLResponse)
+async def rank_page():
+    return (PORTAL_DIR / "rank.html").read_text(encoding="utf-8")
+
+
+@app.get("/s/{score_id}", response_class=HTMLResponse)
+async def share_page(score_id: int, request: Request):
+    """점수 공유 페이지 — 카톡 미리보기용 OG 태그를 점수별로 렌더."""
+    if database.async_session is None:
+        return RedirectResponse(url="/", status_code=302)
+    from app.models import Score
+
+    async with database.async_session() as db:
+        score = await db.get(Score, score_id)
+    if score is None or score.game not in GAMES:
+        return RedirectResponse(url="/", status_code=302)
+
+    info = GAMES[score.game]
+    base = str(request.base_url).rstrip("/")
+    record = f"{score.score:,}"
+    og_title = f"{info['title']} — {record}{info['unit']}"
+    html = (PORTAL_DIR / "share.html").read_text(encoding="utf-8")
+    for key, value in {
+        "{{TITLE}}": og_title,
+        "{{OG_TITLE}}": og_title,
+        "{{OG_DESC}}": "한판만 해봐. 설치 없이 바로 시작.",
+        "{{OG_IMAGE}}": f"{base}/{score.game}/og/main.png",
+        "{{GAME}}": score.game,
+        "{{GAME_TITLE}}": info["title"],
+        "{{SCORE}}": record,
+        "{{UNIT}}": info["unit"],
+    }.items():
+        html = html.replace(key, value)
+    return HTMLResponse(html)
 
 
 def _safe_game_file(game: str, path: str) -> Path:

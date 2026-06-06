@@ -76,17 +76,16 @@ async def record_score(body: ScoreIn):
         return {"ok": False, "reason": "unknown-game"}
     try:
         async with database.async_session() as db:
-            db.add(
-                Score(
-                    visitor_id=body.visitor_id,
-                    game=body.game,
-                    score=body.score,
-                    nickname=body.nickname,
-                    meta=body.meta,
-                )
+            score = Score(
+                visitor_id=body.visitor_id,
+                game=body.game,
+                score=body.score,
+                nickname=body.nickname,
+                meta=body.meta,
             )
+            db.add(score)
             await db.commit()
-        return {"ok": True}
+            return {"ok": True, "id": score.id, "share_url": f"/s/{score.id}"}
     except Exception:
         logger.exception("score 기록 실패")
         return {"ok": False, "reason": "db-error"}
@@ -99,21 +98,29 @@ async def leaderboard(game: str, limit: int = 10):
     limit = max(1, min(limit, 50))
     try:
         async with database.async_session() as db:
+            # 방문자당 최고 기록 1개만 (자동 캡처는 신기록마다 행이 쌓인다)
+            best = (
+                select(
+                    Score.visitor_id,
+                    func.max(Score.score).label("best_score"),
+                )
+                .where(Score.game == game)
+                .group_by(Score.visitor_id)
+                .subquery()
+            )
             rows = (
                 await db.execute(
-                    select(Score).where(Score.game == game).order_by(desc(Score.score)).limit(limit)
+                    select(best.c.visitor_id, best.c.best_score, Visitor.nickname)
+                    .outerjoin(Visitor, Visitor.id == best.c.visitor_id)
+                    .order_by(desc(best.c.best_score))
+                    .limit(limit)
                 )
-            ).scalars().all()
+            ).all()
         return {
             "game": game,
             "entries": [
-                {
-                    "rank": i + 1,
-                    "nickname": s.nickname or "익명",
-                    "score": s.score,
-                    "at": s.created_at.isoformat(),
-                }
-                for i, s in enumerate(rows)
+                {"rank": i + 1, "nickname": nickname or "익명", "score": int(score)}
+                for i, (_, score, nickname) in enumerate(rows)
             ],
         }
     except Exception:
