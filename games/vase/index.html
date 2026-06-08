@@ -44,20 +44,20 @@
   /* 미세 도트 질감 — 천천히 흐른다 (맥북 동적 배경처럼).
      빈 병은 유리 너머로 이 움직임이 비치고, 까만 액체는 불투명해서 멈춰 있음 → 구분 */
   body::before{
-    content:'';position:fixed;inset:-46px;z-index:0;pointer-events:none;
-    background-image:radial-gradient(rgba(255,255,255,.055) 1px, transparent 1.3px);
-    background-size:23px 23px;
-    animation:bg-drift 9s linear infinite;
+    content:'';position:fixed;inset:-52px;z-index:0;pointer-events:none;
+    background-image:radial-gradient(rgba(255,255,255,.085) 1.3px, transparent 1.7px);
+    background-size:26px 26px;
+    animation:bg-drift 4.5s linear infinite;
   }
-  @keyframes bg-drift{from{transform:translate(0,0);}to{transform:translate(23px,23px);}}
-  /* 아주 옅은 빛이 화면을 가로질러 숨쉬듯 지나간다 */
+  @keyframes bg-drift{from{transform:translate(0,0);}to{transform:translate(26px,26px);}}
+  /* 옅은 빛이 화면을 가로질러 숨쉬듯 지나간다 */
   body::after{
     content:'';position:fixed;top:-30%;left:-45%;width:95%;height:85%;z-index:0;pointer-events:none;
-    background:radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,.06), transparent 70%);
-    animation:bg-breathe 26s ease-in-out infinite alternate;
+    background:radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,.09), transparent 70%);
+    animation:bg-breathe 14s ease-in-out infinite alternate;
   }
   @keyframes bg-breathe{from{transform:translate(0,0) scale(1);}to{transform:translate(62vw,32vh) scale(1.3);}}
-  @media (prefers-reduced-motion:reduce){body::before,body::after{animation:none;}}
+  @media (prefers-reduced-motion:reduce){body::before,body::after,.tube .glass .sheen{animation:none;}}
 
   /* ── 상단 바 ── */
   .topbar{display:flex;align-items:center;gap:8px;z-index:2;width:100%;max-width:560px;flex:0 0 auto;}
@@ -111,6 +111,16 @@
   @keyframes cork-in{0%{transform:translateX(-50%) translateY(-16px);opacity:0;}65%{transform:translateX(-50%) translateY(3px);opacity:1;}100%{transform:translateX(-50%) translateY(0);}}
   .tube.shake{animation:shake .4s;}
   .tube canvas.liq{position:absolute;inset:0;width:100%;height:100%;border-radius:4px 4px 18px 18px;z-index:1;pointer-events:none;}
+  /* 유리 글린트: 빈 공간에서만 보이는 움직임 신호 —
+     불투명한 액체(특히 검정)가 가리므로 "흐르면 빈 곳, 멈춰 있으면 액체"
+     (.glass가 병 모양으로 클리핑 — 림/마개는 음수 좌표라 .tube에 overflow를 못 건다) */
+  .tube .glass{position:absolute;inset:0;overflow:hidden;border-radius:4px 4px 18px 18px;z-index:0;pointer-events:none;}
+  .tube .glass .sheen{
+    position:absolute;left:-35%;top:0;width:170%;height:34%;
+    background:linear-gradient(115deg,transparent 18%,rgba(190,225,255,.16) 40%,rgba(255,255,255,.30) 50%,rgba(190,225,255,.16) 60%,transparent 82%);
+    animation:sheen-move 4.6s linear infinite;
+  }
+  @keyframes sheen-move{from{transform:translateY(-140%);}to{transform:translateY(440%);}}
   @keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.1)}100%{transform:scale(1)}}
   @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 
@@ -362,6 +372,15 @@
 <script src="game.js"></script>
 <script>
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    // 배포 직후 기존 유저가 구버전+신버전이 섞인 채 2~3번 접속해야 했던 문제:
+    // 새 SW가 컨트롤을 잡으면(업데이트) 시작 10초 이내일 때만 한 번 자동 새로고침
+    const hadController = !!navigator.serviceWorker.controller;
+    let refreshed = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || refreshed || performance.now() > 10000) return;
+      refreshed = true;
+      location.reload();
+    });
     navigator.serviceWorker.register('./sw.js');
   }
 </script>

@@ -169,6 +169,13 @@
         cork.className = 'cork';
         el.appendChild(cork);
       }
+      const glass = document.createElement('div'); // 유리 글린트 (액체가 가림 → 빈 곳 표시)
+      glass.className = 'glass';
+      const sheen = document.createElement('div');
+      sheen.className = 'sheen';
+      sheen.style.animationDelay = `-${((idx * 0.83) % 4.6).toFixed(2)}s`;
+      glass.appendChild(sheen);
+      el.appendChild(glass);
       const cv = document.createElement('canvas');
       cv.className = 'liq';
       el.appendChild(cv);

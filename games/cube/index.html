@@ -53,11 +53,23 @@
     60%  { background: #6bff7a; } 80% { background: #c14dff; } 100% { background: #ff4d6d; }
   }
 
-  /* 구름 (하늘 단계) */
+  /* 구름 (하늘 단계) — CSS로 그린 뭉게구름 (겹친 원 + 둥근 바닥) */
   #bg .cloud {
-    position: absolute; font-size: 56px; opacity: 0; transition: opacity 1s;
+    position: absolute; opacity: 0; transition: opacity 1s;
     animation: drift linear infinite;
+    width: 56px; height: 22px;       /* width는 인라인으로 덮어씀, height는 비율로 */
+    background: rgba(255, 255, 255, .92);
+    border-radius: 999px;
+    filter: drop-shadow(0 3px 6px rgba(120, 150, 180, .18));
   }
+  #bg .cloud::before, #bg .cloud::after {
+    content: ""; position: absolute; bottom: 0;
+    background: inherit; border-radius: 50%;
+  }
+  /* 왼쪽 봉우리 */
+  #bg .cloud::before { left: 14%; width: 52%; height: 170%; }
+  /* 오른쪽(더 큰) 봉우리 */
+  #bg .cloud::after  { right: 8%; width: 64%; height: 215%; }
   #bg.sky .cloud, #bg.night .cloud { opacity: .9; }
   @keyframes drift {
     from { transform: translateX(-20vw); } to { transform: translateX(120vw); }
@@ -85,8 +97,15 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   #bg.legend .cloud, #bg.legend .star { opacity: 0; }
 
-  /* 이모지 비 */
+  /* 과일·별 비 (전설 모드) */
   #bg .confetti { position: absolute; top: -10%; font-size: 26px; opacity: 0; will-change: transform; }
+  #bg .confetti .conf-i {
+    width: 1em; height: 1em; display: block;
+    stroke: #5d4037; paint-order: stroke;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,.25));
+  }
+  #bg .confetti .conf-i.g { stroke-width: 22; }
+  #bg .confetti .conf-i.p { stroke-width: 10; }
   #bg.legend .confetti { opacity: 1; animation: fall linear infinite; }
   @keyframes fall {
     0%   { transform: translateY(-12vh) rotate(0deg); }
@@ -200,6 +219,24 @@
     font-size: 28px; z-index: 1;
     animation: bounce 0.9s ease-in-out infinite;
   }
+  /* 과일/별 SVG: font-size(=1em)로 크기 구동 → 기존 이모지와 동일 스케일 유지 */
+  .cell .fruit .fruit-i {
+    width: 1em; height: 1em;
+    /* 잉크색 외곽선을 글리프 밑에 깔아 파스텔 보드 위에서 또렷하게 */
+    stroke: #5d4037; paint-order: stroke;
+    filter: drop-shadow(0 1.5px 0 rgba(93, 64, 55, .28));
+  }
+  /* game-icons는 512 박스 → 굵은 stroke-width라야 외곽선이 읽힘.
+     포도·딸기는 잔 패스가 많아 너무 굵으면 뭉개지므로 18u(≈1px)로 절제 */
+  .cell .fruit .fruit-i.g  { stroke-width: 18; }
+  /* phosphor(별)는 256 박스 → 절반 두께로 동일 시각감 */
+  .cell .fruit .fruit-i.p  { stroke-width: 9; }
+  /* 과일별 밝은 톤 단색 — 보드 위에서 색이 뚜렷이 구분되도록 */
+  .fr-apple      { fill: #f4574f; }
+  .fr-strawberry { fill: #ff6f8b; }
+  .fr-cherry     { fill: #e2415f; }
+  .fr-grapes     { fill: #a07bf0; }
+  .fr-orange     { fill: #ffa83c; }
   @keyframes bounce {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.15); }
@@ -285,6 +322,9 @@
     animation: bounce .45s ease-in-out infinite;
     filter: drop-shadow(0 0 9px #ffd54f) drop-shadow(0 0 18px #ffe082);
   }
+  .fr-golden { fill: #ffc24b; }
+  /* 황금 별은 글로우가 그림자 역할 → 바닥 그림자 필터는 끄기 */
+  .cell .fruit.golden .fruit-i { filter: none; }
 
   /* ── 점수 플로팅 텍스트 / 신기록 ── */
   .fx-score { font-weight: 800; font-size: 20px; color: #ef6c00; text-shadow: 0 2px 0 #fff; }
@@ -387,6 +427,31 @@
   #snack .snack-donut { width: 1.25em; height: 1.25em; vertical-align: -0.28em; fill: #c98a5e; }
   /* 고마워요 모달 커피 */
   .thanks-emoji .ki { width: 56px; height: 56px; fill: #a1887f; }
+  /* 고마워요 모달 하트 (마음 표현) */
+  .thanks-card p .heart-i { width: 1em; height: 1em; vertical-align: -0.16em; fill: #f4a6b8; }
+
+  /* HUD 과일 카운터 사과 (점수 별·왕관과 같은 줄) */
+  #hud .hud-apple { width: 1em; height: 1em; vertical-align: -0.14em; fill: #f4574f;
+    filter: drop-shadow(0 1px 0 rgba(93,64,55,.25)); }
+  /* 콤보 배지 불꽃 */
+  #combo .combo-i { width: 0.95em; height: 0.95em; vertical-align: -0.12em; fill: #ff7043; }
+  /* 게임오버 제목 등급 아이콘 (트로피·왕관·불꽃) */
+  #overlay h1 .rank-i { width: 0.9em; height: 0.9em; vertical-align: -0.06em; }
+  #overlay h1 .rank-trophy { fill: #f5b03e; }
+  #overlay h1 .rank-crown  { fill: #f3a93c; }
+  #overlay h1 .rank-fire   { fill: #ff7043; }
+  /* 본문 커피·콤보 불꽃 (메시지 안) */
+  #overlay p .msg-i { width: 1em; height: 1em; vertical-align: -0.16em; }
+  #overlay p .msg-coffee { fill: #a1887f; }
+  #overlay p .msg-fire   { fill: #ff7043; }
+  /* NEW RECORD 반짝이 (연출) */
+  .newrecord .rec-i { width: 0.8em; height: 0.8em; vertical-align: -0.02em; fill: currentColor; }
+  /* 플로팅 점수의 황금 별 */
+  .fx-score .fxs-i { width: 1em; height: 1em; vertical-align: -0.14em; fill: #ffc24b;
+    filter: drop-shadow(0 0 4px #ffe082); }
+  /* 폭죽/먹기 파티클의 별·반짝이 */
+  #fx .p .fxp-i { display: block; width: 100%; height: 100%; fill: #ffe082;
+    filter: drop-shadow(0 0 3px #ffd54f); }
 
   @media (max-width: 480px) {
     :root { --cube: 270px; }
@@ -405,8 +470,8 @@
     });
   </script>
   <div id="bg"></div>
-  <div id="hud">🍎 <span id="fruits-n">0</span><span class="sep">·</span><svg class="ki hud-i" id="hud-star"><use href="#p-star"/></svg> <span id="score">0</span><span class="sep">·</span><svg class="ki hud-i" id="hud-crown"><use href="#p-crown"/></svg> <span id="best">0</span></div>
-  <div id="combo">🔥 x<span id="combo-n">2</span></div>
+  <div id="hud"><svg class="ki hud-apple" aria-label="과일"><use href="#g-apple-seeds"/></svg> <span id="fruits-n">0</span><span class="sep">·</span><svg class="ki hud-i" id="hud-star"><use href="#p-star"/></svg> <span id="score">0</span><span class="sep">·</span><svg class="ki hud-i" id="hud-crown"><use href="#p-crown"/></svg> <span id="best">0</span></div>
+  <div id="combo"><svg class="ki combo-i"><use href="#p-fire"/></svg> x<span id="combo-n">2</span></div>
   <button id="mute" aria-label="소리 켜기/끄기"><svg class="ki" id="mute-icon"><use href="#p-speaker-high"/></svg></button>
   <div id="scene"><div id="cube"></div></div>
   <div id="controls">
@@ -434,9 +499,9 @@
     <div class="thanks-card">
       <div class="thanks-emoji"><svg class="ki" id="thanks-icon"><use href="#p-coffee"/></svg></div>
       <h2>마음만으로도 감동이에요!</h2>
-      <p>송금은 폰에서 열어야 동작하지만,<br>여기까지 눌러주신 것만으로도<br>개발자는 이미 커피 한 잔 마신 기분이에요 💛</p>
+      <p>송금은 폰에서 열어야 동작하지만,<br>여기까지 눌러주신 것만으로도<br>개발자는 이미 커피 한 잔 마신 기분이에요 <svg class="ki heart-i"><use href="#p-heart"/></svg></p>
       <p class="thanks-sub">정 보내고 싶다면 폰으로 접속해서 눌러주세요!</p>
-      <button id="thanks-close">고마워요 😊</button>
+      <button id="thanks-close">고마워요</button>
     </div>
   </div>
 
@@ -701,7 +766,22 @@ if (typeof module !== 'undefined') {
   requestAnimationFrame(camFrame);
 
   // ───────────────────────── 게임 상태 ─────────────────────────
-  const FRUITS = ['🍎', '🍓', '🍒', '🍇', '🍊'];
+  // 과일은 토큰으로 관리(개수·분포는 그대로 5종), 표시만 render에서 SVG로 매핑
+  const FRUITS = ['apple', 'strawberry', 'cherry', 'grapes', 'orange'];
+  // 토큰 → {심볼 id, viewBox 박스(g=512/p=256), fill 클래스}
+  const FRUIT_ICON = {
+    apple:      { href: 'g-apple-seeds', box: 'g', cls: 'fr-apple' },
+    strawberry: { href: 'g-strawberry',  box: 'g', cls: 'fr-strawberry' },
+    cherry:     { href: 'g-cherry',      box: 'g', cls: 'fr-cherry' },
+    grapes:     { href: 'g-grapes',      box: 'g', cls: 'fr-grapes' },
+    orange:     { href: 'g-orange',      box: 'g', cls: 'fr-orange' },
+    golden:     { href: 'p-star',        box: 'p', cls: 'fr-golden' },
+  };
+  // 과일 토큰을 <svg> 마크업으로 (보드 먹이용 — 잉크 외곽선 + 단색)
+  const fruitSvg = (tok) => {
+    const f = FRUIT_ICON[tok] || FRUIT_ICON.apple;
+    return `<svg class="fruit-i ${f.box} ${f.cls}"><use href="#${f.href}"/></svg>`;
+  };
   let snake, dir, normal, foodPos, fruit, score, speed, turnQueue, alive, growing, yumTicks, turnedThisTick, tickCount;
   let fruits, combo, comboDeadline, maxCombo, isGolden;
   let tickTimer = null, goldenTimer = null, legendTimer = null;
@@ -734,7 +814,7 @@ if (typeof module !== 'undefined') {
     foodPos = free[Math.floor(Math.random() * free.length)];
     isGolden = Math.random() < GOLDEN_CHANCE;
     if (isGolden) {
-      fruit = '🌟';
+      fruit = 'golden';
       // 제한시간 내 못 먹으면 일반 과일로 변신
       goldenTimer = setTimeout(() => {
         if (!alive || !isGolden) return;
@@ -762,17 +842,16 @@ if (typeof module !== 'undefined') {
   const bgEl = document.getElementById('bg');
   // 구름·별을 한 번만 생성 (CSS 클래스로 단계마다 표시/숨김)
   (function buildBackdrop() {
-    const clouds = ['☁️', '⛅', '☁️', '🌤️', '☁️'];
-    clouds.forEach((c, i) => {
+    // CSS로 그린 뭉게구름 5개 (크기·높이·속도만 다르게)
+    for (let i = 0; i < 5; i++) {
       const el = document.createElement('div');
       el.className = 'cloud';
-      el.textContent = c;
       el.style.top = `${8 + i * 16}%`;
       el.style.animationDuration = `${18 + i * 7}s`;
       el.style.animationDelay = `${-i * 5}s`;
-      el.style.fontSize = `${40 + (i % 3) * 22}px`;
+      el.style.width = `${64 + (i % 3) * 34}px`; // 인라인 width로 구름 크기 (height는 비율)
       bgEl.appendChild(el);
-    });
+    }
     for (let i = 0; i < 60; i++) {
       const s = document.createElement('div');
       s.className = 'star';
@@ -781,12 +860,18 @@ if (typeof module !== 'undefined') {
       s.style.animationDelay = `${(i % 10) * 0.2}s`;
       bgEl.appendChild(s);
     }
-    // 전설 모드 이모지 비
-    const emojis = ['🎉', '⭐', '🍎', '🏆', '🎊', '🍓', '✨'];
+    // 전설 모드 과일·별 비 (보드와 같은 과일 SVG + 별/반짝이 재사용)
+    const confSvg = [
+      fruitSvg('apple'), fruitSvg('strawberry'), fruitSvg('cherry'),
+      fruitSvg('grapes'), fruitSvg('orange'),
+      '<svg class="conf-i p fr-golden"><use href="#p-star"/></svg>',
+      '<svg class="conf-i p fr-golden"><use href="#p-sparkle"/></svg>',
+    ];
     for (let i = 0; i < 24; i++) {
       const c = document.createElement('div');
       c.className = 'confetti';
-      c.textContent = emojis[i % emojis.length];
+      // fruitSvg는 .fruit-i 클래스를 쓰므로 .conf-i 로 치환해 배경용 스타일 적용
+      c.innerHTML = confSvg[i % confSvg.length].replace('fruit-i', 'conf-i');
       c.style.left = `${(i * 41) % 100}%`;
       c.style.animationDuration = `${3 + (i % 5)}s`;
       c.style.animationDelay = `${-(i % 8) * 0.6}s`;
@@ -877,32 +962,37 @@ if (typeof module !== 'undefined') {
     tickTimer = setTimeout(loop, speed);
   }
 
+  // 게임오버 제목/본문용 SVG 헬퍼 (이모지 대신 game-kit 심볼)
+  const rankIcon = (id, cls) => `<svg class="ki rank-i ${cls}"><use href="#${id}"/></svg>`;
+  const msgIcon  = (id, cls) => `<svg class="ki msg-i ${cls}"><use href="#${id}"/></svg>`;
+
   // 과일 개수 구간별 칭찬 멘트 (점수는 콤보 보너스 포함이라 실력 기준은 과일 개수)
+  // 매핑되는 등급 아이콘만 SVG로, 매핑 없는 단계(🍀🌱🥚)는 텍스트만 사용
   function deathMessage() {
     const head = `과일 <b>${fruits}개</b> · <b>${score}점</b>!`;
     if (score >= 150) return {
-      t: '🏆 전설의 큐브 지배자!',
-      m: `<b>${score}점</b>(과일 ${fruits}개)?! 이건 개발자도 못 깬 기록이에요.<br>너무 고수라서 개발자가 커피 한 잔 사겠습니다 ☕<br><a href="mailto:junhee@finda.co.kr">junhee@finda.co.kr</a> 로 연락 주세요!`,
+      t: `${rankIcon('p-trophy', 'rank-trophy')} 전설의 큐브 지배자!`,
+      m: `<b>${score}점</b>(과일 ${fruits}개)?! 이건 개발자도 못 깬 기록이에요.<br>너무 고수라서 개발자가 커피 한 잔 사겠습니다 ${msgIcon('p-coffee', 'msg-coffee')}<br><a href="mailto:junhee@finda.co.kr">junhee@finda.co.kr</a> 로 연락 주세요!`,
     };
     if (fruits >= 26) return {
-      t: '👑 큐브 마스터 직전!',
+      t: `${rankIcon('p-crown', 'rank-crown')} 큐브 마스터 직전!`,
       m: `${head} 무지개 뱀까지 보셨군요.<br>150점을 찍으면 좋은 일이 생긴다는 소문이...`,
     };
     if (fruits >= 16) return {
-      t: '🔥 고수의 향기!',
+      t: `${rankIcon('p-fire', 'rank-fire')} 고수의 향기!`,
       m: `${head} 모서리를 넘나드는 솜씨가<br>예사롭지 않은데요?`,
     };
     if (fruits >= 6) return {
-      t: '🍀 제법인데요?',
+      t: '제법인데요?',
       m: `${head} 큐브가 슬슬<br>만만해 보이기 시작했죠?`,
     };
     if (fruits >= 1) return {
-      t: '🌱 냠냠 입문 완료!',
+      t: '냠냠 입문 완료!',
       m: `${head} 몸풀기는 끝.<br>이제 진짜 실력을 보여줄 시간이에요`,
     };
     return {
-      t: '🥚 음...',
-      m: `과일은 장식이 아니에요! 🥲<br>딱 한 입만 먹어봐요`,
+      t: '음...',
+      m: `과일은 장식이 아니에요!<br>딱 한 입만 먹어봐요`,
     };
   }
 
@@ -922,11 +1012,12 @@ if (typeof module !== 'undefined') {
     }
     const ov = document.getElementById('overlay');
     const { t, m } = deathMessage();
-    ov.querySelector('h1').textContent = t;
+    ov.querySelector('h1').innerHTML = t; // 제목에 등급 SVG가 들어가므로 innerHTML
+    const recSpark = '<svg class="ki rec-i"><use href="#p-sparkle"/></svg>';
     ov.querySelector('p').innerHTML =
-      (isRecord ? '<span class="newrecord">🎉 NEW RECORD! 🎉</span><br>' : '') +
+      (isRecord ? `<span class="newrecord">${recSpark} NEW RECORD! ${recSpark}</span><br>` : '') +
       m +
-      (maxCombo >= 2 ? `<br><span class="sub">최대 콤보 🔥x${maxCombo} · 과일 ${fruits}개</span>` : '');
+      (maxCombo >= 2 ? `<br><span class="sub">최대 콤보 ${msgIcon('p-fire', 'msg-fire')}x${maxCombo} · 과일 ${fruits}개</span>` : '');
     ov.querySelector('button').textContent = '다시 하기!';
     ov.classList.add('gameover'); // 간식 사주기 노출
     setTimeout(() => ov.classList.remove('hidden'), 700);
@@ -999,7 +1090,7 @@ if (typeof module !== 'undefined') {
       if (fruitEl) fruitEl.remove();
       const span = document.createElement('span');
       span.className = 'fruit' + (isGolden ? ' golden' : '');
-      span.textContent = fruit;
+      span.innerHTML = fruitSvg(fruit); // 이모지 대신 과일/별 SVG
       cellEl(cellOf(foodPos)).appendChild(span);
       fruitEl = span;
       fruitSig = sig;
@@ -1094,8 +1185,10 @@ if (typeof module !== 'undefined') {
       const el = document.createElement('div');
       el.className = 'p';
       if (Math.random() < emojiRatio) {
-        el.textContent = pick(['✨', '⭐', '💫']);
-        el.style.fontSize = `${10 + Math.random() * 8}px`;
+        // 이모지 대신 별/반짝이 SVG (div 크기로 스케일)
+        const sz = 12 + Math.random() * 10;
+        el.style.width = el.style.height = `${sz}px`;
+        el.innerHTML = `<svg class="fxp-i"><use href="#${pick(['p-star', 'p-sparkle'])}"/></svg>`;
       } else {
         const s = sizeMin + Math.random() * (sizeMax - sizeMin);
         el.style.width = el.style.height = `${s}px`;
@@ -1138,11 +1231,11 @@ if (typeof module !== 'undefined') {
     SFX.pop();
   }
 
-  // 위로 떠오르는 획득 점수 텍스트
-  function fxScore(x, y, text, big) {
+  // 위로 떠오르는 획득 점수 텍스트 (황금 별 SVG가 들어갈 수 있어 innerHTML)
+  function fxScore(x, y, html, big) {
     const el = document.createElement('div');
     el.className = 'p fx-score' + (big ? ' big' : '');
-    el.textContent = text;
+    el.innerHTML = html;
     el.style.left = `${x}px`;
     el.style.top = `${y}px`;
     fxLayer.appendChild(el);
@@ -1159,7 +1252,7 @@ if (typeof module !== 'undefined') {
     if (score >= 26) { hud.classList.remove('pop'); void hud.offsetWidth; hud.classList.add('pop'); }
     const sp = headScreenPos();
     if (sp && (gained > 1 || wasGolden)) {
-      fxScore(sp.x, sp.y - 24, (wasGolden ? '🌟' : '') + `+${gained}`, wasGolden || gained >= 6);
+      fxScore(sp.x, sp.y - 24, (wasGolden ? '<svg class="ki fxs-i"><use href="#p-star"/></svg>' : '') + `+${gained}`, wasGolden || gained >= 6);
     }
     if (wasGolden && sp) burst(sp.x, sp.y, { count: 14, dist: 55, sizeMin: 4, sizeMax: 8, duration: 600, emojiRatio: 0.5 });
     if (score <= 5) return;
@@ -1273,8 +1366,17 @@ if (typeof module !== 'undefined') {
   // 첫 화면: 큐브가 보이도록 초기 상태만 렌더
   reset();
 
-  // PWA 서비스 워커 등록 (http/https에서만 — 파일로 직접 열면 건너뜀)
-  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  // PWA 서비스 워커 등록 (localhost 개발 중엔 캐시 꼬임 방지를 위해 미등록 — gateway 패턴)
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http') && !/^(localhost|127\.)/.test(location.hostname)) {
+    // 새 SW가 컨트롤을 잡으면(=배포 업데이트) 시작 10초 이내에만 한 번 자동 새로고침
+    // → 기존 유저도 한 번 접속만에 새 버전 (게임 중 리로드 방지 가드)
+    const hadController = !!navigator.serviceWorker.controller;
+    let swRefreshed = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || swRefreshed || performance.now() > 10000) return;
+      swRefreshed = true;
+      location.reload();
+    });
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
 
