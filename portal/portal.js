@@ -67,7 +67,62 @@
         }),
         keepalive: true
       }).catch(function () {});
-    }
+    },
+    // 후원 모달 열기 (게임/포털 어디서든 호출. 링크는 /api/support = 서버 .env)
+    openSupport: function () { gpOpenSupport(); }
+  };
+
+  // ===== 후원(토스/카카오뱅크) — 포털 공용. 링크 없으면 아무것도 안 뜸 =====
+  var gpSupportCache = null;
+  function gpEsc(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+  function gpFetchSupport() {
+    if (gpSupportCache) return Promise.resolve(gpSupportCache);
+    return fetch('/api/support').then(function (r) { return r.ok ? r.json() : {}; })
+      .then(function (d) { gpSupportCache = d || {}; return gpSupportCache; })
+      .catch(function () { return {}; });
+  }
+  function gpEnsureSupportStyle() {
+    if (document.getElementById('gp-support-style')) return;
+    var st = document.createElement('style');
+    st.id = 'gp-support-style';
+    st.textContent =
+      '.gp-sup-ov{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;' +
+      'background:rgba(0,0,0,.5);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);padding:24px;' +
+      'font-family:"Pretendard Variable",-apple-system,"Apple SD Gothic Neo",sans-serif;}' +
+      '.gp-sup-card{background:#fff;color:#222;border-radius:24px;padding:26px 22px;max-width:320px;width:100%;' +
+      'text-align:center;position:relative;box-shadow:0 20px 50px rgba(0,0,0,.3);}' +
+      '.gp-sup-x{position:absolute;top:12px;right:14px;border:none;background:none;font-size:24px;line-height:1;' +
+      'color:#aaa;cursor:pointer;}' +
+      '.gp-sup-h{font-size:20px;font-weight:900;}' +
+      '.gp-sup-desc{font-size:13px;color:#888;line-height:1.5;margin:8px 0 18px;}' +
+      '.gp-sup-btn{display:block;width:100%;box-sizing:border-box;padding:14px;border-radius:14px;margin-top:10px;' +
+      'font-size:15px;font-weight:800;text-decoration:none;}' +
+      '.gp-sup-btn.toss{background:#2c66f6;color:#fff;}' +
+      '.gp-sup-btn.kb{background:#fee500;color:#3c1e1e;}' +
+      '.gp-sup-soon{font-size:14px;color:#888;padding:8px 0 4px;}';
+    document.head.appendChild(st);
+  }
+  function gpOpenSupport() {
+    gpFetchSupport().then(function (links) {
+      gpEnsureSupportStyle();
+      var rows = '';
+      if (links.toss) rows += '<a class="gp-sup-btn toss" href="' + gpEsc(links.toss) + '" target="_blank" rel="noopener">토스로 후원</a>';
+      if (links.kakaobank) rows += '<a class="gp-sup-btn kb" href="' + gpEsc(links.kakaobank) + '" target="_blank" rel="noopener">카카오뱅크로 후원</a>';
+      if (!rows) rows = '<p class="gp-sup-soon">후원 링크 준비 중이에요. 곧 열릴게요!</p>';
+      var ov = document.createElement('div');
+      ov.className = 'gp-sup-ov';
+      ov.innerHTML = '<div class="gp-sup-card"><button class="gp-sup-x" aria-label="닫기">&times;</button>' +
+        '<div class="gp-sup-h">♡ 후원하기</div>' +
+        '<p class="gp-sup-desc">광고 없이 즐기셨다면, 다음 게임 만들 힘이 됩니다.</p>' + rows + '</div>';
+      document.body.appendChild(ov);
+      function close() { if (ov.parentNode) ov.parentNode.removeChild(ov); }
+      ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
+      ov.querySelector('.gp-sup-x').addEventListener('click', close);
+    });
+  }
+  // 노출 헬퍼: 링크가 있을 때만 콜백(true) — 게임이 후원 버튼 보일지 결정
+  window.GamePortal.supportAvailable = function (cb) {
+    gpFetchSupport().then(function (links) { cb(!!(links.toss || links.kakaobank)); });
   };
 
   // ===== 상태 동기화 manifest (서버 주입, 로그인 시에만 동작) =====

@@ -42,10 +42,10 @@
     {
       "id": "pang",
       "title": "과일 팡팡",
-      "tagline": "같은 과일 3개를 톡! 60초 안에 최대한 많이 터뜨려요.",
-      "unit": "점",
+      "tagline": "과일을 모아 목표 달성! 레벨이 오를수록 짜릿한 매치 퍼즐.",
+      "unit": "레벨",
       "score_key": "pangBest",
-      "score_metric": "score",
+      "score_metric": "level",
       "state_keys": [
         { "key": "pangBest", "merge": "max" },
         { "key": "pangMuted", "merge": "lww" }

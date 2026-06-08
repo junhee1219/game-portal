@@ -19,5 +19,10 @@ class Settings(BaseSettings):
     # 비어 있으면 auth_session이 임시 랜덤 키를 생성하고 경고 로그를 남긴다.
     secret_key: str = ""
 
+    # 후원 링크 (토스/카카오뱅크). 개인 금융 식별자라 서버 .env에만 두고 커밋 금지.
+    # 둘 다 비어 있으면 후원 버튼/모달이 아예 노출되지 않는다.
+    support_toss_url: str = ""
+    support_kakaobank_url: str = ""
+
 
 settings = Settings()

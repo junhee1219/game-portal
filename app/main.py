@@ -16,6 +16,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
 from app import database, games
+from app.config import settings
 from app.database import init_db
 from app.routers.api import router as api_router
 from app.routers.auth import router as auth_router
@@ -147,6 +148,17 @@ async def portal_font(name: str):
         media_type="font/woff2",
         headers={"Cache-Control": "public, max-age=31536000, immutable"},
     )
+
+
+@app.get("/api/support")
+async def support_links():
+    """후원 링크(토스/카카오뱅크). 서버 .env에 설정된 것만 노출. 둘 다 비면 빈 객체 → 버튼 숨김."""
+    out = {}
+    if settings.support_toss_url:
+        out["toss"] = settings.support_toss_url
+    if settings.support_kakaobank_url:
+        out["kakaobank"] = settings.support_kakaobank_url
+    return out
 
 
 @app.get("/manifest.webmanifest")

@@ -12,12 +12,21 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>과일 팡팡</title>
 <style>
+  @font-face {
+    font-family: "Pretendard Variable"; font-weight: 45 920; font-style: normal; font-display: swap;
+    src: url("/fonts/PretendardVariable.woff2") format("woff2-variations");
+  }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  :root { --ink: #6b4a32; --ink-dim: #b08c72; --accent: #ff7a59; }
+  :root {
+    --ink: #6b4a32; --ink-dim: #b08c72; --accent: #ff7a59;
+    --fs-1: clamp(28px, 8vw, 40px);  /* display */
+    --fs-2: 16px;                     /* body / 숫자 */
+    --fs-3: 13px;                     /* 라벨 / caption */
+  }
   html, body { height: 100%; overflow: hidden; }
   body {
     background: linear-gradient(170deg, #fff5e9 0%, #ffe6cf 100%);
-    font-family: -apple-system, "Segoe UI", "Apple SD Gothic Neo", sans-serif;
+    font-family: "Pretendard Variable", -apple-system, "Apple SD Gothic Neo", sans-serif;
     color: var(--ink);
     user-select: none; -webkit-user-select: none;
     touch-action: manipulation; -webkit-touch-callout: none;
@@ -25,17 +34,26 @@
     padding-top: env(safe-area-inset-top);
   }
 
-  /* ── 상단 HUD ── */
+  /* ── HUD ── */
   #hud {
-    width: 100%; max-width: 480px;
-    padding: 14px 18px 6px; display: flex; align-items: flex-end; gap: 14px;
+    width: 100%; max-width: 480px; padding: 12px 18px 4px;
+    display: flex; align-items: center; gap: 14px;
   }
-  .stat { display: flex; flex-direction: column; line-height: 1.05; }
-  .stat .lbl { font-size: 11px; font-weight: 800; letter-spacing: .04em; color: var(--ink-dim); }
-  #score { font-size: 30px; font-weight: 900; display: inline-block; transform-origin: left center; }
-  .stat.best { margin-left: auto; align-items: flex-end; }
-  .stat.best .lbl { display: flex; align-items: center; gap: 3px; }
-  #best { font-size: 18px; font-weight: 800; }
+  .stat { display: flex; flex-direction: column; line-height: 1.1; }
+  .stat .lbl { font-size: var(--fs-3); font-weight: 800; color: var(--ink-dim); }
+  .stat .val { font-size: var(--fs-2); font-weight: 900; }
+  #level { font-size: var(--fs-1); }
+  .stat.score { margin-left: 4px; }
+  #score { display: inline-block; transform-origin: left center; }
+  .moves-pill {
+    margin-left: auto; display: flex; flex-direction: column; align-items: center;
+    background: #fff; border-radius: 16px; padding: 6px 16px;
+    box-shadow: 0 3px 0 rgba(107,74,50,.12);
+  }
+  .moves-pill .lbl { font-size: var(--fs-3); font-weight: 800; color: var(--ink-dim); }
+  #moves { font-size: var(--fs-1); font-weight: 900; line-height: 1; }
+  .moves-pill.low #moves { color: var(--accent); animation: pulse .6s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
   #mute {
     width: 40px; height: 40px; flex: none; border-radius: 50%;
     background: #fff; border: 1px solid rgba(107,74,50,.14); color: var(--ink);
@@ -45,27 +63,22 @@
   #mute:active { transform: translateY(1px); box-shadow: none; }
   .ki { width: 20px; height: 20px; fill: currentColor; }
 
-  /* ── 타임바 ── */
-  #timebar {
-    width: 100%; max-width: 480px; padding: 4px 18px 12px;
+  /* ── 목표 칩 ── */
+  #goals { display: flex; gap: 8px; padding: 8px 18px 10px; flex-wrap: wrap; justify-content: center; }
+  .goal {
+    display: flex; align-items: center; gap: 5px;
+    background: #fff; border-radius: 99px; padding: 5px 12px 5px 8px;
+    box-shadow: 0 2px 0 rgba(107,74,50,.1);
+    font-size: var(--fs-2); font-weight: 900;
   }
-  #timetrack { height: 10px; border-radius: 99px; background: rgba(107,74,50,.12); overflow: hidden; }
-  #timefill {
-    height: 100%; width: 100%; border-radius: 99px;
-    background: linear-gradient(90deg, #ffd166, #ff7a59);
-    transition: width .1s linear;
-  }
-  #timebar.low #timefill { background: linear-gradient(90deg, #ff7a59, #ef4444); animation: pulse .6s ease-in-out infinite; }
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
+  .goal .gfrt { width: 22px; height: 22px; fill: var(--fc); }
+  .goal.done { opacity: .45; }
+  .goal.done span { color: #2ec4b6; }
 
   /* ── 보드 ── */
   #board { position: relative; margin: 2px auto 0; }
   #fx { position: absolute; inset: 0; pointer-events: none; z-index: 20; overflow: visible; }
-  .tile {
-    position: absolute; top: 0; left: 0;
-    transition: transform .18s cubic-bezier(.34,1.4,.5,1);
-    will-change: transform;
-  }
+  .tile { position: absolute; top: 0; left: 0; transition: transform .18s cubic-bezier(.34,1.4,.5,1); will-change: transform; }
   .ti {
     width: 100%; height: 100%; border-radius: 24%;
     background: #fff; box-shadow: 0 3px 0 rgba(107,74,50,.13), inset 0 0 0 1px rgba(107,74,50,.05);
@@ -76,88 +89,42 @@
   .tile.sel .ti { transform: scale(1.13); box-shadow: 0 0 0 3px var(--fc), 0 4px 8px rgba(107,74,50,.25); }
   .tile.pop { z-index: 5; }
   .tile.pop .ti { animation: pop .28s ease forwards; }
-  @keyframes pop {
-    0% { transform: scale(1); }
-    38% { transform: scale(1.32); }
-    100% { transform: scale(0); opacity: 0; }
-  }
+  @keyframes pop { 0% { transform: scale(1); } 38% { transform: scale(1.32); } 100% { transform: scale(0); opacity: 0; } }
   #board.shake { animation: shake .3s ease; }
-  @keyframes shake {
-    0%,100% { transform: translateX(0); } 20% { transform: translateX(-5px); }
-    40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(3px); }
-  }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-5px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(3px); } }
 
-  /* ── 손맛 파티클/팝업 ── */
-  .spark {
-    position: absolute; width: 9px; height: 9px; border-radius: 50%;
-    background: var(--fc); transform: translate(-50%,-50%);
-    animation: sparkfly .48s ease-out forwards;
-  }
-  @keyframes sparkfly {
-    0% { opacity: 1; transform: translate(-50%,-50%) scale(1); }
-    100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(.2); }
-  }
-  .gain {
-    position: absolute; transform: translate(-50%,-50%);
-    font-size: 18px; font-weight: 900; color: #fff;
-    text-shadow: 0 1px 0 rgba(0,0,0,.25), 0 0 6px rgba(255,160,90,.6);
-    animation: gainup .72s ease-out forwards;
-  }
-  @keyframes gainup {
-    0% { opacity: 0; transform: translate(-50%,-50%) scale(.6); }
-    25% { opacity: 1; transform: translate(-50%,-90%) scale(1.1); }
-    100% { opacity: 0; transform: translate(-50%,-170%) scale(1); }
-  }
-  .combo {
-    position: absolute; left: 50%; top: 40%; transform: translate(-50%,-50%);
-    font-size: 32px; font-weight: 900; color: var(--accent);
-    text-shadow: 0 2px 0 #fff, 0 4px 10px rgba(255,122,89,.4); white-space: nowrap;
-    animation: comboPop .78s ease-out forwards;
-  }
-  @keyframes comboPop {
-    0% { opacity: 0; transform: translate(-50%,-50%) scale(.5) rotate(-7deg); }
-    30% { opacity: 1; transform: translate(-50%,-50%) scale(1.18) rotate(3deg); }
-    72% { opacity: 1; transform: translate(-50%,-60%) scale(1) rotate(0); }
-    100% { opacity: 0; transform: translate(-50%,-95%) scale(1); }
-  }
+  /* ── 손맛 ── */
+  .spark { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: var(--fc); transform: translate(-50%,-50%); animation: sparkfly .48s ease-out forwards; }
+  @keyframes sparkfly { 0% { opacity: 1; transform: translate(-50%,-50%) scale(1); } 100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(.2); } }
+  .gain { position: absolute; transform: translate(-50%,-50%); font-size: var(--fs-2); font-weight: 900; color: #fff; text-shadow: 0 1px 0 rgba(0,0,0,.25), 0 0 6px rgba(255,160,90,.6); animation: gainup .72s ease-out forwards; }
+  @keyframes gainup { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.6); } 25% { opacity: 1; transform: translate(-50%,-90%) scale(1.1); } 100% { opacity: 0; transform: translate(-50%,-170%) scale(1); } }
+  .combo { position: absolute; left: 50%; top: 40%; transform: translate(-50%,-50%); font-size: var(--fs-1); font-weight: 900; color: var(--accent); text-shadow: 0 2px 0 #fff, 0 4px 10px rgba(255,122,89,.4); white-space: nowrap; animation: comboPop .78s ease-out forwards; }
+  @keyframes comboPop { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.5) rotate(-7deg); } 30% { opacity: 1; transform: translate(-50%,-50%) scale(1.18) rotate(3deg); } 72% { opacity: 1; transform: translate(-50%,-60%) scale(1) rotate(0); } 100% { opacity: 0; transform: translate(-50%,-95%) scale(1); } }
   #score.bump { animation: bump .25s ease; }
   @keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.28); } 100% { transform: scale(1); } }
 
   /* ── 오버레이 ── */
-  .ov {
-    position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
-    background: rgba(255,238,220,.78); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-    padding: 24px;
-  }
+  .ov { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(255,238,220,.8); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 24px; }
   .ov.hidden { display: none; }
-  .card {
-    background: #fff; border-radius: 28px; padding: 32px 28px 28px; text-align: center;
-    width: 100%; max-width: 320px; box-shadow: 0 12px 0 rgba(107,74,50,.1), 0 20px 40px rgba(107,74,50,.18);
-  }
-  .card h1 { font-size: 34px; font-weight: 900; letter-spacing: -.02em; }
+  .card { background: #fff; border-radius: 28px; padding: 30px 28px 26px; text-align: center; width: 100%; max-width: 320px; box-shadow: 0 12px 0 rgba(107,74,50,.1), 0 20px 40px rgba(107,74,50,.18); }
+  .card h1 { font-size: var(--fs-1); font-weight: 900; letter-spacing: -.02em; }
   .card .row-fruit { display: flex; justify-content: center; gap: 6px; margin: 14px 0 6px; }
   .card .row-fruit svg { width: 34px; height: 34px; }
-  .card p { font-size: 14.5px; color: var(--ink-dim); line-height: 1.5; margin-top: 10px; }
-  .big-score { font-size: 52px; font-weight: 900; margin: 6px 0 2px; }
-  .new-badge {
-    display: inline-block; background: var(--accent); color: #fff; font-weight: 800; font-size: 13px;
-    padding: 4px 12px; border-radius: 99px; margin: 6px 0 2px;
-  }
-  .over-best { font-size: 14px; color: var(--ink-dim); font-weight: 700; }
-  .btn {
-    margin-top: 20px; width: 100%; border: none; cursor: pointer; font-family: inherit;
-    background: var(--accent); color: #fff; font-size: 19px; font-weight: 900;
-    padding: 16px; border-radius: 18px; box-shadow: 0 5px 0 #d8553a;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-  }
+  .card p { font-size: var(--fs-3); color: var(--ink-dim); line-height: 1.6; margin-top: 10px; }
+  .big { font-size: var(--fs-1); font-weight: 900; margin: 4px 0 2px; }
+  .label-sm { font-size: var(--fs-3); color: var(--ink-dim); font-weight: 700; }
+  .new-badge { display: inline-block; background: var(--accent); color: #fff; font-weight: 800; font-size: var(--fs-3); padding: 4px 12px; border-radius: 99px; margin: 6px 0; }
+  .btn { margin-top: 18px; width: 100%; border: none; cursor: pointer; font-family: inherit; background: var(--accent); color: #fff; font-size: var(--fs-2); font-weight: 900; padding: 16px; border-radius: 18px; box-shadow: 0 5px 0 #d8553a; display: flex; align-items: center; justify-content: center; gap: 8px; }
   .btn:active { transform: translateY(4px); box-shadow: none; }
   .btn .ki { width: 22px; height: 22px; }
-  .k-credit { margin-top: 16px; font-size: 11px; color: var(--ink-dim); }
+  .btn-ghost { margin-top: 10px; background: none; box-shadow: none; color: var(--ink-dim); font-weight: 700; font-size: var(--fs-3); padding: 8px; }
+  .btn-ghost:active { transform: none; }
+  .k-credit { margin-top: 14px; font-size: var(--fs-3); color: var(--ink-dim); }
   .k-credit a { color: var(--ink-dim); }
 </style>
 </head>
 <body>
-  <!-- game-kit 2층 아이콘 스프라이트 (쓸 심볼만 인라인) -->
+  <!-- game-kit 2층 아이콘 스프라이트 -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="g-cherry" viewBox="0 0 512 512"><path d="M278.814 35.137c-3.87 29.372 2.21 62.917 23.563 91.277 24.7 32.807 70.077 59.506 146.49 64.467-10.864-53.306-31.943-84.387-60.87-107.415-23.07-18.367-51.784-31.734-84.02-45.96 29.838 36.785 60.63 73.392 105.382 92.694l-7.13 16.527c-55.713-24.03-90.292-70.698-123.416-111.59zM259.2 46.79c-42.613 88.792-88.927 175.71-147.975 257.08-1.967-1.61-3.77-3.225-5.454-4.725-4.98-4.436-9.11-7.99-15.42-10.407-2.338-.896-4.675-1.33-7.02-1.326-7.035.01-14.15 3.948-21.65 11.11-10 9.553-18.946 24.412-23.893 37.62-14.318 38.227 4.955 80.574 43.186 94.89 38.23 14.32 80.582-4.952 94.9-43.178 4.94-13.187 8.024-30.42 6.8-44.243-.61-6.91-2.283-12.897-4.786-17.208-2.503-4.31-5.532-7.033-10.21-8.627-4.466-1.52-10.517-1.707-17.765-1.85-6.83-.133-14.742-.297-22.97-3.064 53.342-73.767 96.236-151.695 135.23-230.99-7.14 56.593-14.18 114.543-29.91 170.29-7.03-.83-12.847-3.195-17.887-5.144-6.222-2.407-11.337-4.285-18.094-4.336-10.013-.077-17.4 6.766-23.415 19.216-5.06 10.48-8.094 24.21-8.93 36.708 3.11.388 6.3 1.027 9.544 2.132 8.872 3.023 15.68 9.234 19.973 16.627 4.293 7.394 6.374 15.88 7.15 24.662.775 8.75.267 17.862-1.156 26.727 11.08 6.646 24.062 10.47 37.967 10.47 40.825 0 73.725-32.898 73.725-73.718 0-14.08-3.156-31.3-9.15-43.817-2.997-6.257-6.663-11.276-10.52-14.435-3.856-3.16-7.648-4.648-12.59-4.5-4.713.142-10.445 2.09-17.282 4.498-3.142 1.107-6.54 2.286-10.188 3.25 11.84-43.77 18.6-88.247 24.276-131.803C263.302 95.443 258.402 70.4 259.2 46.79zm46.732 110.605c1.617 5.452 3.26 10.96 4.945 16.554 20.44 67.845 45.324 144.313 68.207 195.255-4.537.18-8.715-.204-12.46-.52-6.65-.564-12.083-.93-18.583.917-9.63 2.738-14.8 11.38-17.075 25.017-2.275 13.638-.524 30.894 3.437 44.43 11.464 39.178 52.28 61.515 91.463 50.052 39.182-11.464 61.52-52.276 50.057-91.454-3.955-13.514-11.82-29.155-21.086-39.484-4.634-5.164-9.564-8.953-14.152-10.902-2.295-.975-4.456-1.554-6.63-1.698-2.177-.143-4.368.15-6.718.915-4.485 1.458-9.44 4.937-15.324 9.168-4.337 3.118-9.218 6.61-15.076 9.29-21.51-47.232-46.358-122.123-66.762-189.375-9.007-5.556-17.075-11.646-24.242-18.168z"/></symbol>
 <symbol id="g-strawberry" viewBox="0 0 512 512"><path d="M365.1 30.76c-16.7 3.83-35.9 36.61-47.6 50.9 8.2 3.7 17.3 3.8 26.9 3.6 4.7-7.83 49.9-54.37 20.7-54.5zm-264.3 64.9c12.1 7.44 28.8 8.84 40.6 8.94 27.2.2 62.9-6.14 99.9-17.24l8.6 15.34c-20.7 18.6-25.7 33.6-25.7 44-.1 10.4 5.9 17.6 7.3 18.6 10.5 7.7 24.9 7.2 42.7-.1 17.9-7.2 37.7-21.1 55.5-36.7l9.2-8.2 5 11.3c12.8 29.1 25.3 55.5 40.5 72.6 13 14.7 27.1 22.9 47.7 22.2-8.9-27.4-14-47.6-21.5-64.2-8.5-18.8-20-34.4-45.9-55.9-3.2-2.6-9.5-3.1-19.4-3-26.5-.2-45.2-5.6-63.4-25.14-5.8-6.3-10.2-11.9-20.7-19.8-57.3 7.28-114 23.84-160.4 37.3zm116.8 16.74c-19.3 4.7-37.9 7.8-55 9.3-1.3 6.9-8 17.9-14 16.7-4.4-1.2-6.5-8-5.2-15.8-9.8-.2-20.1-.8-28.5-2.5-15.26 15.7-19.51 38-23.31 56.7 8.1-1.4 9.11 12.8 7.76 18.4-2.34 8.7-8.08 14.7-12.99 13.8-5.49 44-5.81 93.1-6.06 138.7-.29 54.3-4.75 99.6 27 129.2 85.7 24 196.2-55.3 262-122.3-2.4.8-4.5.6-6.1-.4-4.3-2.9-3.6-11.4 1.5-19 4.1-4.7 10.8-12.4 17-8.8 3.2 2.2 3.7 7.6 1.3 13.8 23.4-25.8 39-48.2 42.1-60 2.1-12.5 2.4-24.5 1.5-36-1.3 0-2.5-.1-3.7-.2-.2 3-1.2 6.5-2.9 9.8-4.2 8.3-11.3 13-15.8 10.7-4.6-2.3-5-10.8-.8-19.1.9-1.8 2-3.5 3.2-4.9-8.8-3-16.8-7.5-23.9-13.2 1.2 4-.2 10-3.9 15.6-5.1 7.7-12.8 11.6-17 8.7-4.3-2.8-3.6-11.3 1.5-19 4-4.6 8.8-9.6 14.4-9.6-2.4-2.2-4.6-4.4-6.8-6.9-12.8-14.4-22.9-32.8-32.3-52.8-2.8 3.7-6.2 5.7-9.2 4.9-3.6-1-5.7-5.8-5.6-11.8C310 167 295.5 176 281 181.9c-2.7 5.8-7.6 14.3-13.2 13.1-2.7-.8-4.6-3.6-5.3-7.6-14.9 2.9-29.5 1.3-41.6-7.5-7.1-5.1-13.6-15-14.6-29.2-2.8 4.3-6.5 6.7-9.8 5.8-5-1.3-7-9.6-4.7-18.5 2.2-7.9 7.1-13.7 11.8-13.9 2.8 0 5 2.5 5.9 4.4 1.8-5.2 4.5-10.5 8.1-16.1zm-50.1 34.1c4.9 1.4 7 9.7 4.6 18.5-2.4 8.9-8.3 15.1-13.3 13.7-5-1.3-7-9.6-4.6-18.5 2.7-6.1 6.6-14.8 13.3-13.7zm-35.4 4.3c4.9 1.4 7 9.7 4.6 18.6-2.4 8.9-8.3 15-13.3 13.6-5-1.3-7-9.6-4.6-18.5 2.8-6.2 6.6-14.6 13.3-13.7zm188.1 14c5 1.3 7 9.6 4.6 18.5-2.3 8.9-8.3 15-13.3 13.7-4.9-1.4-7.6-9.9-4.6-18.6 2.1-6.3 6.7-14.8 13.3-13.6zm-135.1 18.8c5 1.4 7.1 9.7 4.7 18.6-2.4 8.9-8.4 15-13.4 13.6-4.9-1.3-7.6-9.8-4.6-18.5 2.1-6.3 6.7-14.6 13.3-13.7zm44.3 9.4c4.9 1.3 7 9.6 4.6 18.5-2.4 8.9-8.4 15-13.3 13.7-5-1.4-7.6-9.8-4.7-18.5 2.2-6.4 6.8-14.8 13.4-13.7zm67.3 9.7c5 1.3 7.1 9.6 4.7 18.5-2.4 8.9-8.4 15.1-13.4 13.7-4.9-1.3-7-9.6-4.6-18.5 2.7-6.1 6.7-14.8 13.3-13.7zm39.4 1.8c5 1.3 7 9.6 4.6 18.5-2.4 8.9-8.3 15-13.3 13.7-4.9-1.3-7-9.6-4.6-18.5 2.7-6.2 6.6-14.8 13.3-13.7zm-197.7 3c5 1.3 7.1 9.6 4.7 18.5-2.4 8.9-8.4 15-13.3 13.7-5-1.4-7.1-9.6-4.7-18.5 2.6-6 6.8-14.9 13.3-13.7zm121.2 18.8c5 1.4 7.1 9.7 4.7 18.6-2.4 8.9-8.4 15-13.4 13.7-4.9-1.4-7-9.7-4.6-18.6 2.7-6.1 6.7-14.6 13.3-13.7zm-157.9 14.9c4.9 1.4 7 9.7 4.6 18.6-2.4 8.9-8.35 15-13.31 13.7-4.97-1.4-7.05-9.7-4.66-18.6 2.77-6.2 6.69-14.6 13.37-13.7zm209.7 6c5 1.3 7.1 9.6 4.7 18.5-2.4 8.9-8.4 15-13.3 13.7-11.7-7.3-2.1-34.1 8.6-32.2zm-109.9 2.5c5.1.3 8.9 7.9 8.4 17.1-.4 9.2-5 16.5-10.1 16.2-5.2-.3-8.9-7.9-8.4-17.1.4-9.2 5-16.5 10.1-16.2zM157.4 261c5 1.4 7.1 9.7 4.7 18.6-2.4 8.9-8.4 15-13.3 13.7-5-1.4-7.1-9.7-4.7-18.6 2.7-6.1 6.7-14.6 13.3-13.7zm199 7.9c4.3 2.8 3.6 11.3-1.5 19-5.1 7.7-12.7 11.6-17 8.7-4.3-2.9-3.6-11.4 1.5-19 3.7-4.2 11.3-13 17-8.7zm47.1 6.5c4.4 2.7 4.1 11.2-.7 19.1-4.8 7.8-12.3 12-16.7 9.4-4.4-2.7-4-11.3.8-19.1 3.8-4.4 10.4-13.2 16.6-9.4zm-161.1 4.5c4.9 1.3 7 9.6 4.6 18.5-2.4 8.9-8.3 15-13.3 13.7-4.9-1.3-7-9.6-4.6-18.5 2.7-6.1 6.7-14.8 13.3-13.7zm50.4 10.8c4.3 2.8 3.6 11.3-1.5 19-5.1 7.7-12.7 11.6-17 8.7-4.3-2.9-3.6-11.4 1.5-19 3.7-4.1 11.3-13 17-8.7zM107 300.2c4.9 1.4 7 9.7 4.6 18.6-2.4 8.9-8.3 15-13.33 13.6-4.96-1.3-7.04-9.6-4.65-18.5 2.77-6.2 6.68-14.6 13.38-13.7zm222.5 10.3c4.3 2.9 3.6 11.4-1.5 19.1-5.1 7.6-12.7 11.5-17 8.7-4.3-2.9-3.6-11.4 1.5-19.1 3.9-4.4 11-12.6 17-8.7zm-133 .3c5 1.3 7.1 9.6 4.7 18.5-2.4 8.9-8.4 15-13.3 13.7-5-1.4-7.1-9.6-4.7-18.5 2.6-6 6.8-14.9 13.3-13.7zm-52.5 5.9c5 1.3 7.1 9.6 4.7 18.5-2.4 8.9-8.4 15-13.4 13.7-4.9-1.3-7.5-9.8-4.6-18.5 2.1-6.2 6.8-14.9 13.3-13.7zm121.1 17.5c4.3 2.8 3.6 11.4-1.5 19-5.1 7.7-12.7 11.6-17 8.7-4.3-2.8-3.6-11.4 1.5-19 3.7-4.2 11.3-13 17-8.7zm30.2 22.5c4.3 2.9 3.6 11.4-1.5 19-5.1 7.7-12.7 11.6-17 8.7-4.3-2.8-3.6-11.3 1.5-19 4-4.3 11-12.6 17-8.7zm40.3 1.5c4.2 2.9 3.5 11.4-1.6 19-5.1 7.7-12.7 11.6-17 8.7-4.2-2.8-3.6-11.3 1.6-19 4.1-4.6 10.8-12.3 17-8.7zm-132.1-.4c4.9 1.4 7 9.7 4.6 18.6-2.4 8.9-8.3 15-13.3 13.7-5-1.4-7.6-9.9-4.6-18.6 2.3-6.8 6.4-14.3 13.3-13.7zm-94.9 12.6c5 1.3 7.1 9.6 4.7 18.5-2.4 8.9-8.4 15-13.36 13.7-4.97-1.4-7.05-9.7-4.65-18.5 2.62-6 6.81-14.9 13.31-13.7zm47.7 10.4c4.9 1.3 7 9.6 4.6 18.5-2.4 8.9-8.3 15-13.3 13.7-5-1.3-7.7-9.8-4.7-18.5 2.2-6.3 6.8-14.8 13.4-13.7zm76.7 20.1c4.3 2.9 3.6 11.4-1.5 19.1-5.1 7.6-12.7 11.5-17 8.7-4.3-2.9-3.6-11.4 1.5-19.1 3.9-4.4 11-12.6 17-8.7zm41.1 6.5c4.3 2.9 3.6 11.4-1.5 19.1-5.1 7.6-12.7 11.5-17 8.7-4.3-2.9-3.6-11.4 1.5-19.1 3.9-4.3 11-12.6 17-8.7zm-152.6 26.5c5 1.4 7.1 9.7 4.7 18.6-2.4 8.9-8.4 15-13.3 13.6-5-1.3-7.1-9.6-4.7-18.5 2.7-6.1 6.8-14.6 13.3-13.7zm64.3 10.5c4.2 2.9 3.5 11.4-1.6 19.1-5.1 7.6-12.7 11.5-17 8.7-4.3-2.9-3.6-11.4 1.5-19.1 4.1-4.6 10.9-12.3 17.1-8.7z"/></symbol>
 <symbol id="g-orange" viewBox="0 0 512 512"><path d="M254.355 15.997c-93.512.726-182.057 56.405-220.066 148.166-50.68 122.35 7.525 262.87 129.874 313.547 122.35 50.68 262.868-7.526 313.547-129.875 50.68-122.35-7.525-262.868-129.874-313.547-30.587-12.67-62.31-18.532-93.48-18.29zm1.325 24.342c33.248 0 66.497 14.247 56.998 42.745L270.822 218.74 338.23 93.165c13.433-26.868 47.018-13.433 70.528 10.077 23.51 23.51 36.946 57.095 10.078 70.53l-126.7 66.57L428.91 199.43c3.562-1.188 6.903-1.71 10.02-1.644 21.82.455 32.728 29.547 32.728 58.64 0 33.247-14.25 66.497-42.748 56.997l-135.385-42.267 125.233 67.072c3.358 1.68 6.088 3.674 8.246 5.924 15.107 15.75 2.25 44.034-18.322 64.605-23.51 23.51-57.095 36.947-70.53 10.078l-67.59-127.218c9.505-3.882 17.067-11.4 21.002-20.885 8.137-19.643-1.19-42.163-20.834-50.3-19.642-8.136-42.162 1.192-50.298 20.835-8.137 19.643 1.19 42.162 20.834 50.3 9.317 3.854 19.776 3.9 29.127.126L311.93 428.91c19 56.998-132.993 56.998-113.994 0l43.605-137.63-67.77 126.5c-26.867 53.736-134.343-53.74-80.606-80.61l124.156-66.243-134.232 41.748c-53.435 17.812-56.775-114.662-10.02-115.637 3.117-.065 6.458.456 10.02 1.643l135.914 41.188L94.146 173.77C43.768 148.583 135.08 52.548 168.83 84.92c2.25 2.157 4.245 4.887 5.924 8.245L239.54 217.95 198.683 83.085c-9.5-28.498 23.75-42.746 56.998-42.746z"/></symbol>
@@ -171,11 +138,12 @@
 <symbol id="p-speaker-slash" viewBox="0 0 256 256"><path d="M213.92,210.62a8,8,0,1,1-11.84,10.76L160,175.09v48.6a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.55-51A4,4,0,0,1,80,176.18V87.09L42.08,45.38A8,8,0,1,1,53.92,34.62Zm-27.21-55.46a8,8,0,0,0,11.29-.7,40,40,0,0,0,0-52.88,8,8,0,1,0-12,10.57,24,24,0,0,1,0,31.72A8,8,0,0,0,186.71,155.16Zm40.92-80.49a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66ZM153,119.87a4,4,0,0,0,7-2.7V32.25a8.27,8.27,0,0,0-2.88-6.4,8,8,0,0,0-10-.16L103.83,59.33a4,4,0,0,0-.5,5.85ZM60,80H32A16,16,0,0,0,16,96v64a16,16,0,0,0,16,16H60a4,4,0,0,0,4-4V84A4,4,0,0,0,60,80Z"/></symbol></svg>
 
   <div id="hud">
-    <div class="stat"><span class="lbl">점수</span><span id="score">0</span></div>
+    <div class="stat"><span class="lbl">레벨</span><span class="val" id="level">1</span></div>
+    <div class="stat score"><span class="lbl">점수</span><span class="val" id="score">0</span></div>
+    <div class="moves-pill" id="moves-wrap"><span class="lbl">남은 이동</span><span id="moves">0</span></div>
     <button id="mute" aria-label="소리"></button>
-    <div class="stat best"><span class="lbl"><svg class="ki" style="width:14px;height:14px"><use href="#p-trophy"/></svg>최고</span><span id="best">0</span></div>
   </div>
-  <div id="timebar"><div id="timetrack"><div id="timefill"></div></div></div>
+  <div id="goals"></div>
 
   <div id="board"><div id="fx"></div></div>
 
@@ -189,20 +157,31 @@
         <svg viewBox="0 0 512 512" style="fill:#9b5de5"><use href="#g-grapes"/></svg>
         <svg viewBox="0 0 512 512" style="fill:#2ec4b6"><use href="#g-watermelon"/></svg>
       </div>
-      <p>같은 과일 3개를 나란히 맞춰 톡 터뜨려요.<br>60초 안에 최대한 많이!</p>
+      <p>같은 과일 3개를 맞춰 톡! 정해진 이동 안에<br>목표 과일을 모으면 다음 레벨로.<br>4개 이상 맞추면 줄이 통째로 터져요.</p>
       <button class="btn" id="btn-start"><svg class="ki"><use href="#p-play"/></svg>시작!</button>
+      <button class="btn-ghost" id="btn-support-start" type="button">♡ 후원하기</button>
       <div class="k-credit">Icons: <a href="https://game-icons.net">game-icons.net</a> (CC BY 3.0) · Phosphor</div>
+    </div>
+  </div>
+
+  <!-- 레벨 클리어 -->
+  <div class="ov hidden" id="clear">
+    <div class="card">
+      <div class="row-fruit"><svg viewBox="0 0 512 512" style="fill:#ff9f1c;width:48px;height:48px"><use href="#p-trophy"/></svg></div>
+      <h1 id="clear-title" style="font-size:var(--fs-1)">레벨 클리어!</h1>
+      <p id="clear-sub">다음 레벨로!</p>
     </div>
   </div>
 
   <!-- 게임오버 -->
   <div class="ov hidden" id="over">
     <div class="card">
-      <h1 style="font-size:26px">끝!</h1>
-      <div class="big-score" id="over-score">0</div>
-      <div class="new-badge" id="over-new" style="display:none">🎉 신기록!</div>
-      <div class="over-best">최고 <span id="over-best">0</span></div>
+      <div class="label-sm">도달 레벨</div>
+      <div class="big" id="over-level">1</div>
+      <div class="new-badge" id="over-new" style="display:none">🎉 최고 기록!</div>
+      <div class="label-sm">점수 <span id="over-score">0</span> · 최고 레벨 <span id="over-best">0</span></div>
       <button class="btn" id="btn-again"><svg class="ki"><use href="#p-arrows-clockwise"/></svg>다시 하기</button>
+      <button class="btn-ghost" id="btn-support-over" type="button">♡ 후원하기</button>
     </div>
   </div>
 
