@@ -232,4 +232,12 @@
   }
 
   if (stateKeys.length) syncPull();
+
+  // ===== PWA 서비스 워커 등록 — 포털 페이지 + https에서만 =====
+  // 게임 페이지엔 등록 안 함 (게임 자체 NOOP sw.js와 scope 충돌 회피).
+  // http(IP:8080)에선 secure context가 아니라 등록 시도 자체를 안 함 (콘솔 에러 0).
+  if (game === 'portal' && location.protocol === 'https:' &&
+      navigator.serviceWorker && typeof navigator.serviceWorker.register === 'function') {
+    navigator.serviceWorker.register('/sw.js').catch(function () {});
+  }
 })();

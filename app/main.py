@@ -50,11 +50,13 @@ def _inject_snippet(game: str) -> str:
     return f'<script src="/portal.js" {attrs}></script>'
 
 # 게임이 갖고 있던 sw.js를 대체하는 무력화 SW —
-# 설치 즉시 기존 캐시를 비우고 스스로 등록 해제한다 (stale cache 방지)
+# 설치 즉시 게임 캐시를 비우고 스스로 등록 해제한다 (stale cache 방지).
+# ★단 'portal-' 접두 캐시는 보존 — caches.delete는 origin 전역이라, 안 그러면
+#   게임 한 번 방문에 포털 SW 캐시까지 날아가 포털 SW가 silent no-op이 된다.
 NOOP_SW = (
     "self.addEventListener('install',()=>self.skipWaiting());\n"
     "self.addEventListener('activate',e=>{e.waitUntil(\n"
-    "  caches.keys().then(ks=>Promise.all(ks.map(k=>caches.delete(k))))\n"
+    "  caches.keys().then(ks=>Promise.all(ks.filter(k=>k.indexOf('portal-')!==0).map(k=>caches.delete(k))))\n"
     "    .then(()=>self.registration.unregister())\n"
     ");});\n"
 )
@@ -114,7 +116,59 @@ async def portal_og():
 
 @app.get("/favicon.ico")
 async def favicon():
-    return FileResponse(GAMES_DIR / "vase" / "icon-192.png", media_type="image/png")
+    return FileResponse(PORTAL_DIR / "icons" / "portal-192.png", media_type="image/png")
+
+
+_ICON_DIR = (PORTAL_DIR / "icons").resolve()
+
+
+@app.get("/icons/{name}")
+async def portal_icon(name: str):
+    """포털 PWA 아이콘 (portal-192/512/180/maskable)."""
+    target = (_ICON_DIR / name).resolve()
+    if not str(target).startswith(str(_ICON_DIR)) or not target.is_file():
+        raise HTTPException(status_code=404)
+    return FileResponse(
+        target, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"}
+    )
+
+
+@app.get("/manifest.webmanifest")
+async def manifest(request: Request):
+    """포털 PWA manifest. scope '/'로 게임별 manifest(scope /{game}/)와 분리."""
+    data = {
+        "id": "/",
+        "name": "한 판 하고 가요",
+        "short_name": "한판만",
+        "description": "설치 없이 바로 하는 웹 미니게임 모음.",
+        "start_url": "/?src=pwa",
+        "scope": "/",
+        "display": "standalone",
+        "orientation": "portrait",
+        "background_color": "#101014",
+        "theme_color": "#101014",
+        "icons": [
+            {"src": "/icons/portal-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": "/icons/portal-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+            {"src": "/icons/portal-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+        ],
+    }
+    return Response(
+        json.dumps(data, ensure_ascii=False),
+        media_type="application/manifest+json",
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
+@app.get("/sw.js")
+async def service_worker():
+    """포털 서비스 워커. 게임 prefix를 passthrough 정규식에 주입 (게임 추가 시 자동 반영)."""
+    sw = (PORTAL_DIR / "sw.js").read_text(encoding="utf-8")
+    game_re = "|".join(sorted(games.playable_ids())) or "__none__"
+    sw = sw.replace("{{GAME_RE}}", game_re)
+    return Response(
+        sw, media_type="text/javascript", headers={"Cache-Control": "no-cache"}
+    )
 
 
 @app.get("/portal.js")

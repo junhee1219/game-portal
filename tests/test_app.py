@@ -250,3 +250,40 @@ def test_follow_page():
     res = client.get("/follow/someuserid")
     assert res.status_code == 200
     assert "친구" in res.text
+
+
+# --- Phase 5: PWA ---
+
+def test_manifest():
+    res = client.get("/manifest.webmanifest")
+    assert res.status_code == 200
+    assert "application/manifest+json" in res.headers["content-type"]
+    data = res.json()
+    assert data["scope"] == "/"
+    assert data["name"] == "한 판 하고 가요"
+    assert any(i["purpose"] == "maskable" for i in data["icons"])
+
+
+def test_service_worker():
+    res = client.get("/sw.js")
+    assert res.status_code == 200
+    # 게임 prefix가 주입돼 {{GAME_RE}} 치환됐는지 + 게임 경로 passthrough 가드
+    assert "{{GAME_RE}}" not in res.text
+    assert "vase" in res.text and "gateway" in res.text
+    assert "portal-v1" in res.text
+
+
+def test_portal_icons():
+    res = client.get("/icons/portal-192.png")
+    assert res.status_code == 200
+    assert res.headers["content-type"] == "image/png"
+    # 경로 이탈 차단
+    assert client.get("/icons/..%2f..%2fapp%2fconfig.py").status_code == 404
+
+
+def test_noop_sw_preserves_portal_cache():
+    # 게임 NOOP sw가 portal- 캐시는 지우지 않아야 (포털 SW silent no-op 방지)
+    res = client.get("/vase/sw.js")
+    assert res.status_code == 200
+    assert "portal-" in res.text  # 제외 필터 존재
+    assert "unregister" in res.text
