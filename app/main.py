@@ -5,6 +5,7 @@
   계측 스크립트는 서빙 시점에 HTML 응답에 주입한다.
 - DB가 없어도 포털과 게임은 정상 동작한다.
 """
+import html
 import logging
 import mimetypes
 from contextlib import asynccontextmanager
@@ -13,7 +14,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
-from app import database
+from app import database, games
 from app.database import init_db
 from app.routers.api import router as api_router
 from app.routers.auth import router as auth_router
@@ -25,26 +26,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 GAMES_DIR = BASE_DIR / "games"
 PORTAL_DIR = BASE_DIR / "portal"
 
-GAMES = {
-    "cube": {
-        "title": "Cube Snake",
-        "tagline": "3D 큐브 표면을 기어다니는 스네이크. 모서리를 넘으면 세상이 돌아간다.",
-        "unit": "점",
-    },
-    "gateway": {
-        "title": "라면집 사장님",
-        "tagline": "세 줄로 밀려드는 손님, 서빙은 한 줄씩. 줄이 터지면 가게도 끝.",
-        "unit": "점",
-    },
-    "vase": {
-        "title": "물병 정렬",
-        "tagline": "알록달록 물을 옮겨 담는 퍼즐. 봇보다 적게 움직이면 별 셋.",
-        "unit": "레벨",
-    },
-}
 
-# 서빙 시점에 게임 HTML에 주입하는 계측 스크립트 태그
-INJECT_SNIPPET = '<script src="/portal.js" data-game="{game}"></script>'
+def _inject_snippet(game: str) -> str:
+    """게임 HTML에 주입할 계측 스크립트 태그. 점수 config를 같은 자리에 동기 주입한다.
+
+    portal.js는 Storage.prototype.setItem을 래핑해 자동 점수 캡처를 하므로,
+    score_key를 fetch로 받으면 응답 전 첫 신기록 쓰기가 후킹 전에 유실된다(race).
+    서버는 주입 시점에 game을 알고 있으니 data-* 속성으로 동기 전달한다.
+    """
+    g = games.games_by_id().get(game)
+    attrs = f'data-game="{html.escape(game)}"'
+    if g and g.get("score_key"):
+        attrs += f' data-score-key="{html.escape(g["score_key"])}"'
+        attrs += f' data-score-metric="{html.escape(g.get("score_metric", "best"))}"'
+    return f'<script src="/portal.js" {attrs}></script>'
 
 # 게임이 갖고 있던 sw.js를 대체하는 무력화 SW —
 # 설치 즉시 기존 캐시를 비우고 스스로 등록 해제한다 (stale cache 방지)
@@ -73,11 +68,32 @@ async def health():
     return {"ok": True}
 
 
+def _render_cards() -> str:
+    """index.html의 게임 카드 목록을 레지스트리로 서버사이드 렌더.
+
+    클라 fetch 카드는 OG 프리뷰/초기 페인트에 안 잡히므로 서버에서 박는다.
+    """
+    cards = []
+    for g in games.load_games():
+        gid = html.escape(g["id"])
+        title = html.escape(g.get("title", gid))
+        desc = html.escape(g.get("tagline", ""))
+        cards.append(
+            f'<a class="card" href="/{gid}/">'
+            f'<img src="/{gid}/icon-192.png" alt="" width="64" height="64" loading="lazy">'
+            f'<span class="meta"><span class="name">{title}</span>'
+            f'<span class="desc">{desc}</span></span>'
+            f'<span class="go" aria-hidden="true">&rarr;</span></a>'
+        )
+    return "\n".join(cards)
+
+
 @app.get("/", response_class=HTMLResponse)
 async def portal_index(request: Request):
-    html = (PORTAL_DIR / "index.html").read_text(encoding="utf-8")
+    page = (PORTAL_DIR / "index.html").read_text(encoding="utf-8")
     base = str(request.base_url).rstrip("/")
-    return HTMLResponse(html.replace("{{BASE}}", base), headers={"Cache-Control": "no-cache"})
+    page = page.replace("{{BASE}}", base).replace("{{CARDS}}", _render_cards())
+    return HTMLResponse(page, headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/og.png")
@@ -118,16 +134,17 @@ async def share_page(score_id: int, request: Request):
         return RedirectResponse(url="/", status_code=302)
     from app.models import Score
 
+    games_map = games.games_by_id()
     async with database.async_session() as db:
         score = await db.get(Score, score_id)
-    if score is None or score.game not in GAMES:
+    if score is None or score.game not in games_map:
         return RedirectResponse(url="/", status_code=302)
 
-    info = GAMES[score.game]
+    info = games_map[score.game]
     base = str(request.base_url).rstrip("/")
     record = f"{score.score:,}"
     og_title = f"{info['title']} — {record}{info['unit']}"
-    html = (PORTAL_DIR / "share.html").read_text(encoding="utf-8")
+    page = (PORTAL_DIR / "share.html").read_text(encoding="utf-8")
     for key, value in {
         "{{TITLE}}": og_title,
         "{{OG_TITLE}}": og_title,
@@ -138,8 +155,8 @@ async def share_page(score_id: int, request: Request):
         "{{SCORE}}": record,
         "{{UNIT}}": info["unit"],
     }.items():
-        html = html.replace(key, value)
-    return HTMLResponse(html)
+        page = page.replace(key, value)
+    return HTMLResponse(page)
 
 
 def _safe_game_file(game: str, path: str) -> Path:
@@ -154,14 +171,14 @@ def _safe_game_file(game: str, path: str) -> Path:
 @app.get("/{game}")
 async def game_root_redirect(game: str):
     """상대경로 자산이 깨지지 않도록 /vase → /vase/ 로 정규화."""
-    if game not in GAMES:
+    if game not in games.playable_ids():
         raise HTTPException(status_code=404)
     return RedirectResponse(url=f"/{game}/", status_code=308)
 
 
 @app.get("/{game}/{path:path}")
 async def serve_game(game: str, path: str = ""):
-    if game not in GAMES:
+    if game not in games.playable_ids():
         raise HTTPException(status_code=404)
 
     # 게임 자체 sw.js는 무력화 버전으로 대체 (원본 파일은 그대로 둔다)
@@ -180,13 +197,13 @@ async def serve_game(game: str, path: str = ""):
 
     # HTML에는 계측 스크립트 주입. 캐시 금지 — 게임 업데이트 즉시 반영
     if target.suffix == ".html":
-        html = target.read_text(encoding="utf-8")
-        snippet = INJECT_SNIPPET.format(game=game)
-        if "</body>" in html:
-            html = html.replace("</body>", f"{snippet}\n</body>", 1)
+        page = target.read_text(encoding="utf-8")
+        snippet = _inject_snippet(game)
+        if "</body>" in page:
+            page = page.replace("</body>", f"{snippet}\n</body>", 1)
         else:
-            html += snippet
-        return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
+            page += snippet
+        return HTMLResponse(page, headers={"Cache-Control": "no-cache"})
 
     media_type = mimetypes.guess_type(str(target))[0] or "application/octet-stream"
     # 에셋은 짧게만 캐시 (10분) — 교체 후 "반영 안 됨" 혼란 방지

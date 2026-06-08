@@ -14,8 +14,11 @@
   }
 
   var script = document.currentScript;
-  var game = (script && script.dataset && script.dataset.game) ||
-    (location.pathname.split('/')[1] || 'portal');
+  var ds = (script && script.dataset) || {};
+  var game = ds.game || (location.pathname.split('/')[1] || 'portal');
+  // 점수 config는 서버가 주입한 data-* 속성에서 동기 읽기 (fetch 금지 — setItem 후킹 race 방지)
+  var scoreKey = ds.scoreKey || null;
+  var scoreMetric = ds.scoreMetric || 'best';
 
   function send(payload, useBeacon) {
     payload.visitor_id = vid;
@@ -68,25 +71,19 @@
   };
 
   // 자동 점수 캡처 — 게임이 localStorage에 쓰는 신기록을 가로채 보고한다.
-  // 게임 원본 무수정 원칙: 키 이름만 알면 게임 코드는 그대로.
-  var SCORE_KEYS = {
-    gateway: { key: 'gatewayBest', metric: 'best' },
-    cube: { key: 'cubeSnakeBest', metric: 'best' },
-    vase: { key: 'vaseMaxClear', metric: 'level' }
-  };
-  var conf = SCORE_KEYS[game];
-  if (conf) {
+  // 게임 원본 무수정 원칙: 서버가 주입한 scoreKey만 알면 게임 코드는 그대로.
+  if (scoreKey) {
     var last = 0;
-    try { last = parseInt(localStorage.getItem(conf.key) || '0', 10) || 0; } catch (e) {}
+    try { last = parseInt(localStorage.getItem(scoreKey) || '0', 10) || 0; } catch (e) {}
     var origSet = Storage.prototype.setItem;
     Storage.prototype.setItem = function (k, v) {
       origSet.apply(this, arguments);
       try {
-        if (this === window.localStorage && k === conf.key) {
+        if (this === window.localStorage && k === scoreKey) {
           var n = parseInt(v, 10);
           if (!isNaN(n) && n > last) {
             last = n;
-            window.GamePortal.reportScore(n, { metric: conf.metric, auto: true });
+            window.GamePortal.reportScore(n, { metric: scoreMetric, auto: true });
           }
         }
       } catch (e) {}

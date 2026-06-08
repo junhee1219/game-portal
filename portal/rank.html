@@ -54,27 +54,37 @@
       <h1 style="font-size:clamp(32px,9vw,44px)">기록실</h1>
     </header>
 
-    <section class="board" data-game="vase" data-unit="레벨">
-      <h2><img src="/vase/icon-192.png" alt="">물병 정렬</h2>
-      <ol><li class="empty">아직 기록이 없습니다. 첫 줄의 주인공이 되어보자.</li></ol>
-    </section>
-
-    <section class="board" data-game="gateway" data-unit="점">
-      <h2><img src="/gateway/icon-192.png" alt="">라면집 사장님</h2>
-      <ol><li class="empty">아직 기록이 없습니다.</li></ol>
-    </section>
-
-    <section class="board" data-game="cube" data-unit="점">
-      <h2><img src="/cube/icon-192.png" alt="">Cube Snake</h2>
-      <ol><li class="empty">아직 기록이 없습니다.</li></ol>
-    </section>
+    <div id="boards"><p class="empty" style="color:var(--dim)">불러오는 중…</p></div>
   </main>
   <script>
-    var SCORE_KEYS = { vase: 'vaseMaxClear', gateway: 'gatewayBest', cube: 'cubeSnakeBest' };
+    // 게임 목록 + 점수 키는 /api/games 단일 소스에서 받는다 (하드코딩 SCORE_KEYS 제거)
+    fetch('/api/games')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var container = document.getElementById('boards');
+        container.innerHTML = '';
+        (data.games || []).forEach(function (g) {
+          var board = document.createElement('section');
+          board.className = 'board';
+          board.dataset.game = g.id;
+          board.dataset.unit = g.unit || '점';
+          board.dataset.scoreKey = g.score_key || '';
+          board.innerHTML =
+            '<h2><img src="' + g.icon + '" alt="">' + g.title + '</h2>' +
+            '<ol><li class="empty">아직 기록이 없습니다.</li></ol>';
+          container.appendChild(board);
+          renderBoard(board);
+        });
+      })
+      .catch(function () {
+        document.getElementById('boards').innerHTML =
+          '<p class="empty" style="color:var(--dim)">기록을 불러오지 못했습니다.</p>';
+      });
 
-    document.querySelectorAll('.board').forEach(function (board) {
+    function renderBoard(board) {
       var game = board.dataset.game;
       var unit = board.dataset.unit;
+      var scoreKey = board.dataset.scoreKey;
 
       fetch('/api/leaderboard/' + game + '?limit=10')
         .then(function (r) { return r.json(); })
@@ -91,7 +101,7 @@
 
       // 내 최고 기록 (게임이 남긴 localStorage, 같은 origin이라 읽힌다) + 공유
       var mine = 0;
-      try { mine = parseInt(localStorage.getItem(SCORE_KEYS[game]) || '0', 10) || 0; } catch (e) {}
+      try { if (scoreKey) mine = parseInt(localStorage.getItem(scoreKey) || '0', 10) || 0; } catch (e) {}
       if (mine > 0) {
         var div = document.createElement('div');
         div.className = 'mine';
@@ -128,7 +138,7 @@
         });
         board.appendChild(div);
       }
-    });
+    }
   </script>
   <script src="/portal.js" data-game="portal"></script>
 </body>

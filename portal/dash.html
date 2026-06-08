@@ -49,13 +49,11 @@
 
     <p class="section-title" style="margin-top:28px">일별 방문자 (게임별)</p>
     <table id="daily-table">
-      <thead><tr><th>날짜</th><th>물병</th><th>라면집</th><th>큐브</th><th>포털</th></tr></thead>
-      <tbody><tr><td colspan="5" style="text-align:center;color:var(--dim)">불러오는 중</td></tr></tbody>
+      <thead><tr><th>날짜</th></tr></thead>
+      <tbody><tr><td style="text-align:center;color:var(--dim)">불러오는 중</td></tr></tbody>
     </table>
   </main>
   <script>
-    var NAMES = { vase: '물병', gateway: '라면집', cube: '큐브', portal: '포털' };
-
     function fmtMs(ms) {
       if (!ms) return '-';
       var s = Math.round(ms / 1000);
@@ -63,41 +61,59 @@
       return Math.floor(s / 60) + '분 ' + (s % 60) + '초';
     }
 
-    fetch('/api/stats').then(function (r) { return r.json(); }).then(function (d) {
-      if (!d.ok) return;
-      document.getElementById('total-visitors').textContent = (d.visitors || 0).toLocaleString();
-      var totalVisits = Object.values(d.visits || {}).reduce(function (a, b) { return a + b; }, 0);
-      var tbody = document.querySelector('#session-table tbody');
-      var games = ['vase', 'gateway', 'cube', 'portal'];
-      tbody.innerHTML = games.map(function (g) {
-        return '<tr><td>' + NAMES[g] + '</td><td>' + ((d.visits || {})[g] || 0) +
-          '</td><td>' + fmtMs((d.avg_session_ms || {})[g]) + '</td></tr>';
-      }).join('');
-    }).catch(function () {});
+    // 게임 목록은 /api/games 단일 소스. 'portal'은 합성 소스라 dash에서만 덧붙인다.
+    fetch('/api/games')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var playable = (data.games || []).map(function (g) { return { id: g.id, name: g.title }; });
+        initDash(playable);
+      })
+      .catch(function () { initDash([]); });
 
-    Promise.all(['vase','gateway','cube'].map(function (g) {
-      return fetch('/api/leaderboard/' + g + '?limit=50').then(function (r) { return r.json(); });
-    })).then(function (boards) {
-      var n = boards.reduce(function (a, b) { return a + (b.entries || []).length; }, 0);
-      document.getElementById('total-scores').innerHTML = n.toLocaleString() + ' <small>명 기록</small>';
-    }).catch(function () {});
+    function initDash(playable) {
+      var all = playable.concat([{ id: 'portal', name: '포털' }]);  // 방문 추적 합성 소스
+      var allIds = all.map(function (g) { return g.id; });
+      var playableIds = playable.map(function (g) { return g.id; });
+      var names = {};
+      all.forEach(function (g) { names[g.id] = g.name; });
 
-    fetch('/api/stats/daily?days=14').then(function (r) { return r.json(); }).then(function (d) {
-      if (!d.ok) return;
-      var days = Object.keys(d.days || {}).sort().reverse();
-      var tbody = document.querySelector('#daily-table tbody');
-      if (!days.length) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--dim)">아직 데이터 없음</td></tr>';
-        return;
-      }
-      tbody.innerHTML = days.map(function (day) {
-        var row = d.days[day] || {};
-        return '<tr><td>' + day.slice(5) + '</td>' +
-          ['vase', 'gateway', 'cube', 'portal'].map(function (g) {
-            return '<td>' + (row[g] || 0) + '</td>';
-          }).join('') + '</tr>';
-      }).join('');
-    }).catch(function () {});
+      // 일별 테이블 헤더 동적 생성
+      document.querySelector('#daily-table thead tr').innerHTML =
+        '<th>날짜</th>' + all.map(function (g) { return '<th>' + g.name + '</th>'; }).join('');
+
+      fetch('/api/stats').then(function (r) { return r.json(); }).then(function (d) {
+        if (!d.ok) return;
+        document.getElementById('total-visitors').textContent = (d.visitors || 0).toLocaleString();
+        var tbody = document.querySelector('#session-table tbody');
+        tbody.innerHTML = all.map(function (g) {
+          return '<tr><td>' + names[g.id] + '</td><td>' + ((d.visits || {})[g.id] || 0) +
+            '</td><td>' + fmtMs((d.avg_session_ms || {})[g.id]) + '</td></tr>';
+        }).join('');
+      }).catch(function () {});
+
+      Promise.all(playableIds.map(function (g) {
+        return fetch('/api/leaderboard/' + g + '?limit=50').then(function (r) { return r.json(); });
+      })).then(function (boards) {
+        var n = boards.reduce(function (a, b) { return a + (b.entries || []).length; }, 0);
+        document.getElementById('total-scores').innerHTML = n.toLocaleString() + ' <small>명 기록</small>';
+      }).catch(function () {});
+
+      fetch('/api/stats/daily?days=14').then(function (r) { return r.json(); }).then(function (d) {
+        if (!d.ok) return;
+        var days = Object.keys(d.days || {}).sort().reverse();
+        var tbody = document.querySelector('#daily-table tbody');
+        if (!days.length) {
+          tbody.innerHTML = '<tr><td colspan="' + (allIds.length + 1) +
+            '" style="text-align:center;color:var(--dim)">아직 데이터 없음</td></tr>';
+          return;
+        }
+        tbody.innerHTML = days.map(function (day) {
+          var row = d.days[day] || {};
+          return '<tr><td>' + day.slice(5) + '</td>' +
+            allIds.map(function (g) { return '<td>' + (row[g] || 0) + '</td>'; }).join('') + '</tr>';
+        }).join('');
+      }).catch(function () {});
+    }
   </script>
 </body>
 </html>

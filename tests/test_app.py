@@ -23,6 +23,23 @@ def test_portal_index():
     # og:image의 {{BASE}}가 실제 주소로 치환됐는지
     assert "{{BASE}}" not in res.text
     assert 'og:image" content="http' in res.text
+    # 게임 카드가 레지스트리로 서버사이드 렌더됐는지 ({{CARDS}} 치환 + 실제 게임)
+    assert "{{CARDS}}" not in res.text
+    assert "물병 정렬" in res.text
+    assert 'href="/vase/"' in res.text
+
+
+def test_api_games():
+    res = client.get("/api/games")
+    assert res.status_code == 200
+    data = res.json()
+    ids = [g["id"] for g in data["games"]]
+    assert {"vase", "gateway", "cube"} <= set(ids)
+    vase = next(g for g in data["games"] if g["id"] == "vase")
+    assert vase["score_key"] == "vaseMaxClear"
+    assert vase["icon"] == "/vase/icon-192.png"
+    # state_keys 인터페이스가 노출되는지 (Phase 2 sync가 소비)
+    assert any(k["key"] == "vaseBest" and k["merge"] == "union_min" for k in vase["state_keys"])
 
 
 def test_rank_page():
@@ -43,6 +60,8 @@ def test_game_serves_with_injection(game):
     # 계측 스크립트가 정확히 1번 주입
     assert res.text.count('src="/portal.js"') == 1
     assert f'data-game="{game}"' in res.text
+    # 점수 config가 fetch가 아니라 주입으로 동기 전달되는지 (setItem 후킹 race 방지)
+    assert 'data-score-key="' in res.text
 
 
 @pytest.mark.parametrize("game", ["vase", "gateway", "cube"])

@@ -10,13 +10,15 @@ if [ ! -d "$SRC" ]; then
   exit 1
 fi
 
-for g in cube gateway vase; do
-  if [ -d "$SRC/$g" ]; then
-    rm -rf "games/$g"
-    cp -R "$SRC/$g" "games/$g"
-    rm -rf "games/$g/.git"
-    echo "동기화: $g"
-  fi
+# ~/game 하위의 모든 게임 폴더를 자동 순회 (하드코딩 목록 제거 — 새 게임 추가 시 폴더만 두면 됨).
+# 숨김 폴더(.git 등)와 파일은 건너뛴다.
+for dir in "$SRC"/*/; do
+  g=$(basename "$dir")
+  case "$g" in .*) continue ;; esac   # 숨김 폴더 제외
+  rm -rf "games/$g"
+  cp -R "$dir" "games/$g"
+  rm -rf "games/$g/.git"
+  echo "동기화: $g"
 done
 
-echo "완료. git diff 확인 후 커밋하세요."
+echo "완료. games.json에 새 게임 entry가 있는지 확인하고, git diff 후 커밋하세요."

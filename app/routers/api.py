@@ -5,7 +5,7 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import desc, func, select, text
 
-from app import database
+from app import database, games
 from app.database import kst_now
 from app.models import Event, Score, Visitor
 
@@ -13,7 +13,11 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api")
 
-VALID_GAMES = {"cube", "gateway", "vase", "portal"}
+
+@router.get("/games")
+async def list_games():
+    """게임 레지스트리 단일 소스. DB 무관 항상 200. rank/dash가 fetch해서 소비."""
+    return {"games": games.public_games()}
 
 
 class PingIn(BaseModel):
@@ -37,7 +41,7 @@ class ScoreIn(BaseModel):
 async def ping(body: PingIn, request: Request):
     if database.async_session is None:
         return {"ok": False, "reason": "no-db"}
-    if body.game not in VALID_GAMES:
+    if body.game not in games.valid_event_games():
         return {"ok": False, "reason": "unknown-game"}
     try:
         async with database.async_session() as db:
@@ -72,7 +76,7 @@ async def ping(body: PingIn, request: Request):
 async def record_score(body: ScoreIn):
     if database.async_session is None:
         return {"ok": False, "reason": "no-db"}
-    if body.game not in VALID_GAMES:
+    if body.game not in games.valid_event_games():
         return {"ok": False, "reason": "unknown-game"}
     try:
         async with database.async_session() as db:
@@ -93,7 +97,7 @@ async def record_score(body: ScoreIn):
 
 @router.get("/leaderboard/{game}")
 async def leaderboard(game: str, limit: int = 10):
-    if database.async_session is None or game not in VALID_GAMES:
+    if database.async_session is None or game not in games.valid_event_games():
         return {"game": game, "entries": []}
     limit = max(1, min(limit, 50))
     try:

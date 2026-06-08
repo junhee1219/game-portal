@@ -1,0 +1,43 @@
+{
+  "games": [
+    {
+      "id": "vase",
+      "title": "물병 정렬",
+      "tagline": "알록달록 물을 옮겨 담는 퍼즐. 봇보다 적게 움직이면 별 셋.",
+      "unit": "레벨",
+      "score_key": "vaseMaxClear",
+      "score_metric": "level",
+      "state_keys": [
+        { "key": "vaseMaxClear", "merge": "max" },
+        { "key": "vaseLevel", "merge": "max" },
+        { "key": "vaseStars", "merge": "union" },
+        { "key": "vaseBest", "merge": "union_min" },
+        { "key": "vaseMuted", "merge": "lww" }
+      ]
+    },
+    {
+      "id": "gateway",
+      "title": "라면집 사장님",
+      "tagline": "세 줄로 밀려드는 손님, 서빙은 한 줄씩. 줄이 터지면 가게도 끝.",
+      "unit": "점",
+      "score_key": "gatewayBest",
+      "score_metric": "best",
+      "state_keys": [
+        { "key": "gatewayBest", "merge": "max", "init_cache": true },
+        { "key": "gatewayMuted", "merge": "lww" }
+      ]
+    },
+    {
+      "id": "cube",
+      "title": "Cube Snake",
+      "tagline": "3D 큐브 표면을 기어다니는 스네이크. 모서리를 넘으면 세상이 돌아간다.",
+      "unit": "점",
+      "score_key": "cubeSnakeBest",
+      "score_metric": "best",
+      "state_keys": [
+        { "key": "cubeSnakeBest", "merge": "max" },
+        { "key": "cubeSnakeMuted", "merge": "lww" }
+      ]
+    }
+  ]
+}
