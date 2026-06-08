@@ -6,6 +6,7 @@
 - DB가 없어도 포털과 게임은 정상 동작한다.
 """
 import html
+import json
 import logging
 import mimetypes
 from contextlib import asynccontextmanager
@@ -18,6 +19,7 @@ from app import database, games
 from app.database import init_db
 from app.routers.api import router as api_router
 from app.routers.auth import router as auth_router
+from app.routers.state import router as state_router
 from app.routers.users import router as users_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -29,10 +31,10 @@ PORTAL_DIR = BASE_DIR / "portal"
 
 
 def _inject_snippet(game: str) -> str:
-    """게임 HTML에 주입할 계측 스크립트 태그. 점수 config를 같은 자리에 동기 주입한다.
+    """게임 HTML에 주입할 계측 스크립트 태그. 점수/상태 config를 같은 자리에 동기 주입한다.
 
-    portal.js는 Storage.prototype.setItem을 래핑해 자동 점수 캡처를 하므로,
-    score_key를 fetch로 받으면 응답 전 첫 신기록 쓰기가 후킹 전에 유실된다(race).
+    portal.js는 Storage.prototype.setItem을 래핑해 자동 점수 캡처 + 상태 push를 하므로,
+    config를 fetch로 받으면 응답 전 첫 쓰기가 후킹 전에 유실된다(race).
     서버는 주입 시점에 game을 알고 있으니 data-* 속성으로 동기 전달한다.
     """
     g = games.games_by_id().get(game)
@@ -40,6 +42,10 @@ def _inject_snippet(game: str) -> str:
     if g and g.get("score_key"):
         attrs += f' data-score-key="{html.escape(g["score_key"])}"'
         attrs += f' data-score-metric="{html.escape(g.get("score_metric", "best"))}"'
+    if g and g.get("state_keys"):
+        # 상태 sync manifest (키별 merge 방식 + init_cache) — JSON을 속성에 동기 전달
+        state_json = json.dumps(g["state_keys"], ensure_ascii=False, separators=(",", ":"))
+        attrs += f' data-state-keys="{html.escape(state_json, quote=True)}"'
     return f'<script src="/portal.js" {attrs}></script>'
 
 # 게임이 갖고 있던 sw.js를 대체하는 무력화 SW —
@@ -63,6 +69,7 @@ app = FastAPI(title="game-portal", lifespan=lifespan)
 app.include_router(api_router)
 app.include_router(auth_router)
 app.include_router(users_router)
+app.include_router(state_router)
 
 
 @app.get("/health")

@@ -1,7 +1,7 @@
 """게임 포털 데이터 모델. 테이블명 복수형, ID는 클라이언트 생성 UUID 문자열."""
 from datetime import datetime
 
-from sqlalchemy import JSON, BigInteger, DateTime, Index, Integer, String
+from sqlalchemy import JSON, BigInteger, DateTime, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base, kst_now
@@ -77,3 +77,22 @@ class Score(Base):
         Index("ix_scores_game_score", "game", "score"),
         Index("ix_scores_game_user", "game", "user_id"),
     )
+
+
+class GameState(Base):
+    """게임 상태 동기화 (로그인 전용). value는 opaque JSON 문자열 — 게임당 컬럼 안 늘린다.
+
+    merge 방식은 games.json의 state_keys[].merge 선언이 정하고, reducer는 app/state_merge.py.
+    비로그인은 sync 없음 (localStorage만).
+    """
+
+    __tablename__ = "game_states"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(64), index=True)
+    game: Mapped[str] = mapped_column(String(32))
+    k: Mapped[str] = mapped_column(String(64))  # localStorage 키 ('key'는 예약어라 k)
+    value: Mapped[str] = mapped_column(Text)  # 항상 JSON 문자열
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=kst_now)
+
+    __table_args__ = (UniqueConstraint("user_id", "game", "k", name="uq_user_game_key"),)

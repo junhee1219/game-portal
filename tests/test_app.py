@@ -171,3 +171,41 @@ def test_me_scores_anonymous():
     res = client.get("/api/me/scores")
     assert res.status_code == 200
     assert res.json()["ok"] is False
+
+
+# --- Phase 2: 상태 동기화 ---
+
+def test_merge_max():
+    from app.state_merge import merge_value
+    assert merge_value("max", 120, 40) == 120      # 오래된 기기가 낮은 값 써도 후퇴 안 함
+    assert merge_value("max", 40, 120) == 120
+    assert merge_value("max", None, 7) == 7         # 첫 기록
+    assert merge_value("max", "100", "9") == 100    # 문자열도 숫자로
+
+
+def test_merge_union_maxmin():
+    from app.state_merge import merge_value
+    # union: 키별 max (vaseStars — 높을수록 좋음)
+    assert merge_value("union", {"3": 2, "5": 1}, {"5": 3, "7": 2}) == {"3": 2, "5": 3, "7": 2}
+    # union_min: 키별 min (vaseBest — moves 적을수록 좋음)
+    assert merge_value("union_min", {"3": 20, "5": 15}, {"3": 12, "7": 9}) == {"3": 12, "5": 15, "7": 9}
+
+
+def test_merge_lww_passthrough():
+    from app.state_merge import merge_value
+    # lww/미지 타입은 client(최신 쓰기)가 그대로 — raw 문자열 보존
+    assert merge_value("lww", "0", "1") == "1"
+    assert merge_value("unknown", "a", "b") == "b"
+
+
+def test_state_requires_login():
+    # 비로그인(쿠키 없음) → 401, sync OFF
+    assert client.get("/api/state/vase").status_code == 401
+    assert client.put("/api/state/vase", json={"changes": {"vaseMaxClear": 5}}).status_code == 401
+
+
+def test_game_injects_state_keys():
+    # 게임 페이지에 상태 manifest가 동기 주입되는지 (fetch 금지)
+    res = client.get("/vase/")
+    assert "data-state-keys=" in res.text
+    assert "union_min" in res.text  # vaseBest merge 방식이 주입에 실려야

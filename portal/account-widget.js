@@ -16,6 +16,12 @@
         btn.type = 'button';
         btn.textContent = '로그아웃';
         btn.addEventListener('click', function () {
+          // 로그아웃 후 다음 게임 진입에서 재동기화 + 계정 전환 가드가 돌도록 sync 플래그 초기화
+          try {
+            Object.keys(sessionStorage).forEach(function (k) {
+              if (k.indexOf('gp_synced:') === 0) sessionStorage.removeItem(k);
+            });
+          } catch (e) {}
           fetch('/auth/logout', { method: 'POST' })
             .then(function () { location.reload(); })
             .catch(function () { location.reload(); });

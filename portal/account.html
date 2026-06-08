@@ -119,6 +119,12 @@
         .then(function (r) { return r.json().then(function (d) { return { status: r.status, d: d }; }); })
         .then(function (res) {
           if (res.d && res.d.ok) {
+            // 계정 전환 시 다음 게임 진입에서 재동기화되도록 sync 플래그 초기화
+            try {
+              Object.keys(sessionStorage).forEach(function (k) {
+                if (k.indexOf('gp_synced:') === 0) sessionStorage.removeItem(k);
+              });
+            } catch (e) {}
             location.href = next;
           } else {
             submitBtn.disabled = false;

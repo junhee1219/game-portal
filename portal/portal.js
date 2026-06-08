@@ -70,23 +70,166 @@
     }
   };
 
-  // 자동 점수 캡처 — 게임이 localStorage에 쓰는 신기록을 가로채 보고한다.
-  // 게임 원본 무수정 원칙: 서버가 주입한 scoreKey만 알면 게임 코드는 그대로.
-  if (scoreKey) {
-    var last = 0;
-    try { last = parseInt(localStorage.getItem(scoreKey) || '0', 10) || 0; } catch (e) {}
+  // ===== 상태 동기화 manifest (서버 주입, 로그인 시에만 동작) =====
+  var stateKeys = [];
+  try { stateKeys = ds.stateKeys ? JSON.parse(ds.stateKeys) : []; } catch (e) {}
+  var stateMani = {};            // key -> { merge, init_cache }
+  stateKeys.forEach(function (sk) { stateMani[sk.key] = sk; });
+  var loggedIn = false;          // /api/state 200이면 true
+  window.__gpApplying = false;   // pull/merge가 쓰는 동안 후킹 side-effect 억제
+
+  function numOf(v) { var n = parseInt(v, 10); return isNaN(n) ? 0 : n; }
+  function objOf(v) { try { var o = JSON.parse(v); return (o && typeof o === 'object') ? o : {}; } catch (e) { return {}; } }
+
+  // 유저 첫 입력 시각 — init_cache 게임 reload는 입력 전(grace window)에만 (플레이 중 판 파괴 방지)
+  function markInteracted() { window.__gpInteracted = true; }
+  window.addEventListener('pointerdown', markInteracted, { once: true, capture: true });
+  window.addEventListener('keydown', markInteracted, { once: true, capture: true });
+
+  // ===== 자동 점수 캡처 + 상태 push 통합 후킹 (게임이 setItem 하는 순간 한 곳에서) =====
+  var lastScore = 0;
+  try { if (scoreKey) lastScore = numOf(localStorage.getItem(scoreKey)); } catch (e) {}
+
+  if (scoreKey || stateKeys.length) {
     var origSet = Storage.prototype.setItem;
     Storage.prototype.setItem = function (k, v) {
       origSet.apply(this, arguments);
+      if (window.__gpApplying) return;  // 우리가 pull로 쓴 값은 다시 보고/push 하지 않는다
       try {
-        if (this === window.localStorage && k === scoreKey) {
+        if (this !== window.localStorage) return;
+        // 1) 신기록 자동 캡처 (leaderboard)
+        if (scoreKey && k === scoreKey) {
           var n = parseInt(v, 10);
-          if (!isNaN(n) && n > last) {
-            last = n;
+          if (!isNaN(n) && n > lastScore) {
+            lastScore = n;
             window.GamePortal.reportScore(n, { metric: scoreMetric, auto: true });
           }
         }
+        // 2) 상태 변경 push (로그인 시에만, debounce)
+        if (loggedIn && stateMani[k]) queueStatePush(k);
       } catch (e) {}
     };
   }
+
+  // ===== 상태 push (debounce 1.5s + pagehide flush, 오프라인 큐 없음 — max라 다음 pull로 복구) =====
+  var pendingKeys = {};
+  var pushTimer = null;
+  function queueStatePush(k) {
+    pendingKeys[k] = true;
+    if (pushTimer) clearTimeout(pushTimer);
+    pushTimer = setTimeout(flushState, 1500);
+  }
+  function collectLocal() {
+    var changes = {};
+    Object.keys(stateMani).forEach(function (k) {
+      var raw = null;
+      try { raw = localStorage.getItem(k); } catch (e) {}
+      if (raw === null) return;
+      var m = stateMani[k].merge;
+      if (m === 'max') changes[k] = numOf(raw);
+      else if (m === 'union' || m === 'union_min') changes[k] = objOf(raw);
+      else changes[k] = raw;  // lww: raw 문자열 그대로
+    });
+    return changes;
+  }
+  function applyMerged(merged) {
+    // 서버 권위값으로 로컬 보정 (후킹 억제 상태에서)
+    window.__gpApplying = true;
+    try {
+      Object.keys(merged).forEach(function (k) {
+        var sk = stateMani[k]; if (!sk) return;
+        try {
+          if (sk.merge === 'max') {
+            if (numOf(merged[k]) > numOf(localStorage.getItem(k))) {
+              localStorage.setItem(k, String(numOf(merged[k])));
+              if (k === scoreKey) lastScore = numOf(merged[k]);
+            }
+          } else if (sk.merge === 'union' || sk.merge === 'union_min') {
+            localStorage.setItem(k, JSON.stringify(merged[k]));
+          }
+        } catch (e) {}
+      });
+    } finally { window.__gpApplying = false; }
+  }
+  function pushChanges(changes) {
+    if (!loggedIn || !Object.keys(changes).length) return;
+    fetch('/api/state/' + game, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ changes: changes }), keepalive: true
+    })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { if (d && d.merged) applyMerged(d.merged); })
+      .catch(function () {});
+  }
+  function flushState() {
+    var all = collectLocal();
+    var changes = {};
+    Object.keys(pendingKeys).forEach(function (k) { if (k in all) changes[k] = all[k]; });
+    pendingKeys = {};
+    pushChanges(changes);
+  }
+  window.addEventListener('pagehide', function () {
+    if (Object.keys(pendingKeys).length) flushState();
+  });
+
+  // ===== PULL on enter (세션당 1회) — 서버→로컬 merge + 양방향 reconcile push =====
+  function syncPull() {
+    var already = false;
+    try { already = !!sessionStorage.getItem('gp_synced:' + game); } catch (e) {}
+    if (already) { loggedIn = true; return; }  // 이미 동기화함 = 로그인 상태
+    fetch('/api/state/' + game, { headers: { 'Accept': 'application/json' } })
+      .then(function (r) {
+        if (r.status === 401) { loggedIn = false; return null; }  // 비로그인 → sync OFF
+        return r.ok ? r.json() : null;
+      })
+      .then(function (d) {
+        if (!d || !d.ok) return;
+        loggedIn = true;
+        var uid = d.user_id, state = d.state || {};
+        // 계정 전환 가드: 이 디바이스의 {game} 로컬 상태가 다른 user 것이면 비운다 (도둑질 방지)
+        var lastUid = null;
+        try { lastUid = localStorage.getItem('gp_state_uid:' + game); } catch (e) {}
+        window.__gpApplying = true;
+        try {
+          if (lastUid && lastUid !== uid) {
+            Object.keys(stateMani).forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
+          }
+          try { localStorage.setItem('gp_state_uid:' + game, uid); } catch (e) {}
+          // 서버→로컬 write-through merge
+          var needReload = false;
+          Object.keys(stateMani).forEach(function (k) {
+            if (!(k in state)) return;
+            var sk = stateMani[k], sv = state[k];
+            try {
+              if (sk.merge === 'max') {
+                if (numOf(sv) > numOf(localStorage.getItem(k))) {
+                  localStorage.setItem(k, String(numOf(sv)));
+                  if (sk.init_cache) needReload = true;
+                }
+              } else if (sk.merge === 'union' || sk.merge === 'union_min') {
+                localStorage.setItem(k, JSON.stringify(sv));
+              } else {  // lww
+                localStorage.setItem(k, typeof sv === 'string' ? sv : JSON.stringify(sv));
+              }
+            } catch (e) {}
+          });
+          if (scoreKey) { try { lastScore = numOf(localStorage.getItem(scoreKey)); } catch (e) {} }
+        } finally { window.__gpApplying = false; }
+        try { sessionStorage.setItem('gp_synced:' + game, '1'); } catch (e) {}
+        // 양방향: 로컬 현재값 전체를 1회 push (reconcile + 초기 병합, merge가 멱등이라 안전)
+        pushChanges(collectLocal());
+        // init_cache 게임이 stale 변수를 들고 있으면 1회 reload — 단 유저 입력 전에만
+        if (needReload && !window.__gpInteracted) {
+          var reloaded = false;
+          try { reloaded = !!sessionStorage.getItem('gp_reloaded:' + game); } catch (e) {}
+          if (!reloaded) {
+            try { sessionStorage.setItem('gp_reloaded:' + game, '1'); } catch (e) {}
+            location.reload();
+          }
+        }
+      })
+      .catch(function () {});
+  }
+
+  if (stateKeys.length) syncPull();
 })();
