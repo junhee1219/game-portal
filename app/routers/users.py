@@ -22,7 +22,7 @@ from app.auth_session import (
     set_session_cookie,
     verify_password,
 )
-from app.models import Score, User, Visitor
+from app.models import CreditTransaction, Score, User, Visitor
 
 logger = logging.getLogger(__name__)
 
@@ -92,8 +92,13 @@ async def claim_visitor(db, visitor_id: str | None, user_id: str) -> None:
         .where(Score.visitor_id == visitor_id, Score.user_id.is_(None))
         .values(user_id=user_id)
     )
-    # TODO(Phase 3 크레딧): credit_transactions.user_id 백필도 여기에 한 줄 추가
-    #   UPDATE credit_transactions SET user_id=:u WHERE visitor_id=:v AND user_id IS NULL
+    # 익명 동안 쌓인 크레딧도 user로 백필 (NULL 행만 — scores와 동일 규칙).
+    # 적립 로직은 아직 미구현이라 보통 0건이지만, 구현 후엔 이 백필이 익명 적립을 합류시킨다.
+    await db.execute(
+        update(CreditTransaction)
+        .where(CreditTransaction.visitor_id == visitor_id, CreditTransaction.user_id.is_(None))
+        .values(user_id=user_id)
+    )
     await db.commit()
 
 

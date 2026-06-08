@@ -96,3 +96,27 @@ class GameState(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=kst_now)
 
     __table_args__ = (UniqueConstraint("user_id", "game", "k", name="uq_user_game_key"),)
+
+
+class CreditTransaction(Base):
+    """크레딧 append-only ledger. balance = SUM(amount) 파생 (캐시 컬럼 없음).
+
+    ★1차는 골격만 — 적립 규칙/금액은 미구현 (용도 확정 후). 적립 로직 = app/credits.py TODO.
+    주체 = COALESCE(user_id, visitor_id) (scores와 동일 snapshot 패턴). spend는 음수 amount.
+    """
+
+    __tablename__ = "credit_transactions"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[str | None] = mapped_column(String(64), nullable=True)  # 적립 시점 snapshot
+    visitor_id: Mapped[str] = mapped_column(String(64))  # claim 병합 키
+    amount: Mapped[int] = mapped_column(Integer)  # +적립 / -소비
+    reason: Mapped[str] = mapped_column(String(32))
+    game: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    meta: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=kst_now)
+
+    __table_args__ = (
+        Index("ix_credit_subject", "user_id", "visitor_id"),
+        Index("ix_credit_dedup", "visitor_id", "reason", "created_at"),
+    )

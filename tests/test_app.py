@@ -209,3 +209,24 @@ def test_game_injects_state_keys():
     res = client.get("/vase/")
     assert "data-state-keys=" in res.text
     assert "union_min" in res.text  # vaseBest merge 방식이 주입에 실려야
+
+
+# --- Phase 3: 크레딧 골격 ---
+
+def test_credits_anonymous():
+    res = client.get("/api/me/credits")
+    assert res.status_code == 200
+    assert res.json()["ok"] is False
+    assert res.json()["balance"] == 0
+
+
+def test_award_not_implemented():
+    # 적립 로직은 골격만 — 호출 시 명확히 미구현임을 알린다
+    import asyncio
+
+    from app.credits import award_if_under_cap
+
+    with pytest.raises(NotImplementedError):
+        asyncio.run(
+            award_if_under_cap(None, visitor_id="v", user_id="u", reason="play_session")
+        )

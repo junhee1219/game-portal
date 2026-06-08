@@ -8,7 +8,7 @@ from sqlalchemy import desc, func, select, text
 from app import database, games
 from app.auth_session import current_user
 from app.database import kst_now
-from app.models import Event, Score, User, Visitor
+from app.models import CreditTransaction, Event, Score, User, Visitor
 
 logger = logging.getLogger(__name__)
 
@@ -177,6 +177,44 @@ async def my_scores(request: Request):
     except Exception:
         logger.exception("me/scores 조회 실패")
         return {"ok": False, "scores": {}}
+
+
+@router.get("/me/credits")
+async def my_credits(request: Request):
+    """크레딧 잔액 (SUM 파생) + 최근 내역. 적립 로직은 아직 미구현이라 현재는 0.
+
+    골격 — 적립이 붙으면(app/credits.py) 이 엔드포인트가 그대로 잔액을 보여준다.
+    """
+    user = await current_user(request)
+    if user is None:
+        return {"ok": False, "balance": 0}
+    try:
+        async with database.async_session() as db:
+            balance = (
+                await db.execute(
+                    select(func.coalesce(func.sum(CreditTransaction.amount), 0)).where(
+                        CreditTransaction.user_id == user.id
+                    )
+                )
+            ).scalar() or 0
+            recent = (
+                await db.execute(
+                    select(CreditTransaction.amount, CreditTransaction.reason, CreditTransaction.created_at)
+                    .where(CreditTransaction.user_id == user.id)
+                    .order_by(desc(CreditTransaction.id))
+                    .limit(10)
+                )
+            ).all()
+        return {
+            "ok": True,
+            "balance": int(balance),
+            "recent": [
+                {"amount": a, "reason": r, "at": c.isoformat()} for a, r, c in recent
+            ],
+        }
+    except Exception:
+        logger.exception("me/credits 조회 실패")
+        return {"ok": False, "balance": 0}
 
 
 @router.get("/stats/daily")
