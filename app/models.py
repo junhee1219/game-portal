@@ -120,3 +120,23 @@ class CreditTransaction(Base):
         Index("ix_credit_subject", "user_id", "visitor_id"),
         Index("ix_credit_dedup", "visitor_id", "reason", "created_at"),
     )
+
+
+class Friendship(Base):
+    """단방향 follow. A가 B를 follow하면 A의 /rank에 B 기록이 보인다 (B 동의 불필요).
+
+    유일 use case = '친구 기록 보기'인데 그 기록은 이미 /rank에 공개 → 상호 수락은 과설계.
+    주체는 항상 user (익명은 친구 불가 = 가입 wedge).
+    """
+
+    __tablename__ = "friendships"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    follower_id: Mapped[str] = mapped_column(String(64))
+    followee_id: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=kst_now)
+
+    __table_args__ = (
+        UniqueConstraint("follower_id", "followee_id", name="uq_friendship"),
+        Index("ix_friendships_follower", "follower_id"),
+    )

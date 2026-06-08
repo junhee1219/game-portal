@@ -230,3 +230,23 @@ def test_award_not_implemented():
         asyncio.run(
             award_if_under_cap(None, visitor_id="v", user_id="u", reason="play_session")
         )
+
+
+# --- Phase 4: 친구 ---
+
+def test_follow_requires_login():
+    assert client.post("/api/follow", json={"followee_id": "x"}).status_code == 401
+    assert client.get("/api/friends").status_code == 401
+    assert client.get("/api/friends/leaderboard/vase").status_code == 401
+
+
+def test_score_owner_graceful_without_db():
+    res = client.get("/api/score-owner/1")
+    assert res.status_code == 200
+    assert res.json()["owner_user_id"] is None
+
+
+def test_follow_page():
+    res = client.get("/follow/someuserid")
+    assert res.status_code == 200
+    assert "친구" in res.text

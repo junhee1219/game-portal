@@ -44,6 +44,21 @@
       font-family: inherit; cursor: pointer;
     }
     .mine button:active { transform: scale(0.97); }
+    .scope-toggle { margin-left: auto; display: flex; gap: 4px; }
+    .scope-toggle button {
+      background: transparent; border: 1px solid var(--line); color: var(--dim);
+      font: inherit; font-size: 12px; font-weight: 700; padding: 4px 10px;
+      border-radius: 8px; cursor: pointer;
+    }
+    .scope-toggle button.active { background: var(--accent); color: #14110a; border-color: var(--accent); }
+    .board li.me-row { background: rgba(255,177,61,0.08); }
+    .board li.me-row .who { color: var(--accent); font-weight: 700; }
+    .login-banner {
+      display: block; text-align: center; padding: 14px; margin-bottom: 24px;
+      background: var(--panel); border: 1px dashed var(--line); border-radius: 14px;
+      color: var(--accent); text-decoration: none; font-size: 14px; font-weight: 600;
+    }
+    .login-banner:hover { border-color: var(--accent); }
   </style>
 </head>
 <body>
@@ -70,6 +85,13 @@
       if (me && me.ok) { MY.loggedIn = true; MY.scores = me.scores || {}; }
       var container = document.getElementById('boards');
       container.innerHTML = '';
+      if (!MY.loggedIn) {
+        var banner = document.createElement('a');
+        banner.className = 'login-banner';
+        banner.href = '/account';
+        banner.textContent = '로그인하면 친구 기록을 모아볼 수 있어요 →';
+        container.appendChild(banner);
+      }
       (data.games || []).forEach(function (g) {
         var board = document.createElement('section');
         board.className = 'board';
@@ -87,23 +109,50 @@
         '<p class="empty" style="color:var(--dim)">기록을 불러오지 못했습니다.</p>';
     });
 
+    function loadScores(board, scope, unit) {
+      var game = board.dataset.game;
+      var ol = board.querySelector('ol');
+      var url = scope === 'friends'
+        ? '/api/friends/leaderboard/' + game
+        : '/api/leaderboard/' + game + '?limit=10';
+      fetch(url).then(function (r) { return r.json(); }).then(function (data) {
+        var entries = data.entries || [];
+        if (!entries.length) {
+          ol.innerHTML = '<li class="empty">' +
+            (scope === 'friends' ? '친구를 추가하면 여기 나란히 보여요.' : '아직 기록이 없습니다.') +
+            '</li>';
+          return;
+        }
+        ol.innerHTML = entries.map(function (e) {
+          return '<li' + (e.is_me ? ' class="me-row"' : '') + '>' +
+            '<span class="rank-no">' + e.rank + '</span>' +
+            '<span class="who">' + (e.nickname || '익명') + (e.is_me ? ' (나)' : '') + '</span>' +
+            '<span class="pts">' + e.score.toLocaleString() + unit + '</span></li>';
+        }).join('');
+      }).catch(function () {});
+    }
+
     function renderBoard(board) {
       var game = board.dataset.game;
       var unit = board.dataset.unit;
       var scoreKey = board.dataset.scoreKey;
 
-      fetch('/api/leaderboard/' + game + '?limit=10')
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          if (!data.entries || !data.entries.length) return;
-          var ol = board.querySelector('ol');
-          ol.innerHTML = data.entries.map(function (e) {
-            return '<li><span class="rank-no">' + e.rank + '</span>' +
-              '<span class="who">' + (e.nickname || '익명') + '</span>' +
-              '<span class="pts">' + e.score.toLocaleString() + unit + '</span></li>';
-          }).join('');
-        })
-        .catch(function () {});
+      // 로그인 시 전체|친구 토글
+      if (MY.loggedIn) {
+        var toggle = document.createElement('div');
+        toggle.className = 'scope-toggle';
+        toggle.innerHTML = '<button type="button" class="active" data-scope="all">전체</button>' +
+          '<button type="button" data-scope="friends">친구</button>';
+        board.querySelector('h2').appendChild(toggle);
+        toggle.querySelectorAll('button').forEach(function (b) {
+          b.addEventListener('click', function () {
+            toggle.querySelectorAll('button').forEach(function (x) { x.classList.remove('active'); });
+            b.classList.add('active');
+            loadScores(board, b.dataset.scope, unit);
+          });
+        });
+      }
+      loadScores(board, 'all', unit);
 
       // 내 최고 기록 — 로그인 시 서버값(크로스 디바이스), 아니면 localStorage 폴백
       var mine = 0;

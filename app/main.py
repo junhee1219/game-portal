@@ -19,6 +19,7 @@ from app import database, games
 from app.database import init_db
 from app.routers.api import router as api_router
 from app.routers.auth import router as auth_router
+from app.routers.friends import router as friends_router
 from app.routers.state import router as state_router
 from app.routers.users import router as users_router
 
@@ -70,6 +71,7 @@ app.include_router(api_router)
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(state_router)
+app.include_router(friends_router)
 
 
 @app.get("/health")
@@ -148,6 +150,15 @@ async def account_page():
     """가입/로그인 화면 (vanilla JS)."""
     return HTMLResponse(
         (PORTAL_DIR / "account.html").read_text(encoding="utf-8"),
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
+@app.get("/follow/{user_id}", response_class=HTMLResponse)
+async def follow_page(user_id: str):
+    """친구 추가 동선 페이지 (로그인 분기/가입 next). 실제 follow는 JS가 /api/follow 호출."""
+    return HTMLResponse(
+        (PORTAL_DIR / "follow.html").read_text(encoding="utf-8"),
         headers={"Cache-Control": "no-cache"},
     )
 

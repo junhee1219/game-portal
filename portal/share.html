@@ -46,9 +46,27 @@
     </section>
     <div class="cta">
       <a class="btn btn-primary" href="/{{GAME}}/">나도 한판</a>
+      <a class="btn btn-ghost" id="friend-cta" style="display:none"></a>
       <a class="btn btn-ghost" href="/">다른 게임 보기</a>
     </div>
   </main>
+  <script>
+    // 이 기록 주인이 로그인 user면 '친구 추가' 동선을 띄운다 (익명 기록이면 미노출)
+    (function () {
+      var scoreId = location.pathname.split('/')[2];
+      if (!scoreId) return;
+      fetch('/api/score-owner/' + encodeURIComponent(scoreId))
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (!d.ok || !d.owner_user_id) return;
+          var cta = document.getElementById('friend-cta');
+          cta.textContent = (d.nickname || '이 친구') + '님 친구 추가하고 기록 받아보기';
+          cta.href = '/follow/' + d.owner_user_id;
+          cta.style.display = 'block';
+        })
+        .catch(function () {});
+    })();
+  </script>
   <script src="/portal.js" data-game="portal"></script>
 </body>
 </html>
