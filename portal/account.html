@@ -12,7 +12,7 @@
   <style>
     .auth-or {
       display: flex; align-items: center; gap: 12px;
-      margin: 20px 0 16px; color: var(--dim); font-size: 13px;
+      margin: 20px 0 16px; color: var(--dim); font-size: var(--fs-3);
     }
     .auth-or::before, .auth-or::after {
       content: ""; flex: 1; height: 1px; background: rgba(255,255,255,.12);
@@ -22,7 +22,7 @@
       width: 100%; box-sizing: border-box;
       padding: 13px 16px; border-radius: 12px;
       background: #FEE500; color: #181600;
-      font-size: 15px; font-weight: 700; text-decoration: none;
+      font-size: var(--fs-2); font-weight: 700; text-decoration: none;
       transition: filter .15s ease;
     }
     .kakao-btn:hover { filter: brightness(.96); }
@@ -31,10 +31,10 @@
 </head>
 <body>
   <main class="wrap">
-    <a class="back" href="/" style="display:inline-block;margin-bottom:24px;color:var(--dim);text-decoration:none;font-size:14px">&larr; 게임 목록</a>
+    <a class="back" href="/" style="display:inline-block;margin-bottom:24px;color:var(--dim);text-decoration:none;font-size: var(--fs-3)">&larr; 게임 목록</a>
     <header class="hero" style="margin-bottom:28px">
       <p class="kicker">ACCOUNT</p>
-      <h1 style="font-size:clamp(30px,8vw,40px)">기록을 남기자</h1>
+      <h1 style="font-size: var(--fs-1)">기록을 남기자</h1>
       <p class="sub">닉네임으로 로그인하면 어느 기기에서도 내 기록이 따라옵니다.</p>
     </header>
 

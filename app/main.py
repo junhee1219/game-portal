@@ -133,6 +133,22 @@ async def portal_icon(name: str):
     )
 
 
+_FONTS_DIR = (PORTAL_DIR / "fonts").resolve()
+
+
+@app.get("/fonts/{name}")
+async def portal_font(name: str):
+    """self-host 폰트(Pretendard woff2). 오프라인 PWA — 외부 CDN 의존 없음."""
+    target = (_FONTS_DIR / name).resolve()
+    if not str(target).startswith(str(_FONTS_DIR)) or not target.is_file():
+        raise HTTPException(status_code=404)
+    return FileResponse(
+        target,
+        media_type="font/woff2",
+        headers={"Cache-Control": "public, max-age=31536000, immutable"},
+    )
+
+
 @app.get("/manifest.webmanifest")
 async def manifest(request: Request):
     """포털 PWA manifest. scope '/'로 게임별 manifest(scope /{game}/)와 분리."""

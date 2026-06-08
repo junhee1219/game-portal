@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face {
+    font-family: "Pretendard Variable"; font-weight: 45 920; font-display: block;
+    src: url("/portal/fonts/PretendardVariable.woff2") format("woff2-variations");
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  #og {
+    width: 1200px; height: 630px; position: relative; overflow: hidden;
+    background: #101014; color: #f2f2f0;
+    font-family: "Pretendard Variable", sans-serif;
+    display: flex; align-items: center;
+    padding: 0 96px;
+  }
+  .kicker { color: #ffb13d; font-weight: 800; font-size: 26px; letter-spacing: .22em; margin-bottom: 22px; }
+  h1 { font-size: 104px; font-weight: 800; line-height: 1.08; letter-spacing: -0.02em; }
+  .sub { margin-top: 28px; color: #8e8e98; font-size: 32px; font-weight: 500; }
+  .icons {
+    position: absolute; right: 90px; top: 50%; transform: translateY(-50%);
+    display: grid; grid-template-columns: repeat(2, 150px); gap: 22px;
+  }
+  .icons img { width: 150px; height: 150px; border-radius: 34px; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+</style>
+</head>
+<body>
+  <div id="og">
+    <div>
+      <div class="kicker">GAME PORTAL</div>
+      <h1>한 판 하고<br>가요</h1>
+      <div class="sub">설치 없음 · 로그인 없음 · 누르면 바로 시작</div>
+    </div>
+    <div class="icons">
+      <img src="/games/vase/icon-192.png" alt="">
+      <img src="/games/gateway/icon-192.png" alt="">
+      <img src="/games/cube/icon-192.png" alt="">
+      <img src="/games/pang/icon-192.png" alt="">
+    </div>
+  </div>
+</body>
+</html>

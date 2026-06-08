@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "Pretendard Variable";
+  font-weight: 45 920;
+  font-style: normal;
+  font-display: swap;
+  src: url("/fonts/PretendardVariable.woff2") format("woff2-variations");
+}
+
 :root {
   --bg: #101014;
   --panel: #18181f;
@@ -6,6 +14,10 @@
   --text: #f2f2f0;
   --dim: #8e8e98;
   --accent: #ffb13d;
+  /* 타입 스케일 — 딱 3종. 위계는 font-weight + color로 만든다. */
+  --fs-1: clamp(30px, 8vw, 44px);  /* display / hero */
+  --fs-2: 16px;                     /* body / 제목(굵게) / 버튼 */
+  --fs-3: 13px;                     /* caption / 라벨 / dim */
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -30,7 +42,7 @@ body {
 .hero { margin-bottom: 40px; }
 
 .kicker {
-  font-size: 12px;
+  font-size: var(--fs-3);
   letter-spacing: 0.22em;
   color: var(--accent);
   font-weight: 700;
@@ -38,7 +50,7 @@ body {
 }
 
 .hero h1 {
-  font-size: clamp(40px, 11vw, 56px);
+  font-size: var(--fs-1);
   font-weight: 800;
   line-height: 1.12;
   letter-spacing: -0.02em;
@@ -47,7 +59,7 @@ body {
 .hero .sub {
   margin-top: 14px;
   color: var(--dim);
-  font-size: 15px;
+  font-size: var(--fs-2);
 }
 
 .list {
@@ -93,13 +105,13 @@ body {
 }
 
 .card .name {
-  font-size: 17px;
+  font-size: var(--fs-2);
   font-weight: 700;
   letter-spacing: -0.01em;
 }
 
 .card .desc {
-  font-size: 13px;
+  font-size: var(--fs-3);
   color: var(--dim);
   line-height: 1.45;
 }
@@ -107,7 +119,7 @@ body {
 .card .go {
   margin-left: auto;
   color: var(--dim);
-  font-size: 18px;
+  font-size: var(--fs-2);
   flex-shrink: 0;
   transition: color 0.15s ease, transform 0.15s ease;
 }
@@ -122,7 +134,7 @@ body {
   padding-top: 20px;
   border-top: 1px solid var(--line);
   color: var(--dim);
-  font-size: 13px;
+  font-size: var(--fs-3);
 }
 
 .foot p + p { margin-top: 6px; }
@@ -143,7 +155,7 @@ body {
   gap: 10px;
   min-height: 20px;
   margin-bottom: 8px;
-  font-size: 13px;
+  font-size: var(--fs-3);
 }
 
 .topbar a { color: var(--accent); text-decoration: none; font-weight: 600; }
@@ -169,21 +181,21 @@ body {
 }
 .auth-tabs button.active { background: var(--accent); color: #14110a; border-color: var(--accent); }
 .auth-field { margin-bottom: 14px; }
-.auth-field label { display: block; font-size: 13px; color: var(--dim); margin-bottom: 6px; }
+.auth-field label { display: block; font-size: var(--fs-3); color: var(--dim); margin-bottom: 6px; }
 .auth-field input {
   width: 100%; padding: 12px 14px; border-radius: 10px;
   border: 1px solid var(--line); background: var(--bg); color: var(--text);
   font: inherit;
 }
 .auth-field input:focus { outline: none; border-color: var(--accent); }
-.auth-hint { font-size: 12px; margin-top: 6px; min-height: 16px; }
+.auth-hint { font-size: var(--fs-3); margin-top: 6px; min-height: 16px; }
 .auth-hint.ok { color: #5fd08a; }
 .auth-hint.bad { color: #ff7a7a; }
 .auth-submit {
   width: 100%; padding: 14px; border-radius: 12px; border: none;
   background: var(--accent); color: #14110a; font: inherit; font-weight: 800;
-  font-size: 15px; cursor: pointer; margin-top: 6px;
+  font-size: var(--fs-2); cursor: pointer; margin-top: 6px;
 }
 .auth-submit:active { transform: scale(0.99); }
 .auth-submit:disabled { opacity: 0.5; cursor: default; }
-.auth-error { color: #ff7a7a; font-size: 13px; margin-top: 12px; min-height: 18px; text-align: center; }
+.auth-error { color: #ff7a7a; font-size: var(--fs-3); margin-top: 12px; min-height: 18px; text-align: center; }
