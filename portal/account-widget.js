@@ -53,8 +53,9 @@
         btn.type = 'button';
         btn.textContent = '로그아웃';
         btn.addEventListener('click', function () {
-          // 로그아웃 후 다음 게임 진입에서 재동기화 + 계정 전환 가드가 돌도록 sync 플래그 초기화
+          // 로그인 힌트 제거 + 다음 게임 진입 재동기화 + 계정 전환 가드용 sync 플래그 초기화
           try {
+            localStorage.removeItem('gp_auth');
             Object.keys(sessionStorage).forEach(function (k) {
               if (k.indexOf('gp_synced:') === 0) sessionStorage.removeItem(k);
             });

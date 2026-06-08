@@ -121,8 +121,9 @@
         .then(function (r) { return r.json().then(function (d) { return { status: r.status, d: d }; }); })
         .then(function (res) {
           if (res.d && res.d.ok) {
-            // 계정 전환 시 다음 게임 진입에서 재동기화되도록 sync 플래그 초기화
+            // 로그인 힌트 set (게임 페이지 portal.js가 sync 켤지 판단) + 계정 전환 재동기화 위해 sync 플래그 초기화
             try {
+              localStorage.setItem('gp_auth', '1');
               Object.keys(sessionStorage).forEach(function (k) {
                 if (k.indexOf('gp_synced:') === 0) sessionStorage.removeItem(k);
               });

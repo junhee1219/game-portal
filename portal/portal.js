@@ -179,7 +179,11 @@
     if (already) { loggedIn = true; return; }  // 이미 동기화함 = 로그인 상태
     fetch('/api/state/' + game, { headers: { 'Accept': 'application/json' } })
       .then(function (r) {
-        if (r.status === 401) { loggedIn = false; return null; }  // 비로그인 → sync OFF
+        if (r.status === 401) {  // 세션 만료 등 → sync OFF + stale 로그인 힌트 제거
+          loggedIn = false;
+          try { localStorage.removeItem('gp_auth'); } catch (e) {}
+          return null;
+        }
         return r.ok ? r.json() : null;
       })
       .then(function (d) {
@@ -231,7 +235,11 @@
       .catch(function () {});
   }
 
-  if (stateKeys.length) syncPull();
+  // 로그인 힌트(gp_auth)가 있을 때만 sync 시도 — 익명 플레이어는 /api/state 안 쳐서 401 콘솔 노이즈 0.
+  // (힌트는 보안 아님 — 서버가 쿠키로 진짜 검증. 힌트는 '이 기기에서 로그인한 적 있음'만 표시)
+  var gpAuthed = false;
+  try { gpAuthed = localStorage.getItem('gp_auth') === '1'; } catch (e) {}
+  if (stateKeys.length && gpAuthed) syncPull();
 
   // ===== PWA 서비스 워커 등록 — 포털 페이지 + https에서만 =====
   // 게임 페이지엔 등록 안 함 (게임 자체 NOOP sw.js와 scope 충돌 회피).
