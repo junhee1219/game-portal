@@ -48,6 +48,7 @@
 </head>
 <body>
   <main class="wrap">
+    <div class="topbar" id="topbar"></div>
     <a class="back" href="/">&larr; 게임 목록</a>
     <header class="hero" style="margin-bottom:32px">
       <p class="kicker">RANKING</p>
@@ -57,29 +58,34 @@
     <div id="boards"><p class="empty" style="color:var(--dim)">불러오는 중…</p></div>
   </main>
   <script>
-    // 게임 목록 + 점수 키는 /api/games 단일 소스에서 받는다 (하드코딩 SCORE_KEYS 제거)
-    fetch('/api/games')
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        var container = document.getElementById('boards');
-        container.innerHTML = '';
-        (data.games || []).forEach(function (g) {
-          var board = document.createElement('section');
-          board.className = 'board';
-          board.dataset.game = g.id;
-          board.dataset.unit = g.unit || '점';
-          board.dataset.scoreKey = g.score_key || '';
-          board.innerHTML =
-            '<h2><img src="' + g.icon + '" alt="">' + g.title + '</h2>' +
-            '<ol><li class="empty">아직 기록이 없습니다.</li></ol>';
-          container.appendChild(board);
-          renderBoard(board);
-        });
-      })
-      .catch(function () {
-        document.getElementById('boards').innerHTML =
-          '<p class="empty" style="color:var(--dim)">기록을 불러오지 못했습니다.</p>';
+    // 로그인 시 '내 기록'은 서버(/api/me/scores)에서 — 크로스 디바이스. 비로그인은 localStorage 폴백.
+    var MY = { loggedIn: false, scores: {} };
+
+    // 게임 목록 + 내 기록을 함께 받은 뒤 보드 렌더 (하드코딩 SCORE_KEYS 제거)
+    Promise.all([
+      fetch('/api/games').then(function (r) { return r.json(); }),
+      fetch('/api/me/scores').then(function (r) { return r.json(); }).catch(function () { return { ok: false }; })
+    ]).then(function (res) {
+      var data = res[0], me = res[1];
+      if (me && me.ok) { MY.loggedIn = true; MY.scores = me.scores || {}; }
+      var container = document.getElementById('boards');
+      container.innerHTML = '';
+      (data.games || []).forEach(function (g) {
+        var board = document.createElement('section');
+        board.className = 'board';
+        board.dataset.game = g.id;
+        board.dataset.unit = g.unit || '점';
+        board.dataset.scoreKey = g.score_key || '';
+        board.innerHTML =
+          '<h2><img src="' + g.icon + '" alt="">' + g.title + '</h2>' +
+          '<ol><li class="empty">아직 기록이 없습니다.</li></ol>';
+        container.appendChild(board);
+        renderBoard(board);
       });
+    }).catch(function () {
+      document.getElementById('boards').innerHTML =
+        '<p class="empty" style="color:var(--dim)">기록을 불러오지 못했습니다.</p>';
+    });
 
     function renderBoard(board) {
       var game = board.dataset.game;
@@ -99,9 +105,13 @@
         })
         .catch(function () {});
 
-      // 내 최고 기록 (게임이 남긴 localStorage, 같은 origin이라 읽힌다) + 공유
+      // 내 최고 기록 — 로그인 시 서버값(크로스 디바이스), 아니면 localStorage 폴백
       var mine = 0;
-      try { if (scoreKey) mine = parseInt(localStorage.getItem(scoreKey) || '0', 10) || 0; } catch (e) {}
+      if (MY.loggedIn) {
+        mine = parseInt(MY.scores[game] || 0, 10) || 0;
+      } else {
+        try { if (scoreKey) mine = parseInt(localStorage.getItem(scoreKey) || '0', 10) || 0; } catch (e) {}
+      }
       if (mine > 0) {
         var div = document.createElement('div');
         div.className = 'mine';
@@ -141,5 +151,6 @@
     }
   </script>
   <script src="/portal.js" data-game="portal"></script>
+  <script src="/account-widget.js"></script>
 </body>
 </html>

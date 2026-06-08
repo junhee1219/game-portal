@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>로그인 — 미니게임</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="/portal.css">
+  <link rel="icon" href="/vase/icon-192.png">
+</head>
+<body>
+  <main class="wrap">
+    <a class="back" href="/" style="display:inline-block;margin-bottom:24px;color:var(--dim);text-decoration:none;font-size:14px">&larr; 게임 목록</a>
+    <header class="hero" style="margin-bottom:28px">
+      <p class="kicker">ACCOUNT</p>
+      <h1 style="font-size:clamp(30px,8vw,40px)">기록을 남기자</h1>
+      <p class="sub">닉네임으로 로그인하면 어느 기기에서도 내 기록이 따라옵니다.</p>
+    </header>
+
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <button type="button" id="tab-login" class="active">로그인</button>
+        <button type="button" id="tab-register">가입</button>
+      </div>
+
+      <form id="auth-form" autocomplete="off">
+        <div class="auth-field">
+          <label for="nickname">닉네임</label>
+          <input id="nickname" name="nickname" type="text" maxlength="16" autocomplete="off"
+                 placeholder="기록에 표시될 이름">
+          <div class="auth-hint" id="nick-hint"></div>
+        </div>
+        <div class="auth-field">
+          <label for="password">비밀번호</label>
+          <input id="password" name="password" type="password" maxlength="128" autocomplete="current-password"
+                 placeholder="4자 이상">
+        </div>
+        <button type="submit" class="auth-submit" id="submit-btn">로그인</button>
+        <div class="auth-error" id="form-error"></div>
+      </form>
+    </div>
+  </main>
+
+  <script>
+    var params = new URLSearchParams(location.search);
+    var next = params.get('next') || '/rank';
+    // 안전: 같은 사이트 내부 경로만 허용 (오픈 리다이렉트 방지)
+    if (!/^\/[a-zA-Z0-9/_-]*$/.test(next)) next = '/rank';
+
+    var mode = 'login';  // 'login' | 'register'
+    var tabLogin = document.getElementById('tab-login');
+    var tabRegister = document.getElementById('tab-register');
+    var submitBtn = document.getElementById('submit-btn');
+    var nickInput = document.getElementById('nickname');
+    var nickHint = document.getElementById('nick-hint');
+    var pwInput = document.getElementById('password');
+    var formError = document.getElementById('form-error');
+
+    function setMode(m) {
+      mode = m;
+      tabLogin.classList.toggle('active', m === 'login');
+      tabRegister.classList.toggle('active', m === 'register');
+      submitBtn.textContent = m === 'login' ? '로그인' : '가입하고 시작';
+      pwInput.setAttribute('autocomplete', m === 'login' ? 'current-password' : 'new-password');
+      nickHint.textContent = '';
+      nickHint.className = 'auth-hint';
+      formError.textContent = '';
+    }
+    tabLogin.addEventListener('click', function () { setMode('login'); });
+    tabRegister.addEventListener('click', function () { setMode('register'); });
+
+    // 가입 모드에서 닉네임 중복 실시간 검사 (debounce)
+    var nickTimer = null;
+    nickInput.addEventListener('input', function () {
+      nickHint.textContent = '';
+      nickHint.className = 'auth-hint';
+      if (mode !== 'register') return;
+      var n = nickInput.value.trim();
+      if (!n) return;
+      clearTimeout(nickTimer);
+      nickTimer = setTimeout(function () {
+        fetch('/auth/check-nickname?n=' + encodeURIComponent(n))
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (nickInput.value.trim() !== n) return;
+            if (d.available) {
+              nickHint.textContent = '사용할 수 있는 닉네임입니다.';
+              nickHint.className = 'auth-hint ok';
+            } else {
+              nickHint.textContent = d.reason === 'invalid'
+                ? '닉네임은 1~16자로 입력해주세요.' : '이미 사용 중인 닉네임입니다.';
+              nickHint.className = 'auth-hint bad';
+            }
+          })
+          .catch(function () {});
+      }, 350);
+    });
+
+    function vid() {
+      try { return localStorage.getItem('gp_vid') || null; } catch (e) { return null; }
+    }
+
+    document.getElementById('auth-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      formError.textContent = '';
+      var nickname = nickInput.value.trim();
+      var password = pwInput.value;
+      if (!nickname || !password) {
+        formError.textContent = '닉네임과 비밀번호를 입력해주세요.';
+        return;
+      }
+      submitBtn.disabled = true;
+      var url = mode === 'login' ? '/auth/login' : '/auth/register';
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nickname: nickname, password: password, visitor_id: vid() })
+      })
+        .then(function (r) { return r.json().then(function (d) { return { status: r.status, d: d }; }); })
+        .then(function (res) {
+          if (res.d && res.d.ok) {
+            location.href = next;
+          } else {
+            submitBtn.disabled = false;
+            formError.textContent = (res.d && res.d.reason) || '문제가 발생했습니다.';
+          }
+        })
+        .catch(function () {
+          submitBtn.disabled = false;
+          formError.textContent = '네트워크 오류입니다. 다시 시도해주세요.';
+        });
+    });
+  </script>
+  <script src="/portal.js" data-game="portal"></script>
+</body>
+</html>

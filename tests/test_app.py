@@ -120,3 +120,54 @@ def test_kakao_disabled_without_keys():
 def test_share_page_redirects_without_db():
     res = client.get("/s/1", follow_redirects=False)
     assert res.status_code == 302
+
+
+# --- Phase 1: 유저 ---
+
+def test_account_page():
+    res = client.get("/account")
+    assert res.status_code == 200
+    assert "닉네임" in res.text
+
+
+def test_auth_me_anonymous():
+    res = client.get("/auth/me")
+    assert res.status_code == 200
+    assert res.json() == {"user": None}
+
+
+def test_register_requires_db():
+    # DB 없는 테스트 환경 — 가입은 503 (게임 플레이는 막지 않지만 가입은 DB 필수)
+    res = client.post(
+        "/auth/register", json={"nickname": "tester", "password": "secret1"}
+    )
+    assert res.status_code == 503
+    assert res.json()["ok"] is False
+
+
+def test_check_nickname_invalid():
+    res = client.get("/auth/check-nickname?n=")
+    assert res.json()["available"] is False
+
+
+def test_password_hash_roundtrip():
+    from app.auth_session import hash_password, verify_password
+
+    h = hash_password("hunter2!")
+    assert h != "hunter2!"
+    assert verify_password("hunter2!", h) is True
+    assert verify_password("wrong", h) is False
+    assert verify_password("anything", None) is False
+
+
+def test_session_token_roundtrip():
+    from app import auth_session
+
+    token = auth_session._serializer.dumps("user-123")
+    assert auth_session._serializer.loads(token, max_age=60) == "user-123"
+
+
+def test_me_scores_anonymous():
+    res = client.get("/api/me/scores")
+    assert res.status_code == 200
+    assert res.json()["ok"] is False

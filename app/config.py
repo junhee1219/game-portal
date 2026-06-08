@@ -15,5 +15,9 @@ class Settings(BaseSettings):
     kakao_client_secret: str = ""
     base_url: str = "http://158.179.178.70:8080"  # 도메인 연결 후 교체
 
+    # 세션 쿠키 서명 키. prod는 .env로 고정 (없으면 재시작마다 전 세션 무효).
+    # 비어 있으면 auth_session이 임시 랜덤 키를 생성하고 경고 로그를 남긴다.
+    secret_key: str = ""
+
 
 settings = Settings()

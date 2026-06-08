@@ -18,6 +18,7 @@ from app import database, games
 from app.database import init_db
 from app.routers.api import router as api_router
 from app.routers.auth import router as auth_router
+from app.routers.users import router as users_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -61,6 +62,7 @@ async def lifespan(_: FastAPI):
 app = FastAPI(title="game-portal", lifespan=lifespan)
 app.include_router(api_router)
 app.include_router(auth_router)
+app.include_router(users_router)
 
 
 @app.get("/health")
@@ -116,6 +118,13 @@ async def portal_css():
     return Response((PORTAL_DIR / "portal.css").read_bytes(), media_type="text/css")
 
 
+@app.get("/account-widget.js")
+async def account_widget_js():
+    return Response(
+        (PORTAL_DIR / "account-widget.js").read_bytes(), media_type="text/javascript"
+    )
+
+
 @app.get("/rank", response_class=HTMLResponse)
 async def rank_page():
     return (PORTAL_DIR / "rank.html").read_text(encoding="utf-8")
@@ -127,23 +136,39 @@ async def dash_page():
     return (PORTAL_DIR / "dash.html").read_text(encoding="utf-8")
 
 
+@app.get("/account", response_class=HTMLResponse)
+async def account_page():
+    """가입/로그인 화면 (vanilla JS)."""
+    return HTMLResponse(
+        (PORTAL_DIR / "account.html").read_text(encoding="utf-8"),
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
 @app.get("/s/{score_id}", response_class=HTMLResponse)
 async def share_page(score_id: int, request: Request):
     """점수 공유 페이지 — 카톡 미리보기용 OG 태그를 점수별로 렌더."""
     if database.async_session is None:
         return RedirectResponse(url="/", status_code=302)
-    from app.models import Score
+    from app.models import Score, User
 
     games_map = games.games_by_id()
     async with database.async_session() as db:
         score = await db.get(Score, score_id)
-    if score is None or score.game not in games_map:
-        return RedirectResponse(url="/", status_code=302)
+        if score is None or score.game not in games_map:
+            return RedirectResponse(url="/", status_code=302)
+        # 닉네임 노출 우선순위: 기록 소유 user.nickname > score 시점 닉 (login_id/user_id는 비노출)
+        nick = None
+        if score.user_id:
+            owner = await db.get(User, score.user_id)
+            nick = owner.nickname if owner else None
+        nick = nick or score.nickname
 
     info = games_map[score.game]
     base = str(request.base_url).rstrip("/")
     record = f"{score.score:,}"
-    og_title = f"{info['title']} — {record}{info['unit']}"
+    base_title = f"{info['title']} — {record}{info['unit']}"
+    og_title = f"{nick}님의 {base_title}" if nick else base_title
     page = (PORTAL_DIR / "share.html").read_text(encoding="utf-8")
     for key, value in {
         "{{TITLE}}": og_title,

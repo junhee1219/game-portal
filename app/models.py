@@ -7,8 +7,26 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base, kst_now
 
 
+class User(Base):
+    """가입 회원. 닉네임이 로그인 ID 겸 표시명, PK는 불변 uuid (닉네임 변경권 판매 대비).
+
+    login_id 별도 컬럼 없음 — 닉네임이 곧 로그인 키. kakao_id는 자리만 (지금 미사용).
+    """
+
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    nickname: Mapped[str] = mapped_column(String(32), unique=True)  # 로그인 ID 겸 표시명
+    password_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    kakao_id: Mapped[str | None] = mapped_column(String(32), nullable=True, unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=kst_now)
+
+
 class Visitor(Base):
-    """익명 방문자. localStorage UUID 기준."""
+    """익명 방문자(디바이스). localStorage UUID 기준.
+
+    user_id = 현재 이 디바이스에 로그인된 user (mutable claim). 다음 점수의 snapshot 소스.
+    """
 
     __tablename__ = "visitors"
 
@@ -19,6 +37,7 @@ class Visitor(Base):
     first_referrer: Mapped[str | None] = mapped_column(String(512), nullable=True)
     kakao_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
     nickname: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    user_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
 
 
 class Event(Base):
@@ -45,10 +64,16 @@ class Score(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     visitor_id: Mapped[str] = mapped_column(String(64), index=True)
+    # 기록 시점의 소유자 user (write-time snapshot). 재로그인해도 안 바뀜 → 과거 기록 오염 방지.
+    # 집계 주체 = COALESCE(user_id, visitor_id).
+    user_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     game: Mapped[str] = mapped_column(String(32), index=True)
     score: Mapped[int] = mapped_column(BigInteger)
     nickname: Mapped[str | None] = mapped_column(String(32), nullable=True)
     meta: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=kst_now)
 
-    __table_args__ = (Index("ix_scores_game_score", "game", "score"),)
+    __table_args__ = (
+        Index("ix_scores_game_score", "game", "score"),
+        Index("ix_scores_game_user", "game", "user_id"),
+    )
