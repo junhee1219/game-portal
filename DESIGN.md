@@ -403,6 +403,12 @@ CREATE TABLE friendships (...);                             -- 5
 
 신규 의존성: `bcrypt>=4.0`, `itsdangerous>=2.0` + `.env`에 `SECRET_KEY`.
 
+> **⚠ collation 함정 (실제로 겪음).** 새 테이블 DDL은 반드시 `COLLATE utf8mb4_unicode_ci`로 친다.
+> 기존 테이블(visitors/scores/events)은 `utf8mb4_unicode_ci`인데, `CHARACTER SET utf8mb4`만 쓰면
+> 서버 기본(`utf8mb4_0900_ai_ci`)으로 생성돼 **cross-table id JOIN이 "Illegal mix of collations"로 500**.
+> (친구 리더보드 `scores.user_id ⋈ users.id`에서 터졌음. dev는 전부 create_all이라 균일해서 안 잡힘.)
+> 현재 prod/dev 7개 테이블 모두 `utf8mb4_unicode_ci`로 통일됨.
+
 ---
 
 ## 8. 구현 순서와 build/defer 선
