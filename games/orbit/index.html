@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#eaf0ff">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="행성 합치기">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='28' fill='%23a7c4ff'/%3E%3Cellipse cx='32' cy='32' rx='38' ry='10' fill='none' stroke='%23f5c77e' stroke-width='4' transform='rotate(-18 32 32)'/%3E%3C/svg%3E">
+<title>행성 합치기</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Gowun+Dodum&display=swap');
+  :root{
+    /* 밝은 파스텔 우주 — 단일 색조, 명도폭 좁게 */
+    --base:#eef3ff;
+    --deep:#dfe8ff;
+    --vig:#d2def9;
+    --ink:#39344e;
+    --ink-soft:#736c8c;
+    --glass:rgba(255,255,255,0.66);
+    --glass-border:rgba(70,60,105,0.16);
+    --gold:#f0a92e;
+    --card:#ffffff;
+    --scrim:rgba(38,32,58,0.34);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    font-family:'Gowun Dodum',sans-serif;
+    height:100vh;height:100dvh;width:100vw;overflow:hidden;
+    background:radial-gradient(130% 100% at 50% 0%, var(--base) 0%, var(--deep) 58%, var(--vig) 100%);
+    color:var(--ink);display:flex;flex-direction:column;align-items:center;
+    padding:calc(8px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));
+    position:relative;
+    user-select:none;-webkit-user-select:none;touch-action:manipulation;
+    overscroll-behavior:none;
+  }
+  /* 옅은 별 가루 패턴 — 정신없지 않게 아주 옅게 */
+  #stars{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.5;}
+  /* 부드러운 흰 블룸이 숨쉬듯 — 네온 글로우 아님, 그냥 빛 */
+  body::after{
+    content:'';position:fixed;top:-25%;left:-40%;width:90%;height:80%;z-index:0;pointer-events:none;
+    background:radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,.5), transparent 70%);
+    animation:bg-breathe 16s ease-in-out infinite alternate;
+  }
+  @keyframes bg-breathe{from{transform:translate(0,0) scale(1);}to{transform:translate(58vw,30vh) scale(1.25);}}
+  @media (prefers-reduced-motion:reduce){body::after{animation:none;}}
+
+  /* ── 상단 바 ── */
+  .topbar{display:flex;align-items:center;gap:8px;z-index:3;width:100%;max-width:480px;flex:0 0 auto;}
+  h1{
+    font-family:'Fredoka',sans-serif;font-weight:600;font-size:19px;letter-spacing:-.3px;
+    color:var(--ink);margin-right:auto;white-space:nowrap;display:flex;align-items:center;gap:7px;
+  }
+  h1 .logo{font-size:20px;}
+  .pill{
+    background:var(--glass);border:1px solid var(--glass-border);backdrop-filter:blur(10px);
+    padding:6px 13px;border-radius:999px;font-size:13px;font-family:'Fredoka',sans-serif;
+    display:flex;align-items:center;gap:5px;white-space:nowrap;color:var(--ink);
+    box-shadow:0 2px 6px rgba(70,60,105,.10);
+  }
+  .pill .lab{font-size:10px;color:var(--ink-soft);font-family:'Gowun Dodum',sans-serif;}
+  .pill #score{font-weight:600;min-width:14px;text-align:right;}
+  .pill #best{font-weight:600;color:var(--gold);}
+  button.icon{
+    cursor:pointer;width:42px;height:42px;border-radius:13px;border:1px solid var(--glass-border);
+    background:var(--glass);backdrop-filter:blur(10px);font-size:18px;display:flex;align-items:center;
+    justify-content:center;transition:transform .1s;color:var(--ink);
+    box-shadow:0 2px 6px rgba(70,60,105,.10);
+  }
+  button.icon:active{transform:scale(.92);}
+
+  /* ── 다음 미리보기 ── */
+  .next-row{display:flex;align-items:center;gap:8px;z-index:3;margin-top:7px;
+    font-size:12px;color:var(--ink-soft);font-family:'Fredoka',sans-serif;}
+  .next-chip{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    box-shadow:inset 0 2px 4px rgba(255,255,255,.55),0 2px 5px rgba(70,60,105,.18);}
+  /* 콤보 배지 — 트위스트 손맛의 핵심: 연쇄가 터지면 크게 튀어오른다 */
+  .combo{margin-left:auto;font-family:'Fredoka',sans-serif;font-weight:700;font-size:15px;
+    color:var(--gold);opacity:0;transform:scale(.6);transition:opacity .15s, transform .15s;}
+  .combo.show{opacity:1;transform:scale(1);}
+  .combo.pulse{animation:combo-pop .35s cubic-bezier(.3,1.6,.5,1);}
+  @keyframes combo-pop{0%{transform:scale(1);}40%{transform:scale(1.5);}100%{transform:scale(1);}}
+
+  /* ── 보드 ── */
+  #wrap{flex:1 1 auto;display:flex;align-items:center;justify-content:center;z-index:2;
+    width:100%;max-width:480px;min-height:0;padding:8px 0;position:relative;}
+  #board{
+    position:relative;border-radius:22px;overflow:hidden;
+    background:linear-gradient(180deg,rgba(255,255,255,.42),rgba(255,255,255,.16));
+    border:2px solid rgba(70,60,105,.14);
+    /* 바닥 하드섀도 느낌 + 부드러운 떠있는 그림자 */
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.85), 0 10px 0 rgba(120,130,170,.12), 0 14px 30px rgba(70,60,105,.16);
+  }
+  #board canvas{display:block;border-radius:20px;}
+  /* 위험선 — 이 위로 행성이 오래 머물면 게임오버 */
+  #dangerline{position:absolute;left:8px;right:8px;height:2px;
+    background:repeating-linear-gradient(90deg,rgba(240,110,110,.6) 0 10px,transparent 10px 18px);
+    z-index:4;pointer-events:none;opacity:0;transition:opacity .2s;border-radius:2px;}
+  #dangerline.warn{opacity:1;animation:dl-blink .6s ease-in-out infinite;}
+  @keyframes dl-blink{50%{opacity:.35;}}
+
+  /* ── 진화 표 (작게, 하단) ── */
+  .evo{display:flex;gap:5px;z-index:3;margin-bottom:2px;flex-wrap:wrap;justify-content:center;max-width:480px;}
+  .evo .e{width:21px;height:21px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:11px;box-shadow:inset 0 1px 2px rgba(255,255,255,.5);}
+
+  /* ── 모달 ── */
+  .scrim{position:fixed;inset:0;background:var(--scrim);backdrop-filter:blur(3px);z-index:20;
+    display:none;align-items:center;justify-content:center;padding:24px;}
+  .scrim.show{display:flex;}
+  .modal{background:var(--card);border-radius:24px;padding:30px 26px;max-width:330px;width:100%;
+    text-align:center;box-shadow:0 18px 50px rgba(70,60,105,.32);}
+  .modal h2{font-family:'Fredoka',sans-serif;font-weight:700;font-size:24px;margin-bottom:6px;color:var(--ink);}
+  .modal .big{font-family:'Fredoka',sans-serif;font-weight:700;font-size:46px;color:var(--gold);line-height:1.1;margin:6px 0;}
+  .modal .sub{font-size:13px;color:var(--ink-soft);margin-bottom:18px;}
+  .modal .recmark{font-size:13px;color:var(--gold);font-weight:600;margin-bottom:8px;}
+  .btn{font-family:'Fredoka',sans-serif;font-weight:600;font-size:17px;padding:14px 22px;border-radius:16px;
+    border:none;cursor:pointer;width:100%;color:#fff;
+    background:linear-gradient(180deg,#8fb0ff,#7a9cf2);
+    box-shadow:0 4px 0 #6a8ad8, 0 8px 16px rgba(90,110,190,.35);transition:transform .1s,box-shadow .1s;}
+  .btn:active{transform:translateY(3px);box-shadow:0 1px 0 #6a8ad8, 0 3px 8px rgba(90,110,190,.3);}
+  .modal .hint{font-size:12px;color:var(--ink-soft);margin-top:14px;line-height:1.6;}
+  .modal .hint b{color:var(--ink);}
+</style>
+</head>
+<body>
+  <svg id="stars" preserveAspectRatio="none"></svg>
+
+  <div class="topbar">
+    <h1><span class="logo">🪐</span>행성 합치기</h1>
+    <div class="pill"><span class="lab">점수</span><span id="score">0</span></div>
+    <div class="pill"><span class="lab">최고</span><span id="best">0</span></div>
+    <button class="icon" id="mute" aria-label="소리">🔊</button>
+  </div>
+
+  <div class="next-row">
+    <span>다음</span>
+    <div class="next-chip" id="nextChip">🌑</div>
+    <span class="combo" id="combo"></span>
+  </div>
+
+  <div id="wrap">
+    <div id="board">
+      <canvas id="cv"></canvas>
+      <div id="dangerline"></div>
+    </div>
+  </div>
+
+  <div class="evo" id="evo"></div>
+
+  <div class="scrim" id="overlay">
+    <div class="modal">
+      <h2 id="ovTitle">우주를 키우자</h2>
+      <div class="recmark" id="recmark" style="display:none">🏆 신기록!</div>
+      <div class="big" id="ovScore" style="display:none">0</div>
+      <div class="sub" id="ovSub">같은 행성끼리 합쳐 더 큰 별로!</div>
+      <button class="btn" id="startBtn">시작</button>
+      <div class="hint">
+        손가락으로 좌우 조준 → 떼면 <b>낙하</b>.<br>
+        같은 행성끼리 닿으면 <b>합체</b> + 점수.<br>
+        가끔 나오는 <b>블랙홀 🕳️</b> 을 떨어뜨리면<br>
+        닿은 행성과 같은 종류를 <b>전부 흡수</b>!<br>
+        연쇄로 터지면 <b>콤보 배율</b> 이 붙어요.
+      </div>
+    </div>
+  </div>
+
+  <script src="matter.js"></script>
+  <script src="audio.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

@@ -50,6 +50,30 @@
         { "key": "pangBest", "merge": "max" },
         { "key": "pangMuted", "merge": "lww" }
       ]
+    },
+    {
+      "id": "merge",
+      "title": "동물 합치기",
+      "tagline": "동그란 동물을 떨어뜨려 합치는 중독성 드롭 퍼즐 — 넘치기 전에 최고 점수에!",
+      "unit": "점",
+      "score_key": "mergeBest",
+      "score_metric": "score",
+      "state_keys": [
+        { "key": "mergeBest", "merge": "max" },
+        { "key": "mergeMuted", "merge": "lww" }
+      ]
+    },
+    {
+      "id": "orbit",
+      "title": "행성 합치기",
+      "tagline": "같은 행성끼리 합쳐 더 큰 별로! 가끔 떨어지는 블랙홀로 한 방에 정리하는 우주 드롭 머지.",
+      "unit": "점",
+      "score_key": "orbitBest",
+      "score_metric": "score",
+      "state_keys": [
+        { "key": "orbitBest", "merge": "max" },
+        { "key": "orbitMuted", "merge": "lww" }
+      ]
     }
   ]
 }
