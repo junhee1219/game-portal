@@ -45,10 +45,39 @@
     .then(function (r) { return r.json(); })
     .then(function (d) {
       if (d.user) {
+        // 카카오 신규 가입 후 닉네임 미설정 상태로 다른 페이지에 들어온 경우 온보딩으로 유도
+        if (d.user.nickname_set === false && location.pathname !== '/onboard') {
+          location.href = '/onboard';
+          return;
+        }
         var span = document.createElement('span');
         span.className = 'who';
         span.innerHTML = '<b></b>님';
         span.querySelector('b').textContent = d.user.nickname;  // XSS 방지 textContent
+
+        // 내 기록 전체공개 on/off — 끄면 전역 랭킹에서만 숨고 친구 리더보드엔 계속 보인다
+        var pub = document.createElement('button');
+        pub.type = 'button';
+        pub.style.cssText = 'background:transparent;border:1px solid var(--line);color:var(--dim);' +
+          'font:inherit;font-size:12px;font-weight:700;padding:4px 10px;border-radius:8px;cursor:pointer';
+        function paintPub(on) {
+          pub.textContent = on ? '🌐 기록 공개' : '🔒 기록 비공개';
+          pub.style.color = on ? 'var(--accent)' : 'var(--dim)';
+        }
+        var pubOn = d.user.public !== false;
+        paintPub(pubOn);
+        pub.addEventListener('click', function () {
+          var next = !pubOn;
+          pub.disabled = true;
+          fetch('/api/visibility', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ public: next })
+          }).then(function (r) { return r.json(); }).then(function (res) {
+            pub.disabled = false;
+            if (res && res.ok) { pubOn = res.public; paintPub(pubOn); }
+          }).catch(function () { pub.disabled = false; });
+        });
+
         var btn = document.createElement('button');
         btn.type = 'button';
         btn.textContent = '로그아웃';
@@ -65,6 +94,7 @@
             .catch(function () { location.reload(); });
         });
         box.appendChild(span);
+        box.appendChild(pub);
         box.appendChild(btn);
       } else {
         var a = document.createElement('a');

@@ -69,6 +69,10 @@ class LoginIn(BaseModel):
     visitor_id: str | None = Field(default=None, max_length=64)
 
 
+class SetNicknameIn(BaseModel):
+    nickname: str = Field(max_length=32)
+
+
 def _valid_nickname(n: str) -> bool:
     n = n.strip()
     return NICK_MIN <= len(n) <= NICK_MAX and "\n" not in n and "\t" not in n
@@ -158,6 +162,59 @@ async def register(body: RegisterIn, request: Request):
         return JSONResponse({"ok": False, "reason": "db-error"}, status_code=500)
 
 
+@router.post("/set-nickname")
+async def set_nickname(body: SetNicknameIn, request: Request):
+    """카카오 온보딩: 세션 user의 닉네임을 처음 확정한다 (nickname_set=True).
+
+    카카오 신규 가입은 임시 닉으로 만들어지므로, 사용자가 /onboard에서 고른 고유 닉을
+    여기서 확정. 이미 확정된 유저의 닉 변경은 막는다(닉 변경권 별도 판매 대비).
+    """
+    if database.async_session is None:
+        return JSONResponse({"ok": False, "reason": "no-db"}, status_code=503)
+    user = await current_user(request)
+    if user is None:
+        return JSONResponse({"ok": False, "reason": "login-required"}, status_code=401)
+    nickname = body.nickname.strip()
+    if not _valid_nickname(nickname):
+        return JSONResponse(
+            {"ok": False, "reason": "닉네임은 1~16자로 입력해주세요."}, status_code=400
+        )
+    try:
+        async with database.async_session() as db:
+            db_user = await db.get(User, user.id)
+            if db_user is None:
+                return JSONResponse({"ok": False, "reason": "not-found"}, status_code=404)
+            if db_user.nickname_set:
+                # 이미 확정 — 멱등(같은 닉) 허용, 변경은 거부
+                if db_user.nickname == nickname:
+                    return {"ok": True, "nickname": nickname}
+                return JSONResponse(
+                    {"ok": False, "reason": "닉네임은 변경할 수 없습니다."}, status_code=409
+                )
+            taken = (
+                await db.execute(
+                    select(User.id).where(User.nickname == nickname, User.id != user.id)
+                )
+            ).first()
+            if taken:
+                return JSONResponse(
+                    {"ok": False, "reason": "이미 사용 중인 닉네임입니다."}, status_code=409
+                )
+            db_user.nickname = nickname
+            db_user.nickname_set = True
+            try:
+                await db.commit()
+            except IntegrityError:
+                await db.rollback()
+                return JSONResponse(
+                    {"ok": False, "reason": "이미 사용 중인 닉네임입니다."}, status_code=409
+                )
+        return {"ok": True, "nickname": nickname}
+    except Exception:
+        logger.exception("set-nickname 실패")
+        return JSONResponse({"ok": False, "reason": "db-error"}, status_code=500)
+
+
 @router.post("/login")
 async def login(body: LoginIn, request: Request):
     if database.async_session is None:
@@ -202,4 +259,11 @@ async def me(request: Request):
     user = await current_user(request)
     if user is None:
         return {"user": None}
-    return {"user": {"user_id": user.id, "nickname": user.nickname}}
+    return {
+        "user": {
+            "user_id": user.id,
+            "nickname": user.nickname,
+            "nickname_set": user.nickname_set,
+            "public": user.public,
+        }
+    }

@@ -34,32 +34,32 @@ KAPI = "https://kapi.kakao.com"
 NICK_MAX = 16  # 자체 가입과 동일 상한 (표시 일관성)
 
 
-async def _upsert_kakao_user(db, kakao_id: str, kakao_nick: str | None) -> str:
-    """kakao_id로 User 조회, 없으면 신규 가입. user.id 반환.
+async def _upsert_kakao_user(db, kakao_id: str) -> tuple[str, bool]:
+    """kakao_id로 User 조회, 없으면 임시 닉으로 신규 가입. (user_id, needs_nickname) 반환.
 
-    닉네임 유니크 충돌은 suffix로 회피하되, 최종 안전망은 IntegrityError 재시도
-    (register()와 동일 패턴 — pre-check만 믿지 않는다).
+    카카오 닉을 자동으로 박지 않는다 — 닉네임=로그인ID(유니크)라 사용자가 온보딩에서
+    직접 골라야 한다. 신규는 임시 닉(`게이머{uuid8}`) + nickname_set=False로 만들고,
+    needs_nickname=True를 돌려 콜백이 /onboard로 보낸다.
     """
     existing = (
         await db.execute(select(User).where(User.kakao_id == kakao_id))
     ).scalar_one_or_none()
     if existing is not None:
-        return existing.id
+        return existing.id, (not existing.nickname_set)
 
-    base = (kakao_nick or "게이머").strip()[:NICK_MAX - 4] or "게이머"
-    candidate = (kakao_nick or "게이머").strip()[:NICK_MAX] or "게이머"
-    for attempt in range(6):
-        nickname = candidate if attempt == 0 else f"{base}{uuid.uuid4().hex[:4]}"
+    for _ in range(6):
+        temp_nick = f"게이머{uuid.uuid4().hex[:8]}"  # 유니크 임시 닉 (온보딩 전까지)
         user = User(
             id=uuid.uuid4().hex,
-            nickname=nickname,
+            nickname=temp_nick,
             password_hash=None,
             kakao_id=kakao_id,
+            nickname_set=False,
         )
         db.add(user)
         try:
             await db.flush()
-            return user.id
+            return user.id, True
         except IntegrityError:
             await db.rollback()
             # kakao_id가 동시에 박혔을 수도 → 다시 조회해 그 user 사용
@@ -67,9 +67,9 @@ async def _upsert_kakao_user(db, kakao_id: str, kakao_nick: str | None) -> str:
                 await db.execute(select(User).where(User.kakao_id == kakao_id))
             ).scalar_one_or_none()
             if existing is not None:
-                return existing.id
-            # 아니면 닉네임 충돌 → 다음 suffix로 재시도
-    raise RuntimeError("kakao user 닉네임 충돌 회피 실패")
+                return existing.id, (not existing.nickname_set)
+            # 아니면 임시 닉 충돌(희박) → 다음 uuid로 재시도
+    raise RuntimeError("kakao user 생성 실패")
 
 
 def _enabled() -> bool:
@@ -120,15 +120,15 @@ async def kakao_callback(code: str = "", state: str = "", error: str = ""):
             me = me_res.json()
 
         kakao_id = str(me["id"])
-        kakao_nick = (me.get("properties") or {}).get("nickname")
 
         async with database.async_session() as db:
-            user_id = await _upsert_kakao_user(db, kakao_id, kakao_nick)
+            user_id, needs_nickname = await _upsert_kakao_user(db, kakao_id)
             await db.commit()
             # 이 디바이스(state=vid)의 익명 기록을 user로 귀속 (자체 commit 포함)
             await claim_visitor(db, state or None, user_id)
 
-        resp = RedirectResponse(url="/rank", status_code=302)
+        # 닉네임 미설정(신규/이탈 후 재로그인) → 온보딩으로. 아니면 기록실로.
+        resp = RedirectResponse(url="/onboard" if needs_nickname else "/rank", status_code=302)
         set_session_cookie(resp, user_id)
         return resp
     except Exception:

@@ -1,8 +1,10 @@
-"""친구 (단방향 follow) + 친구 리더보드.
+"""친구 (상호 수락) + 친구 리더보드.
 
 - 주체는 항상 쿠키 세션 user (body로 follower 안 받음 — 위조 차단).
-- 친구 찾기 = 카톡 공유 루프 결합: /s/{id} → score-owner → /follow/{user_id}.
-- 친구 리더보드는 scores.user_id snapshot에 의존 (Phase 1에서 추가됨).
+- 친구 = 요청(pending) → 상대 수락(accepted). 양방향 관계로 친구 리더보드에 서로 보인다.
+- 발견 경로 = 카톡 공유 루프: /s/{id} → score-owner → /follow/{user_id} 페이지 → 친구 요청.
+- friendships.follower_id=요청자, followee_id=대상, status='pending'|'accepted'.
+  내 친구 = 내가 follower거나 followee인 accepted 행(양방향). 기존 행은 DDL default 'accepted'.
 """
 import logging
 import uuid
@@ -10,12 +12,11 @@ import uuid
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import desc, func, select
+from sqlalchemy import desc, func, or_, select
 from sqlalchemy.exc import IntegrityError
 
 from app import database, games
 from app.auth_session import current_user
-from app.database import kst_now
 from app.models import Friendship, Score, User
 
 logger = logging.getLogger(__name__)
@@ -23,15 +24,25 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
 
-class FollowIn(BaseModel):
-    followee_id: str = Field(max_length=64)
+class FriendIn(BaseModel):
+    other_id: str = Field(max_length=64)
 
 
-async def _followee_ids(db, user_id: str) -> list[str]:
+async def _friend_ids(db, user_id: str) -> list[str]:
+    """accepted 양방향 친구 id 목록 (본인 제외)."""
     rows = (
-        await db.execute(select(Friendship.followee_id).where(Friendship.follower_id == user_id))
+        await db.execute(
+            select(Friendship.follower_id, Friendship.followee_id).where(
+                Friendship.status == "accepted",
+                or_(Friendship.follower_id == user_id, Friendship.followee_id == user_id),
+            )
+        )
     ).all()
-    return [r[0] for r in rows]
+    ids = set()
+    for f, t in rows:
+        ids.add(t if f == user_id else f)  # 상대편
+    ids.discard(user_id)
+    return list(ids)
 
 
 @router.get("/score-owner/{score_id}")
@@ -54,67 +65,140 @@ async def score_owner(score_id: int):
         return {"ok": False, "owner_user_id": None, "nickname": None}
 
 
-@router.post("/follow")
-async def follow(body: FollowIn, request: Request):
+@router.post("/friend-request")
+async def friend_request(body: FriendIn, request: Request):
+    """친구 요청 보내기. 상대가 이미 나에게 요청해둔 상태면 즉시 친구 성립(accepted)."""
     user = await current_user(request)
     if user is None:
         return JSONResponse({"ok": False, "reason": "login-required"}, status_code=401)
-    if body.followee_id == user.id:
+    if body.other_id == user.id:
         return JSONResponse({"ok": False, "reason": "self"}, status_code=400)
     try:
         async with database.async_session() as db:
-            target = await db.get(User, body.followee_id)
+            target = await db.get(User, body.other_id)
             if target is None:
                 return JSONResponse({"ok": False, "reason": "not-found"}, status_code=404)
+
+            # 나↔상대 사이 기존 관계(양방향) 확인
             existing = (
                 await db.execute(
-                    select(Friendship.id).where(
-                        Friendship.follower_id == user.id,
-                        Friendship.followee_id == body.followee_id,
+                    select(Friendship).where(
+                        or_(
+                            (Friendship.follower_id == user.id)
+                            & (Friendship.followee_id == body.other_id),
+                            (Friendship.follower_id == body.other_id)
+                            & (Friendship.followee_id == user.id),
+                        )
                     )
                 )
-            ).first()
-            if existing:
-                return {"ok": True, "already": True}
+            ).scalars().all()
+
+            for fr in existing:
+                if fr.status == "accepted":
+                    return {"ok": True, "status": "accepted", "already": True}
+            # 상대가 나에게 보낸 pending이 있으면 → 수락해서 즉시 친구
+            for fr in existing:
+                if fr.status == "pending" and fr.follower_id == body.other_id:
+                    fr.status = "accepted"
+                    await db.commit()
+                    return {"ok": True, "status": "accepted", "nickname": target.nickname}
+            # 내가 이미 보낸 pending
+            for fr in existing:
+                if fr.status == "pending" and fr.follower_id == user.id:
+                    return {"ok": True, "status": "pending", "already": True}
+
             db.add(
                 Friendship(
                     id=uuid.uuid4().hex,
                     follower_id=user.id,
-                    followee_id=body.followee_id,
+                    followee_id=body.other_id,
+                    status="pending",
                 )
             )
             try:
                 await db.commit()
-            except IntegrityError:  # 동시 follow race → 유니크 제약
+            except IntegrityError:  # 동시 요청 race → 유니크 제약
                 await db.rollback()
-                return {"ok": True, "already": True}
-        return {"ok": True, "nickname": target.nickname}
+                return {"ok": True, "status": "pending", "already": True}
+        return {"ok": True, "status": "pending", "nickname": target.nickname}
     except Exception:
-        logger.exception("follow 실패")
+        logger.exception("friend-request 실패")
         return JSONResponse({"ok": False, "reason": "db-error"}, status_code=500)
 
 
-@router.delete("/follow")
-async def unfollow(body: FollowIn, request: Request):
+@router.post("/friend-request/accept")
+async def friend_accept(body: FriendIn, request: Request):
+    """받은 친구 요청 수락. other_id = 나에게 요청한 사람."""
     user = await current_user(request)
     if user is None:
         return JSONResponse({"ok": False, "reason": "login-required"}, status_code=401)
     try:
         async with database.async_session() as db:
-            row = (
+            fr = (
                 await db.execute(
                     select(Friendship).where(
-                        Friendship.follower_id == user.id,
-                        Friendship.followee_id == body.followee_id,
+                        Friendship.follower_id == body.other_id,
+                        Friendship.followee_id == user.id,
                     )
                 )
             ).scalar_one_or_none()
-            if row is not None:
-                await db.delete(row)
-                await db.commit()
+            if fr is None:
+                return JSONResponse({"ok": False, "reason": "no-request"}, status_code=404)
+            fr.status = "accepted"
+            await db.commit()
         return {"ok": True}
     except Exception:
-        logger.exception("unfollow 실패")
+        logger.exception("friend-accept 실패")
+        return JSONResponse({"ok": False, "reason": "db-error"}, status_code=500)
+
+
+@router.delete("/friend")
+async def remove_friend(body: FriendIn, request: Request):
+    """친구 삭제 / 받은 요청 거절 — 나↔상대 사이 모든 행(양방향, 상태 무관) 제거."""
+    user = await current_user(request)
+    if user is None:
+        return JSONResponse({"ok": False, "reason": "login-required"}, status_code=401)
+    try:
+        async with database.async_session() as db:
+            rows = (
+                await db.execute(
+                    select(Friendship).where(
+                        or_(
+                            (Friendship.follower_id == user.id)
+                            & (Friendship.followee_id == body.other_id),
+                            (Friendship.follower_id == body.other_id)
+                            & (Friendship.followee_id == user.id),
+                        )
+                    )
+                )
+            ).scalars().all()
+            for fr in rows:
+                await db.delete(fr)
+            await db.commit()
+        return {"ok": True}
+    except Exception:
+        logger.exception("remove-friend 실패")
+        return JSONResponse({"ok": False, "reason": "db-error"}, status_code=500)
+
+
+@router.get("/friend-requests")
+async def friend_requests(request: Request):
+    """나에게 들어온 대기 중 친구 요청 목록 (수락/거절 대상)."""
+    user = await current_user(request)
+    if user is None:
+        return JSONResponse({"ok": False, "reason": "login-required"}, status_code=401)
+    try:
+        async with database.async_session() as db:
+            rows = (
+                await db.execute(
+                    select(User.id, User.nickname)
+                    .join(Friendship, Friendship.follower_id == User.id)
+                    .where(Friendship.followee_id == user.id, Friendship.status == "pending")
+                )
+            ).all()
+        return {"ok": True, "requests": [{"user_id": i, "nickname": n} for i, n in rows]}
+    except Exception:
+        logger.exception("friend-requests 조회 실패")
         return JSONResponse({"ok": False, "reason": "db-error"}, status_code=500)
 
 
@@ -125,7 +209,7 @@ async def friends(request: Request):
         return JSONResponse({"ok": False, "reason": "login-required"}, status_code=401)
     try:
         async with database.async_session() as db:
-            ids = await _followee_ids(db, user.id)
+            ids = await _friend_ids(db, user.id)
             if not ids:
                 return {"ok": True, "friends": []}
             rows = (
@@ -146,7 +230,7 @@ async def friends_leaderboard(game: str, request: Request):
         return {"ok": True, "entries": []}
     try:
         async with database.async_session() as db:
-            ids = await _followee_ids(db, user.id) + [user.id]  # 친구 + 본인
+            ids = await _friend_ids(db, user.id) + [user.id]  # 친구 + 본인
             # user 단위 best (scores.user_id snapshot). 여러 디바이스도 user_id로 1행 collapse.
             best = (
                 select(Score.user_id.label("uid"), func.max(Score.score).label("best_score"))

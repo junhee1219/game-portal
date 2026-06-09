@@ -19,6 +19,10 @@ class User(Base):
     nickname: Mapped[str] = mapped_column(String(32), unique=True)  # 로그인 ID 겸 표시명
     password_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
     kakao_id: Mapped[str | None] = mapped_column(String(32), nullable=True, unique=True)
+    # 카카오 가입은 임시 닉으로 만들고 0 → 온보딩에서 직접 고르면 1. 자체가입/기존 유저는 1.
+    nickname_set: Mapped[bool] = mapped_column(default=True)
+    # 전체(전역) 리더보드 노출 여부. 끄면 전역에서만 숨고 친구 리더보드엔 계속 보인다.
+    public: Mapped[bool] = mapped_column(default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=kst_now)
 
 
@@ -132,11 +136,15 @@ class Friendship(Base):
     __tablename__ = "friendships"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    follower_id: Mapped[str] = mapped_column(String(64))
-    followee_id: Mapped[str] = mapped_column(String(64))
+    follower_id: Mapped[str] = mapped_column(String(64))   # 요청자
+    followee_id: Mapped[str] = mapped_column(String(64))   # 대상
+    # 'pending'(요청 보냄) | 'accepted'(상호 친구). 기존 행은 DDL default 'accepted'로 그랜드파더링.
+    # 내 친구 = 내가 follower거나 followee인 accepted 행 (양방향).
+    status: Mapped[str] = mapped_column(String(12), default="pending")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=kst_now)
 
     __table_args__ = (
         UniqueConstraint("follower_id", "followee_id", name="uq_friendship"),
         Index("ix_friendships_follower", "follower_id"),
+        Index("ix_friendships_followee", "followee_id"),
     )

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>닉네임 정하기 — 미니게임</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="/portal.css">
+  <link rel="icon" href="/icons/portal-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#101014">
+</head>
+<body>
+  <main class="wrap">
+    <header class="hero" style="margin-bottom:28px">
+      <p class="kicker">WELCOME</p>
+      <h1 style="font-size: var(--fs-1)">닉네임을 정해주세요</h1>
+      <p class="sub">기록·랭킹에 표시될 이름이에요. 한 번 정하면 바꿀 수 없으니 신중히!</p>
+    </header>
+
+    <div class="auth-card">
+      <form id="nick-form" autocomplete="off">
+        <div class="auth-field">
+          <label for="nickname">닉네임</label>
+          <input id="nickname" name="nickname" type="text" maxlength="16" autocomplete="off"
+                 placeholder="1~16자, 다른 사람과 겹치지 않게">
+          <div class="auth-hint" id="nick-hint"></div>
+        </div>
+        <button type="submit" class="auth-submit" id="submit-btn" disabled>이 닉네임으로 시작</button>
+        <div class="auth-error" id="form-error"></div>
+      </form>
+    </div>
+  </main>
+
+  <script>
+    var nickInput = document.getElementById('nickname');
+    var nickHint = document.getElementById('nick-hint');
+    var submitBtn = document.getElementById('submit-btn');
+    var formError = document.getElementById('form-error');
+    var lastOk = '';   // 마지막으로 사용가능 판정된 닉 (제출 가드)
+
+    var nickTimer = null;
+    nickInput.addEventListener('input', function () {
+      nickHint.textContent = '';
+      nickHint.className = 'auth-hint';
+      submitBtn.disabled = true;
+      lastOk = '';
+      var n = nickInput.value.trim();
+      if (!n) return;
+      clearTimeout(nickTimer);
+      nickTimer = setTimeout(function () {
+        fetch('/auth/check-nickname?n=' + encodeURIComponent(n))
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (nickInput.value.trim() !== n) return;
+            if (d.available) {
+              nickHint.textContent = '사용할 수 있는 닉네임입니다.';
+              nickHint.className = 'auth-hint ok';
+              submitBtn.disabled = false;
+              lastOk = n;
+            } else {
+              nickHint.textContent = d.reason === 'invalid'
+                ? '닉네임은 1~16자로 입력해주세요.' : '이미 사용 중인 닉네임입니다.';
+              nickHint.className = 'auth-hint bad';
+            }
+          })
+          .catch(function () {});
+      }, 350);
+    });
+
+    document.getElementById('nick-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      formError.textContent = '';
+      var nickname = nickInput.value.trim();
+      if (!nickname) { formError.textContent = '닉네임을 입력해주세요.'; return; }
+      submitBtn.disabled = true;
+      fetch('/auth/set-nickname', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nickname: nickname })
+      })
+        .then(function (r) { return r.json().then(function (d) { return { status: r.status, d: d }; }); })
+        .then(function (res) {
+          if (res.d && res.d.ok) {
+            try { localStorage.setItem('gp_auth', '1'); } catch (e) {}
+            location.href = '/rank';
+          } else {
+            submitBtn.disabled = false;
+            formError.textContent = (res.d && res.d.reason) || '문제가 발생했습니다.';
+          }
+        })
+        .catch(function () {
+          submitBtn.disabled = false;
+          formError.textContent = '네트워크 오류입니다. 다시 시도해주세요.';
+        });
+    });
+  </script>
+  <script src="/portal.js" data-game="portal"></script>
+</body>
+</html>

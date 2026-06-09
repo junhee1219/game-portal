@@ -3,7 +3,7 @@ import logging
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import desc, func, select, text
+from sqlalchemy import desc, func, or_, select, text
 
 from app import database, games
 from app.auth_session import current_user
@@ -138,6 +138,8 @@ async def leaderboard(game: str, limit: int = 10):
                     )
                     .outerjoin(User, User.id == best.c.subject)
                     .outerjoin(Visitor, Visitor.id == best.c.subject)
+                    # 비공개(public=0) user는 전역 랭킹에서 제외. 익명(User 미매칭=NULL)은 그대로 노출.
+                    .where(or_(User.id.is_(None), User.public.is_(True)))
                     .order_by(desc(best.c.best_score))
                     .limit(limit)
                 )
@@ -177,6 +179,31 @@ async def my_scores(request: Request):
     except Exception:
         logger.exception("me/scores 조회 실패")
         return {"ok": False, "scores": {}}
+
+
+class VisibilityIn(BaseModel):
+    public: bool
+
+
+@router.post("/visibility")
+async def set_visibility(body: VisibilityIn, request: Request):
+    """내 기록 전체(전역) 공개 on/off. 끄면 전역 리더보드에서만 숨고 친구 리더보드엔 계속 노출."""
+    if database.async_session is None:
+        return {"ok": False, "reason": "no-db"}
+    user = await current_user(request)
+    if user is None:
+        return {"ok": False, "reason": "login-required"}
+    try:
+        async with database.async_session() as db:
+            db_user = await db.get(User, user.id)
+            if db_user is None:
+                return {"ok": False, "reason": "not-found"}
+            db_user.public = bool(body.public)
+            await db.commit()
+        return {"ok": True, "public": bool(body.public)}
+    except Exception:
+        logger.exception("visibility 변경 실패")
+        return {"ok": False, "reason": "db-error"}
 
 
 @router.get("/me/credits")

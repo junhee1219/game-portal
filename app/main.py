@@ -249,6 +249,15 @@ async def account_page():
     )
 
 
+@app.get("/onboard", response_class=HTMLResponse)
+async def onboard_page():
+    """카카오 신규 가입 닉네임 선택 화면 (nickname_set=0일 때 콜백이 보냄)."""
+    return HTMLResponse(
+        (PORTAL_DIR / "onboard.html").read_text(encoding="utf-8"),
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
 @app.get("/follow/{user_id}", response_class=HTMLResponse)
 async def follow_page(user_id: str):
     """친구 추가 동선 페이지 (로그인 분기/가입 next). 실제 follow는 JS가 /api/follow 호출."""

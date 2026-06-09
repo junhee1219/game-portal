@@ -69,6 +69,16 @@
       color: var(--accent); text-decoration: none; font-size: var(--fs-3); font-weight: 600;
     }
     .login-banner:hover { border-color: var(--accent); }
+    .reqs { margin-bottom: 24px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+    .reqs .reqs-h { padding: 12px 16px; font-size: var(--fs-3); font-weight: 700; color: var(--accent); border-bottom: 1px solid var(--line); }
+    .reqs .req { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); font-size: var(--fs-3); }
+    .reqs .req:last-child { border-bottom: none; }
+    .reqs .req .who { color: var(--text); font-weight: 600; }
+    .reqs .req .btns { margin-left: auto; display: flex; gap: 6px; }
+    .reqs .req button { font: inherit; font-size: var(--fs-3); font-weight: 700; padding: 6px 12px; border-radius: 9px; cursor: pointer; border: 1px solid var(--line); }
+    .reqs .req .accept { background: var(--accent); color: #14110a; border-color: var(--accent); }
+    .reqs .req .decline { background: transparent; color: var(--dim); }
+    .reqs .req button:active { transform: scale(0.96); }
   </style>
 </head>
 <body>
@@ -101,6 +111,8 @@
         banner.href = '/account';
         banner.textContent = '로그인하면 친구 기록을 모아볼 수 있어요 →';
         container.appendChild(banner);
+      } else {
+        renderFriendRequests(container);
       }
       (data.games || []).forEach(function (g) {
         var board = document.createElement('section');
@@ -118,6 +130,45 @@
       document.getElementById('boards').innerHTML =
         '<p class="empty" style="color:var(--dim)">기록을 불러오지 못했습니다.</p>';
     });
+
+    // 받은 친구 요청함 — 수락하면 양방향 친구 성립, 친구 리더보드에 서로 보인다
+    function renderFriendRequests(container) {
+      fetch('/api/friend-requests').then(function (r) { return r.json(); }).then(function (d) {
+        if (!d || !d.ok || !d.requests || !d.requests.length) return;
+        var box = document.createElement('section');
+        box.className = 'reqs';
+        var h = '<div class="reqs-h">친구 요청 ' + d.requests.length + '</div>';
+        box.innerHTML = h + d.requests.map(function (req) {
+          return '<div class="req" data-uid="' + req.user_id + '">' +
+            '<span class="who"></span>' +
+            '<span class="btns"><button type="button" class="accept">수락</button>' +
+            '<button type="button" class="decline">거절</button></span></div>';
+        }).join('');
+        // 닉네임은 textContent로 (XSS 방지)
+        var rows = box.querySelectorAll('.req');
+        d.requests.forEach(function (req, i) { rows[i].querySelector('.who').textContent = req.nickname || '익명'; });
+        container.insertBefore(box, container.firstChild);
+        box.querySelectorAll('.req').forEach(function (row) {
+          var uid = row.dataset.uid;
+          function act(url, method) {
+            row.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+            fetch(url, {
+              method: method, headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ other_id: uid })
+            }).then(function (r) { return r.json(); }).then(function (res) {
+              if (res && res.ok) {
+                row.remove();
+                if (!box.querySelector('.req')) box.remove();
+              } else {
+                row.querySelectorAll('button').forEach(function (b) { b.disabled = false; });
+              }
+            }).catch(function () { row.querySelectorAll('button').forEach(function (b) { b.disabled = false; }); });
+          }
+          row.querySelector('.accept').addEventListener('click', function () { act('/api/friend-request/accept', 'POST'); });
+          row.querySelector('.decline').addEventListener('click', function () { act('/api/friend', 'DELETE'); });
+        });
+      }).catch(function () {});
+    }
 
     function loadScores(board, scope, unit) {
       var game = board.dataset.game;

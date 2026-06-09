@@ -34,19 +34,25 @@
             action.innerHTML = '<a class="foot-link" href="/rank">기록실로</a>';
             return;
           }
-          // 로그인 상태 → 바로 follow
-          fetch('/api/follow', {
+          // 로그인 상태 → 친구 요청 전송 (상대가 이미 나를 요청했으면 즉시 친구 성립)
+          fetch('/api/friend-request', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ followee_id: followeeId })
+            body: JSON.stringify({ other_id: followeeId })
           })
             .then(function (r) { return r.json(); })
             .then(function (res) {
               if (res.ok) {
-                msg.textContent = (res.nickname ? res.nickname + '님을 ' : '') +
-                  (res.already ? '이미 친구로 추가했어요.' : '친구로 추가했어요!');
-                setTimeout(function () { location.href = '/rank'; }, 900);
+                var who = res.nickname ? res.nickname + '님' : '상대';
+                if (res.status === 'accepted') {
+                  msg.textContent = who + '과 친구가 되었어요!';
+                } else if (res.already) {
+                  msg.textContent = '이미 ' + who + '에게 친구 요청을 보냈어요.';
+                } else {
+                  msg.textContent = who + '에게 친구 요청을 보냈어요. 상대가 수락하면 친구!';
+                }
+                setTimeout(function () { location.href = '/rank'; }, 1300);
               } else {
-                msg.textContent = '추가하지 못했어요.';
+                msg.textContent = '요청하지 못했어요.';
               }
             })
             .catch(function () { msg.textContent = '네트워크 오류입니다.'; });
