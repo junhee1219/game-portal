@@ -73,6 +73,8 @@
   let levelHasHidden = false, hiddenIntroShown = false;
   let pour = null;      // 붓기 진행 상태
   let hintTimer = null;
+  let hintPlan = null;  // 힌트 풀이 캐시 {moves, states}. 매 클릭 재솔브하면 비최단 DFS가
+                        // 직전 수를 되돌리는 진동(무한 왕복)을 내므로, 한 번 푼 plan을 그대로 따라간다.
   let tubeDirty = [];   // 변화 있는 병만 다시 그린다 (유휴 시 CPU 절약)
   let fxDrawn = false;  // fx 캔버스에 지울 내용이 남아있는지
   let bubbleTimer = 800; // 기포 스폰 타이머(ms)
@@ -136,6 +138,7 @@
   function newGame(lv) {
     level = lv;
     moves = 0; selected = null; history = []; busy = false; pour = null;
+    hintPlan = null;  // 새 판이면 이전 풀이 캐시 폐기
     clearEl.classList.remove('show');
     applyTheme(lv);
     const numColors = C.colorsFor(level);
@@ -795,9 +798,22 @@
     if (busy) return;
     A.init(); A.uiClick();
     clearTimeout(hintTimer);
-    const r = C.solve(tubes, 25000);
-    if (r.solved && r.moves.length) {
-      const [f, t] = r.moves[0];
+    // 캐시된 plan에 현재 상태가 있으면 그 다음 수를 이어준다(재솔브 안 함).
+    // 어긋났거나(직접 다른 수를 둠) 캐시가 없으면 새로 푼다.
+    const skey = JSON.stringify(tubes);
+    let move = null;
+    if (hintPlan) {
+      const i = hintPlan.states.indexOf(skey);
+      if (i >= 0) move = hintPlan.moves[i];
+      else hintPlan = null;
+    }
+    let r = { solved: false, exhausted: false };
+    if (!move) {
+      r = C.solveHintPlan(tubes, 25000);
+      if (r.solved) { hintPlan = r; move = r.moves[0]; }
+    }
+    if (move) {
+      const [f, t] = move;
       render();
       board.children[f].classList.add('selected');
       board.children[t].classList.add('hint-target');

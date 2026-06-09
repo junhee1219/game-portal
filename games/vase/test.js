@@ -170,6 +170,64 @@ console.log('• 레벨 생성 풀이 보장 (lv 1/9/17/19/23/29 × 5판)');
   }
 }
 
+// ── 힌트: 진동(무한루프) 방지 ──
+// 버그: 클릭마다 solve()를 재실행하면 DFS가 비최단 풀이를 골라 직전 수를 되돌려
+//       두 상태를 무한 왕복(길이-2 사이클)했다. game.js는 solveHintPlan으로 한 번 푼
+//       풀이를 캐시해 그대로 따라가야 한다. (숨김 층 레벨도 솔버는 완전정보 → 동일)
+console.log('• 힌트 진동 방지 (lv 1~60 샘플)');
+{
+  // (a) 버그 재현: 매 클릭 재솔브(naive)는 실제로 사이클에 빠진다 → 테스트가 유효함을 증명
+  function followNaive(start, maxSteps) {
+    let t = start.map((x) => x.slice());
+    const seen = new Set();
+    for (let s = 0; s < maxSteps; s++) {
+      if (C.isWin(t)) return 'win';
+      const k = C.canon(t);
+      if (seen.has(k)) return 'CYCLE';
+      seen.add(k);
+      const r = C.solve(t, 25000);
+      if (!r.solved || !r.moves.length) return 'stuck';
+      t = C.applyPour(t, r.moves[0][0], r.moves[0][1]);
+    }
+    return 'maxsteps';
+  }
+  // (b) 수정안: game.js와 동일한 plan 캐시 로직 — solveHintPlan으로 한 번 풀고 따라간다
+  function followPlan(start, maxSteps) {
+    let t = start.map((x) => x.slice());
+    let plan = null;
+    const seen = new Set();
+    for (let s = 0; s < maxSteps; s++) {
+      if (C.isWin(t)) return 'win';
+      const k = C.canon(t);
+      if (seen.has(k)) return 'CYCLE';
+      seen.add(k);
+      const skey = JSON.stringify(t);
+      let mv = null;
+      if (plan) { const i = plan.states.indexOf(skey); if (i >= 0) mv = plan.moves[i]; else plan = null; }
+      if (!mv) { const p = C.solveHintPlan(t, 25000); if (!p.solved) return 'stuck'; plan = p; mv = p.moves[0]; }
+      t = C.applyPour(t, mv[0], mv[1]);
+    }
+    return 'maxsteps';
+  }
+  let naiveCycles = 0, planWins = 0, planCycles = 0, planOther = 0, boards = 0;
+  // lv30+ 포함(숨김 층 레벨의 솔버 입력과 동일한 완전정보 판)
+  for (const lv of [1, 2, 5, 11, 19, 29, 35, 45, 60]) {
+    for (let seed = 1; seed <= 6; seed++) {
+      const rng = lcg(lv * 1000 + seed);
+      let b;
+      try { b = C.generateLevel(lv, C.colorsFor(lv), { rng }); } catch (e) { continue; }
+      boards++;
+      if (followNaive(b.tubes, 400) === 'CYCLE') naiveCycles++;
+      const pr = followPlan(b.tubes, 400);
+      if (pr === 'win') planWins++; else if (pr === 'CYCLE') planCycles++; else planOther++;
+    }
+  }
+  ok(naiveCycles > 0, `naive 재솔브는 진동함 (${naiveCycles}/${boards}판 사이클 — 버그 재현)`);
+  ok(planCycles === 0, `plan 캐시는 사이클 0 (${planCycles}판)`);
+  ok(planOther === 0, `plan 캐시는 막힘/미달 0 (${planOther}판)`);
+  ok(planWins === boards, `plan 캐시 힌트만 따라가도 전판 클리어 (${planWins}/${boards})`);
+}
+
 // ── 별점 ──
 console.log('• 별점');
 {

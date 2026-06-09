@@ -214,6 +214,26 @@ const VaseCore = (() => {
     return { solved, moves: solved ? path.slice() : null, nodes, exhausted };
   }
 
+  // 힌트용 풀이 plan: solve()로 풀이를 *한 번* 구하고, 각 수를 적용하기 직전의
+  // 상태 스냅샷을 함께 돌려준다. game.js가 이 plan을 캐시해 클릭마다 재솔브하지
+  // 않도록 하는 게 목적 — 매 클릭 재솔브하면 DFS가 비최단 풀이를 골라 직전 수를
+  // 되돌리는 길이-2 진동(힌트가 같은 두 상태를 무한 왕복)이 생긴다.
+  // 반환: { solved, exhausted, moves:[[f,t]...], states:[JSON...] }
+  //       states[i] = moves[i]를 적용하기 직전 상태(JSON.stringify). states.length === moves.length.
+  function solveHintPlan(start, nodeBudget) {
+    const r = solve(start, nodeBudget);
+    if (!r.solved || !r.moves.length) {
+      return { solved: false, exhausted: r.exhausted, moves: null, states: null };
+    }
+    const states = [];
+    let cur = start;
+    for (const [f, t] of r.moves) {
+      states.push(JSON.stringify(cur));
+      cur = applyPour(cur, f, t);
+    }
+    return { solved: true, exhausted: false, moves: r.moves, states };
+  }
+
   // 이론적 하한: 모든 색 덩어리(세그먼트)를 색당 하나로 합치는 데 필요한 최소 이동
   function countSegments(tubes) {
     let seg = 0;
@@ -290,7 +310,7 @@ const VaseCore = (() => {
     CAP, topColor, topCount, canPour, pourAmount, applyPour,
     isComplete, isWin, generateBoard, sizesFor, levelConfig, colorsFor,
     generateSolvableBoard, generateLevel,
-    solve, legalMoves, canon, countSegments, starsFor,
+    solve, solveHintPlan, legalMoves, canon, countSegments, starsFor,
   };
 })();
 
