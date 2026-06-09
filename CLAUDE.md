@@ -151,7 +151,7 @@
 ## 배포
 
 - 서버에서 **`./restart.sh`** (git pull → 의존성 → 서비스 재시작 → 헬스체크). 도메인 `https://mini-game.kr`.
-- 게임 원본 갱신: 원본 폴더 수정 후 **`./sync-games.sh`**(`index.html` 있는 폴더만 동기화 — 공용 라이브러리 폴더는 자동 제외).
+- 게임 원본은 이제 `games/{id}/`를 repo에서 직접 편집·커밋한다 (별도 원본 폴더/`sync-games.sh` 동기화 폐지). "게임 원본 무수정" 원칙은 *서빙 레이어가 게임 코드를 안 건드린다*는 의미로 유지 — 게임 자체 개선은 `games/`에서 한다.
 - **DB 접속 정보·서버 호스트·시크릿(secret_key 등)은 서버에만 존재** — repo와 이 문서에는 없다. 새로 추가할 때도 절대 커밋하지 말 것 (`.env`는 gitignore).
 
 ---
@@ -175,7 +175,6 @@ game-portal/
 │   ├── account-widget.js · *.html · portal.css
 │   └── icons/           # 포털 PWA 배지 아이콘
 ├── games/               # 게임 원본 스냅샷 (무수정)
-├── sync-games.sh        # 게임 원본 동기화
 └── restart.sh           # 배포
 ```
 
