@@ -79,6 +79,17 @@
     .reqs .req .accept { background: var(--accent); color: #14110a; border-color: var(--accent); }
     .reqs .req .decline { background: transparent; color: var(--dim); }
     .reqs .req button:active { transform: scale(0.96); }
+    .finder { margin-bottom: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+    .finder-h { font-size: var(--fs-3); font-weight: 700; color: var(--accent); margin-bottom: 10px; }
+    .finder-row { display: flex; gap: 8px; }
+    .finder-in { flex: 1; min-width: 0; background: rgba(255,255,255,.04); border: 1px solid var(--line); color: var(--text); font: inherit; font-size: var(--fs-3); padding: 9px 12px; border-radius: 10px; outline: none; }
+    .finder-in:focus { border-color: var(--accent); }
+    .finder-btn { background: var(--accent); color: #14110a; border: none; font: inherit; font-size: var(--fs-3); font-weight: 700; padding: 9px 16px; border-radius: 10px; cursor: pointer; flex: 0 0 auto; }
+    .finder-btn:disabled { opacity: .5; }
+    .finder-btn:active { transform: scale(0.97); }
+    .finder-msg { font-size: var(--fs-3); margin-top: 8px; min-height: 16px; }
+    .finder-msg.ok { color: #7fdca0; }
+    .finder-msg.bad { color: #ff9a9a; }
   </style>
 </head>
 <body>
@@ -112,6 +123,7 @@
         banner.textContent = '로그인하면 친구 기록을 모아볼 수 있어요 →';
         container.appendChild(banner);
       } else {
+        renderFriendFinder(container);
         renderFriendRequests(container);
       }
       (data.games || []).forEach(function (g) {
@@ -130,6 +142,58 @@
       document.getElementById('boards').innerHTML =
         '<p class="empty" style="color:var(--dim)">기록을 불러오지 못했습니다.</p>';
     });
+
+    // 닉네임으로 친구 찾기/신청
+    function renderFriendFinder(container) {
+      var box = document.createElement('section');
+      box.className = 'finder';
+      box.innerHTML =
+        '<div class="finder-h">친구 찾기</div>' +
+        '<div class="finder-row">' +
+        '<input class="finder-in" type="text" maxlength="16" placeholder="친구 닉네임 입력" autocomplete="off">' +
+        '<button class="finder-btn" type="button">신청</button></div>' +
+        '<div class="finder-msg" aria-live="polite"></div>';
+      container.insertBefore(box, container.firstChild);
+      var inp = box.querySelector('.finder-in');
+      var btn = box.querySelector('.finder-btn');
+      var msg = box.querySelector('.finder-msg');
+      function submit() {
+        var nick = (inp.value || '').trim();
+        msg.textContent = '';
+        msg.className = 'finder-msg';
+        if (!nick) { inp.focus(); return; }
+        btn.disabled = true;
+        fetch('/api/friend-request/by-nickname', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nickname: nick })
+        }).then(function (r) { return r.json().then(function (d) { return { s: r.status, d: d }; }); })
+          .then(function (res) {
+            btn.disabled = false;
+            var d = res.d || {};
+            if (d.ok && d.status === 'accepted') {
+              msg.textContent = (d.nickname || nick) + '님과 친구가 됐어요!';
+              msg.className = 'finder-msg ok';
+              inp.value = '';
+              setTimeout(function () { location.reload(); }, 900);
+            } else if (d.ok) {
+              msg.textContent = (d.already ? '이미 ' : '') + (d.nickname || nick) + '님에게 친구 요청을 보냈어요.';
+              msg.className = 'finder-msg ok';
+              inp.value = '';
+            } else if (d.reason === 'not-found') {
+              msg.textContent = '그런 닉네임이 없어요.';
+              msg.className = 'finder-msg bad';
+            } else if (d.reason === 'self') {
+              msg.textContent = '본인은 추가할 수 없어요.';
+              msg.className = 'finder-msg bad';
+            } else {
+              msg.textContent = '잠시 후 다시 시도해주세요.';
+              msg.className = 'finder-msg bad';
+            }
+          }).catch(function () { btn.disabled = false; msg.textContent = '네트워크 오류입니다.'; msg.className = 'finder-msg bad'; });
+      }
+      btn.addEventListener('click', submit);
+      inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
+    }
 
     // 받은 친구 요청함 — 수락하면 양방향 친구 성립, 친구 리더보드에 서로 보인다
     function renderFriendRequests(container) {

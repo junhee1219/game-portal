@@ -28,6 +28,45 @@ class FriendIn(BaseModel):
     other_id: str = Field(max_length=64)
 
 
+class FriendByNickIn(BaseModel):
+    nickname: str = Field(max_length=32)
+
+
+async def _request_friend(db, user_id: str, target_id: str, target_nickname: str | None) -> dict:
+    """user_id → target_id 친구 요청 생성. 상대가 이미 나에게 보낸 pending이면 즉시 수락(친구 성립).
+
+    target 존재·self 체크는 호출측에서. 응답 dict 반환.
+    """
+    existing = (
+        await db.execute(
+            select(Friendship).where(
+                or_(
+                    (Friendship.follower_id == user_id) & (Friendship.followee_id == target_id),
+                    (Friendship.follower_id == target_id) & (Friendship.followee_id == user_id),
+                )
+            )
+        )
+    ).scalars().all()
+    for fr in existing:
+        if fr.status == "accepted":
+            return {"ok": True, "status": "accepted", "already": True, "nickname": target_nickname}
+    for fr in existing:  # 상대가 나에게 보낸 pending → 수락해서 즉시 친구
+        if fr.status == "pending" and fr.follower_id == target_id:
+            fr.status = "accepted"
+            await db.commit()
+            return {"ok": True, "status": "accepted", "nickname": target_nickname}
+    for fr in existing:  # 내가 이미 보낸 pending
+        if fr.status == "pending" and fr.follower_id == user_id:
+            return {"ok": True, "status": "pending", "already": True, "nickname": target_nickname}
+    db.add(Friendship(id=uuid.uuid4().hex, follower_id=user_id, followee_id=target_id, status="pending"))
+    try:
+        await db.commit()
+    except IntegrityError:  # 동시 요청 race → 유니크 제약
+        await db.rollback()
+        return {"ok": True, "status": "pending", "already": True, "nickname": target_nickname}
+    return {"ok": True, "status": "pending", "nickname": target_nickname}
+
+
 async def _friend_ids(db, user_id: str) -> list[str]:
     """accepted 양방향 친구 id 목록 (본인 제외)."""
     rows = (
@@ -67,7 +106,7 @@ async def score_owner(score_id: int):
 
 @router.post("/friend-request")
 async def friend_request(body: FriendIn, request: Request):
-    """친구 요청 보내기. 상대가 이미 나에게 요청해둔 상태면 즉시 친구 성립(accepted)."""
+    """친구 요청 보내기(user_id). 상대가 이미 나에게 요청해둔 상태면 즉시 친구 성립."""
     user = await current_user(request)
     if user is None:
         return JSONResponse({"ok": False, "reason": "login-required"}, status_code=401)
@@ -78,51 +117,33 @@ async def friend_request(body: FriendIn, request: Request):
             target = await db.get(User, body.other_id)
             if target is None:
                 return JSONResponse({"ok": False, "reason": "not-found"}, status_code=404)
-
-            # 나↔상대 사이 기존 관계(양방향) 확인
-            existing = (
-                await db.execute(
-                    select(Friendship).where(
-                        or_(
-                            (Friendship.follower_id == user.id)
-                            & (Friendship.followee_id == body.other_id),
-                            (Friendship.follower_id == body.other_id)
-                            & (Friendship.followee_id == user.id),
-                        )
-                    )
-                )
-            ).scalars().all()
-
-            for fr in existing:
-                if fr.status == "accepted":
-                    return {"ok": True, "status": "accepted", "already": True}
-            # 상대가 나에게 보낸 pending이 있으면 → 수락해서 즉시 친구
-            for fr in existing:
-                if fr.status == "pending" and fr.follower_id == body.other_id:
-                    fr.status = "accepted"
-                    await db.commit()
-                    return {"ok": True, "status": "accepted", "nickname": target.nickname}
-            # 내가 이미 보낸 pending
-            for fr in existing:
-                if fr.status == "pending" and fr.follower_id == user.id:
-                    return {"ok": True, "status": "pending", "already": True}
-
-            db.add(
-                Friendship(
-                    id=uuid.uuid4().hex,
-                    follower_id=user.id,
-                    followee_id=body.other_id,
-                    status="pending",
-                )
-            )
-            try:
-                await db.commit()
-            except IntegrityError:  # 동시 요청 race → 유니크 제약
-                await db.rollback()
-                return {"ok": True, "status": "pending", "already": True}
-        return {"ok": True, "status": "pending", "nickname": target.nickname}
+            return await _request_friend(db, user.id, target.id, target.nickname)
     except Exception:
         logger.exception("friend-request 실패")
+        return JSONResponse({"ok": False, "reason": "db-error"}, status_code=500)
+
+
+@router.post("/friend-request/by-nickname")
+async def friend_request_by_nickname(body: FriendByNickIn, request: Request):
+    """닉네임으로 친구 신청 — 기록실 '친구 찾기'에서 사용. 닉네임은 유니크."""
+    user = await current_user(request)
+    if user is None:
+        return JSONResponse({"ok": False, "reason": "login-required"}, status_code=401)
+    nick = (body.nickname or "").strip()
+    if not nick:
+        return {"ok": False, "reason": "empty"}
+    try:
+        async with database.async_session() as db:
+            target = (
+                await db.execute(select(User).where(User.nickname == nick))
+            ).scalar_one_or_none()
+            if target is None:
+                return JSONResponse({"ok": False, "reason": "not-found"}, status_code=404)
+            if target.id == user.id:
+                return JSONResponse({"ok": False, "reason": "self"}, status_code=400)
+            return await _request_friend(db, user.id, target.id, target.nickname)
+    except Exception:
+        logger.exception("friend-request-by-nickname 실패")
         return JSONResponse({"ok": False, "reason": "db-error"}, status_code=500)
 
 
