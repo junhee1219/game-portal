@@ -149,29 +149,17 @@
     fillAmt = tubes.map((t) => t.length);
     wave = tubes.map(() => ({ a: 0, p: Math.random() * 6.28 }));
     bubbles = tubes.map(() => []);
-    // ② 숨겨진 층: lv30+ 일부 병의 바닥 칸을 가린다(맨 위 1칸만 보임). 생성/솔버는 완전정보라 영향 없음.
+    // ② 숨겨진 층(물음표) 기능 롤백 — 가려진 칸을 만들지 않는다. 항상 완전정보.
     hiddenBelow = tubes.map(() => 0);
-    const hiddenCount = level < 30 ? 0 : Math.min(2 + Math.floor((level - 30) / 3), 8);
     levelHasHidden = false;
-    if (hiddenCount > 0) {
-      const cand = [];
-      tubes.forEach((t, i) => { if (t.length > 1) cand.push(i); }); // 1칸짜리는 가릴 게 없음
-      for (let i = cand.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [cand[i], cand[j]] = [cand[j], cand[i]]; }
-      cand.slice(0, hiddenCount).forEach((i) => { hiddenBelow[i] = tubes[i].length - 1; });
-      levelHasHidden = cand.length > 0 && hiddenCount > 0;
-    }
     localStorage.setItem('vaseLevel', String(level));
     updateHUD(); render();
-    if (levelHasHidden && !hiddenIntroShown) {
-      hiddenIntroShown = true;
-      setTimeout(() => toast('가려진 병이 생겼어요 — 위를 비우면 아래가 드러나요!', 3200), 500);
-    }
   }
 
   function updateHUD() {
     document.getElementById('level').textContent = level;
     document.getElementById('moves').textContent = moves;
-    document.getElementById('par').textContent = '≤' + (levelHasHidden ? Math.ceil(par * 1.5) : par);
+    document.getElementById('par').textContent = '≤' + par;
     document.getElementById('total-stars').textContent = totalStars();
     setEvoIcon(document.getElementById('evo-icon'), evoFor(getMaxClear()));
   }
