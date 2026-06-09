@@ -23,6 +23,11 @@
     [25, 'g-shark-fin', '상어', '#9fb4c8'],
     [30, 'g-sperm-whale', '고래', '#7f9fd0'],
     [40, 'g-dragon-head', '드래곤', '#8fdc7a'],
+    // Lv55 반전: 서사시 정점(드래곤) → 말랑 귀여움. 이후 점점 더 귀엽게.
+    [55, 'g-sheep', '양', '#f3e2cf'],
+    [70, 'g-rabbit', '토끼', '#ffb3c7'],
+    [85, 'g-cat', '고양이', '#cbb6e0'],
+    [100, 'g-chicken', '병아리', '#ffd84d'],
   ];
   const getMaxClear = () => parseInt(localStorage.getItem('vaseMaxClear') || '0', 10) || 0;
   function evoFor(maxClear) {
