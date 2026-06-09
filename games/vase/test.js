@@ -104,27 +104,51 @@ console.log('• 생성 속도');
   ok(ms / 10 < 1500, '판당 평균 1.5초 미만');
 }
 
-// ── 난이도 곡선: 빈 병↓ → 더블 컬러로 판 확대, 병 최대 16개 ──
+// ── 난이도 곡선: 튜토리얼(lv1-3) → 밴드 → 파라미터 무한 곡선(lv31+, 최대 22병/12색) ──
 console.log('• 난이도 곡선 (levelConfig)');
 {
   const rng = lcg(777);
-  for (let lv = 1; lv <= 40; lv++) {
-    const { fillColors, sizes } = C.levelConfig(lv, 8, rng);
+  for (let lv = 1; lv <= 110; lv++) {
+    const nc = C.colorsFor(lv);
+    const { fillColors, sizes } = C.levelConfig(lv, nc, rng);
     const sum = sizes.reduce((a, b) => a + b, 0);
     ok(sum === fillColors.length * C.CAP, `lv${lv}: 유닛 합 = 색 슬롯×4`);
-    ok(sizes.length <= 16, `lv${lv}: 병 최대 16개 (실제 ${sizes.length})`);
+    ok(sizes.length <= 22, `lv${lv}: 병 최대 22개 (실제 ${sizes.length})`);
     ok(sizes.every((s) => s >= 0 && s <= C.CAP), `lv${lv}: 병 크기 0~CAP`);
-    ok(fillColors.every((c) => c >= 0 && c < 8), `lv${lv}: 색 인덱스 유효`);
+    ok(fillColors.every((c) => c >= 0 && c < nc), `lv${lv}: 색 인덱스 유효(<${nc})`);
   }
-  const cfg = (lv) => C.levelConfig(lv, 8, rng);
+  const cfg = (lv) => C.levelConfig(lv, C.colorsFor(lv), rng);
   const empt = (lv) => cfg(lv).sizes.filter((s) => s === 0).length;
-  ok(empt(1) === 4, 'lv1: 빈 병 4');
-  ok(empt(5) === 2, 'lv5: 빈 병 2');
+  // 튜토리얼
+  ok(cfg(1).sizes.length === 5 && empt(1) === 2, 'lv1: 튜토리얼 5병(빈 2)');
+  ok(cfg(3).sizes.length === 7, 'lv3: 튜토리얼 끝(7병)');
+  // 기존 밴드 유지
   ok(empt(9) === 1, 'lv9: 빈 병 1');
   ok(empt(11) === 0, 'lv11: 빈 병 0');
-  ok(cfg(19).fillColors.length === 10, 'lv19: 더블 컬러 등장 (슬롯 10)');
-  ok(cfg(29).fillColors.length === 14 && cfg(29).sizes.length === 16, 'lv29: 16병 최대 판');
-  ok(cfg(99).sizes.length === 16, 'lv99: 상한 유지');
+  ok(cfg(19).fillColors.length === 10, 'lv19: 더블 컬러 (슬롯 10)');
+  ok(cfg(29).fillColors.length === 14 && cfg(29).sizes.length === 16, 'lv29: 16병 최대 밴드');
+  // 파라미터 무한 곡선 (slack 8 = N-F=2 고정, 22병/12색 상한)
+  ok(C.colorsFor(70) === 12 && cfg(70).sizes.length === 22, 'lv70: 22병 12색');
+  ok(cfg(99).sizes.length === 22, 'lv99: 22병 상한 유지');
+  ok(cfg(70).sizes.length - cfg(70).fillColors.length === 2, 'lv70: slack 2병(여유8) 고정');
+}
+
+// ── 무한 곡선 풀이 보장 + 폴백 미발생 (doc 검증 전략) ──
+console.log('• 무한 곡선 풀이 보장 (lv 30/50/70/100)');
+{
+  for (const lv of [30, 50, 70, 100]) {
+    const nc = C.colorsFor(lv);
+    const expN = Math.min(22, 16 + Math.floor((lv - 30) / 6));
+    for (let i = 0; i < 3; i++) {
+      const rng = lcg(0x5151 + lv * 31 + i);
+      const { tubes, par, solverMoves } = C.generateLevel(lv, nc, { rng });
+      ok(!!solverMoves, `lv${lv}: 풀이 존재`);
+      ok(tubes.length >= expN, `lv${lv}: 폴백 미발생(병 ${tubes.length}≥${expN})`);
+      let st = tubes;
+      for (const [f, t] of solverMoves) st = C.applyPour(st, f, t);
+      ok(C.isWin(st), `lv${lv}: 풀이 재생 → 승리 (par ${par})`);
+    }
+  }
 }
 
 // ── 레벨 생성: 전 난이도 밴드에서 풀이 보장 ──

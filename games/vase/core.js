@@ -97,11 +97,35 @@ const VaseCore = (() => {
     [12, 12, 2], // lv23-24 48유닛, 14병
     [12, 14, 0], // lv25-26
     [14, 14, 2], // lv27-28 56유닛, 16병
-    [14, 16, 0], // lv29+   최대: 16병 전부 부분 충전, 여유 8
+    [14, 16, 0], // lv30 천장(밴드 끝)   최대: 16병 전부 부분 충전, 여유 8
   ];
+  // 입문 튜토리얼 (lv1-3): 가벼운 5병 안팎. EVOS 임계값(5/10/15…)은 절대 레벨이라 영향 없음.
+  const TUTORIAL = [[3, 3, 2], [4, 4, 2], [5, 5, 2]]; // [F색, N물병, E빈병]
+
+  // 레벨별 색 수 (lv30까지 8색, 이후 ~lv62에 12색까지 — 파라미터 곡선과 일치)
+  function colorsFor(level) {
+    if (level <= 30) return 8;
+    return Math.min(12, 8 + Math.floor((level - 30) / 8));
+  }
+
   function levelConfig(level, numColors, rng) {
     rng = rng || Math.random;
-    const [F, N, E] = BANDS[Math.min(BANDS.length - 1, ((level - 1) / 2) | 0)];
+    let F, N, E;
+    if (level <= TUTORIAL.length) {
+      [F, N, E] = TUTORIAL[level - 1];
+    } else {
+      const bandIdx = ((level - 1) / 2) | 0;
+      if (bandIdx < BANDS.length) {
+        [F, N, E] = BANDS[bandIdx];
+      } else {
+        // Lv31+ : 밴드 천장 이후를 파라미터 공식으로 무한히 잇는다 (검증된 slack 8 고정)
+        const step = level - 30;
+        N = Math.min(22, 16 + Math.floor(step / 6)); // 16→22병 (~lv66)
+        F = N - 2;                                    // 여유 항상 8 (= (N-F)*CAP)
+        E = 0;
+        // 색 수는 colorsFor(level)가 정한다 — numColors로 전달돼 들어옴
+      }
+    }
     // 색 슬롯: 팔레트를 섞은 뒤 라운드로빈 — F가 8을 넘으면 일부 색이 두 병 분량
     const colorList = [];
     for (let c = 0; c < numColors; c++) colorList.push(c);
@@ -261,7 +285,7 @@ const VaseCore = (() => {
 
   return {
     CAP, topColor, topCount, canPour, pourAmount, applyPour,
-    isComplete, isWin, generateBoard, sizesFor, levelConfig,
+    isComplete, isWin, generateBoard, sizesFor, levelConfig, colorsFor,
     generateSolvableBoard, generateLevel,
     solve, legalMoves, canon, countSegments, starsFor,
   };

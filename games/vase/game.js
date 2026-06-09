@@ -6,11 +6,12 @@
   const A = VaseAudio;
   const CAP = C.CAP;
 
-  // 8색 고정: 파랑, 빨강, 보라, 노랑, 초록, 검정, 흰색, 주황
-  const COLORS = ['#3b82f6', '#ef4444', '#8b5cf6', '#facc15', '#22c55e', '#3d4654', '#eef2f7', '#f97316'];
-  // 어두운 색(검정)은 그라데이션 대비를 키워 빈 병과 확실히 구분되게
-  const SHADE_HI = { 5: 1.65 }, SHADE_LO = { 5: 1.0 };
-  const NUM_COLORS = 8; // 병 수는 레벨 난이도에 따라 core의 levelConfig가 정한다
+  // 기본 8색: 파랑, 빨강, 보라, 노랑, 초록, 검정, 흰색, 주황
+  // 확장 4색(lv30+): 시안, 핑크, 라임, 갈색 — 색 수는 colorsFor(level)가 정한다(최대 12)
+  const COLORS = ['#3b82f6', '#ef4444', '#8b5cf6', '#facc15', '#22c55e', '#3d4654', '#eef2f7', '#f97316',
+    '#22d3ee', '#ec4899', '#84cc16', '#a16207'];
+  // 어두운 색(검정=5, 갈색=11)은 그라데이션 대비를 키워 빈 병과 확실히 구분되게
+  const SHADE_HI = { 5: 1.65, 11: 1.45 }, SHADE_LO = { 5: 1.0, 11: 0.82 };
 
   // 최고 도달 레벨에 따라 진화하는 물친구 (game-icons 심볼: [기준레벨, 심볼id, 이름, 색])
   const EVOS = [
@@ -107,10 +108,18 @@
   function fitBoard() {
     const bw = board.clientWidth, bh = board.clientHeight;
     if (!bw || !bh) return;
-    const cols = getComputedStyle(board).gridTemplateColumns.split(' ').length || 4;
-    const rows = Math.ceil((tubes.length || 12) / cols);
+    const n = tubes.length || 12;
+    // 병 수에 따라 열 수 결정 (lv30+ 최대 22병 대응). 가로모드는 한 줄에 더 많이.
+    const landscape = window.matchMedia && window.matchMedia('(max-height:520px)').matches;
+    let cols;
+    if (landscape) cols = Math.min(n, n > 16 ? 11 : 8);
+    else if (n <= 12) cols = 4;
+    else if (n <= 18) cols = 5;
+    else cols = 6;
+    board.style.gridTemplateColumns = `repeat(${cols},1fr)`;
+    const rows = Math.ceil(n / cols);
     const gap = 12;
-    const w = Math.max(28, Math.min(52,
+    const w = Math.max(24, Math.min(52,
       (bw - gap * (cols - 1) - 8) / cols,
       (bh - gap * (rows - 1) - 14) / rows / 3.4));
     board.style.setProperty('--w', w.toFixed(1) + 'px');
@@ -122,7 +131,8 @@
     moves = 0; selected = null; history = []; busy = false; pour = null;
     clearEl.classList.remove('show');
     applyTheme(lv);
-    const gen = C.generateLevel(level, NUM_COLORS, { nodeBudget: 80000 });
+    const numColors = C.colorsFor(level);
+    const gen = C.generateLevel(level, numColors, { nodeBudget: 80000 });
     tubes = gen.tubes;
     par = gen.par;
     levelStart = Date.now();
