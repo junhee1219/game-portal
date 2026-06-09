@@ -266,7 +266,7 @@
     runs.forEach((r, i) => {
       const segH = r.u * unitH;
       const top = y - segH;
-      if (r.c === -1) {
+      if (r.c === -1 || COLORS[r.c] === undefined) {  // 가려진 칸 또는 (방어) 유효하지 않은 색
         // ② 가려진 칸: 중립 회색 + 물음표 (색·수면·기포 대신 마스킹)
         const grad = ctx.createLinearGradient(0, top, 0, y);
         grad.addColorStop(0, '#5b6470'); grad.addColorStop(1, '#474e58');
@@ -294,7 +294,9 @@
     // 수면: 사인 웨이브 + 하이라이트
     const surfaceY = H - amt * unitH;
     const w = wave[idx];
-    if (amt > 0.02 && runs.length) {
+    // ② 수면 칸이 가려진 칸(-1)이거나 유효하지 않은 색이면 색 수면/기포를 그리지 않는다.
+    // (붓는 중 from 병의 보이는 칸을 다 비우면 top run이 -1이 됨. COLORS[-1]/[undefined] → shade 크래시 방지)
+    if (amt > 0.02 && runs.length && COLORS[runs[runs.length - 1].c]) {
       const topC = runs[runs.length - 1].c;
       const sc = COLORS[topC];
       ctx.fillStyle = shade(sc, SHADE_HI[topC] ? 1.4 : 1.05);
@@ -402,8 +404,11 @@
 
   function finishPour(from, to, n) {
     if (!pour) return;
-    fillAmt[from] = pour.srcEnd; fillAmt[to] = pour.dstEnd;
-    for (let i = 0; i < n; i++) tubes[to].push(tubes[from].pop());
+    // from이 비면 pop()이 undefined를 반환해 병 데이터를 오염시킨다(흰 병/크래시 원인).
+    // 빠른 연타 등으로 n이 실제 잔량보다 커지는 경우를 막고, fillAmt는 실제 길이로 동기화.
+    for (let i = 0; i < n && tubes[from].length; i++) tubes[to].push(tubes[from].pop());
+    fillAmt[from] = tubes[from].length;
+    fillAmt[to] = tubes[to].length;
     // ② from 병의 위를 비웠으니 새 top 칸이 드러난다 (단조 감소 — 다시 가려지지 않음)
     hiddenBelow[from] = Math.min(hiddenBelow[from], Math.max(0, tubes[from].length - 1));
     moves++;
