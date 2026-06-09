@@ -64,18 +64,6 @@
       ]
     },
     {
-      "id": "orbit",
-      "title": "행성 합치기",
-      "tagline": "같은 행성끼리 합쳐 더 큰 별로! 가끔 떨어지는 블랙홀로 한 방에 정리하는 우주 드롭 머지.",
-      "unit": "점",
-      "score_key": "orbitBest",
-      "score_metric": "score",
-      "state_keys": [
-        { "key": "orbitBest", "merge": "max" },
-        { "key": "orbitMuted", "merge": "lww" }
-      ]
-    },
-    {
       "id": "block",
       "title": "블록 팡",
       "tagline": "조각을 드래그해 줄을 꽉 채우면 팡! 콤보와 폭탄 블록까지.",
@@ -85,18 +73,6 @@
       "state_keys": [
         { "key": "blockBest", "merge": "max" },
         { "key": "blockMuted", "merge": "lww" }
-      ]
-    },
-    {
-      "id": "brick",
-      "title": "벽돌 깨기",
-      "tagline": "공을 튕겨 위쪽 벽돌을 모두 부숴라. 파워업으로 콤보까지.",
-      "unit": "점",
-      "score_key": "brickBest",
-      "score_metric": "score",
-      "state_keys": [
-        { "key": "brickBest", "merge": "max" },
-        { "key": "brickMuted", "merge": "lww" }
       ]
     }
   ]

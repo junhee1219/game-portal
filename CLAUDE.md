@@ -119,6 +119,7 @@
 
 ### 시각 디자인 규칙 (AI 티 안 나게 — 아트디렉팅 세션 확정)
 
+- **폰트 통일(필수).** 모든 게임·포털은 **Pretendard Variable** 단일 폰트. self-host(`/fonts/PretendardVariable.woff2`, `@font-face`)로 쓰고 **외부 CDN 폰트(Google Fonts Fredoka/Gowun 등) 금지**(오프라인 PWA·통일성). 본문 스택: `"Pretendard Variable", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif`. 크기 스케일도 통일 — 히어로/제목 ~28–44px, 본문/버튼 ~16px, 캡션/라벨 ~13px(portal.css `--fs-1/2/3` 기준). 게임마다 Segoe/임의 폰트·제각각 크기 금지.
 - 그라데이션: 색상 고정, **명도 폭 ≤12%** (색이 흐르면 "CSS 데모" 티).
 - 빛 표현은 하나만: 크리스프 윗 림 + 부드러운 하단 음영. 띠(banding) 금지.
 - 바닥은 **하드 섀도(블러 0)** = "사탕이 바닥에 놓인" 느낌.
