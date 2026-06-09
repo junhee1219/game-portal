@@ -16,3 +16,4 @@ __pycache__/
 *.log
 qa-*.png
 .playwright-mcp/
+.gstack/

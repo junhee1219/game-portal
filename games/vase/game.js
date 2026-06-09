@@ -71,6 +71,7 @@
   let bubbles = [];     // 병 속 기포
   let hiddenBelow = []; // ② 병별 가려진 바닥 칸 수(0=안 가림). 단조 감소 — 한 번 본 칸은 계속 보임
   let levelHasHidden = false, hiddenIntroShown = false;
+  let peek = false;     // 엿보기: 버튼을 누르는 동안만 칸마다 색 번호 표시(색맹/연두·초록 구분)
   let pour = null;      // 붓기 진행 상태
   let hintTimer = null;
   let hintPlan = null;  // 힌트 풀이 캐시 {moves, states}. 매 클릭 재솔브하면 비최단 DFS가
@@ -326,6 +327,42 @@
     ctx.fillStyle = '#fff';
     ctx.fillRect(4, surfaceY + 3, 4, Math.max(0, H - surfaceY - 6));
     ctx.globalAlpha = 1;
+
+    // ── 시인성 윤곽선: 밝은 색(특히 흰색)이 밝은 파스텔 배경/유리에 묻히지 않게.
+    // 표면선 + 양옆 가는 다크 라인. 색에 의존하지 않아 색 개수와 무관하게 항상 경계가 잡힌다.
+    if (amt > 0.02) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(45,42,70,0.22)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(0.6, H);
+      ctx.lineTo(0.6, surfaceY + 0.6);
+      ctx.lineTo(W - 0.6, surfaceY + 0.6);
+      ctx.lineTo(W - 0.6, H);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // ── 엿보기: 버튼을 누르는 동안 칸마다 색 번호. 흰 글자 + 검정 외곽선이라 어떤 색 위에서도 읽힌다.
+    if (peek) {
+      ctx.save();
+      ctx.font = `700 ${Math.round(unitH * 0.5)}px -apple-system, system-ui, sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.lineWidth = Math.max(1.5, unitH * 0.09);
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = 'rgba(18,16,32,0.88)';
+      ctx.fillStyle = 'rgba(255,255,255,0.98)';
+      for (let i = 0; i < tube.length; i++) {
+        if (i + 0.5 >= amt) break;       // 표면 위 빈 칸엔 안 그림
+        const c = tube[i];
+        if (c < 0) continue;             // (방어) 가려진 칸
+        const cy = H - (i + 0.5) * unitH;
+        const label = String(c + 1);
+        ctx.strokeText(label, W / 2, cy);
+        ctx.fillText(label, W / 2, cy);
+      }
+      ctx.restore();
+    }
   }
 
   // ── 입력 ──
@@ -786,6 +823,20 @@
     newGame(level);
   });
 
+  // 힌트 하이라이트: 전체 재렌더(render) 없이 클래스만 토글한다.
+  // render()는 board를 통째로 재생성 → 완성 병들의 pop/cork-in 애니메이션이 매번 재생돼 "움찔"거렸다.
+  // 클래스 토글이면 그 한 쌍(from 들어올림 + to 글로우)만 바뀌고 나머지 병은 미동도 없다.
+  function clearHintFx() {
+    for (const el of board.children) el.classList.remove('hint-from', 'hint-target');
+  }
+  function showHint(f, t) {
+    clearTimeout(hintTimer);
+    clearHintFx();
+    if (board.children[f]) board.children[f].classList.add('hint-from');
+    if (board.children[t]) board.children[t].classList.add('hint-target');
+    hintTimer = setTimeout(clearHintFx, 950);
+  }
+
   // 힌트: 솔버가 실제 풀이의 첫 수를 알려준다
   document.getElementById('hint').addEventListener('click', () => {
     if (busy) return;
@@ -807,10 +858,7 @@
     }
     if (move) {
       const [f, t] = move;
-      render();
-      board.children[f].classList.add('selected');
-      board.children[t].classList.add('hint-target');
-      hintTimer = setTimeout(() => { if (!busy) render(); }, 950);
+      showHint(f, t);
     } else if (!r.exhausted) {
       toast('여기선 못 풀어요 — 되돌리기!');
       A.bad();
@@ -819,10 +867,7 @@
       outer: for (let i = 0; i < tubes.length; i++) {
         for (let j = 0; j < tubes.length; j++) {
           if (C.canPour(tubes, i, j) && !C.isComplete(tubes[i])) {
-            render();
-            board.children[i].classList.add('selected');
-            board.children[j].classList.add('hint-target');
-            hintTimer = setTimeout(() => { if (!busy) render(); }, 950);
+            showHint(i, j);
             break outer;
           }
         }
@@ -841,6 +886,19 @@
     if (!A.muted) A.uiClick();
   });
   refreshMute();
+
+  // 엿보기 버튼: 누르는 동안만 색 번호 표시(꾹). 떼거나 손가락이 벗어나면 즉시 끈다.
+  const peekBtn = document.getElementById('peek');
+  function setPeek(on) {
+    if (peek === on) return;
+    peek = on;
+    tubeDirty = tubes.map(() => true);   // 다음 프레임에 전 병을 다시 그려 번호 표시/제거
+  }
+  peekBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); setPeek(true); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) =>
+    peekBtn.addEventListener(ev, () => setPeek(false)));
+  addEventListener('pointerup', () => setPeek(false));      // 버튼 밖에서 떼는 경우 안전망
+  addEventListener('pointercancel', () => setPeek(false));
 
   // ── 시스템 ──
   addEventListener('resize', () => {

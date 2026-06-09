@@ -96,6 +96,8 @@
   .tube::before{content:'';position:absolute;top:-2px;left:-6px;right:-6px;height:6px;border:2px solid rgba(70,60,105,.30);border-bottom:none;border-radius:6px 6px 0 0;z-index:3;}
   .tube::after{content:'';position:absolute;top:8%;left:5px;width:5px;height:78%;background:linear-gradient(180deg,rgba(255,255,255,.85),rgba(255,255,255,0));border-radius:4px;opacity:.6;pointer-events:none;z-index:4;}
   .tube.selected{transform:translateY(-12px) scale(1.05);border-color:#ffe27a;box-shadow:inset 0 0 14px rgba(255,226,122,.25),0 0 22px rgba(255,226,122,.55);}
+  /* 힌트 출발 병: selected와 같은 들어올림 — 단, 힌트 전용 클래스라 실제 선택 상태를 건드리지 않고 전체 재렌더 없이 토글된다 */
+  .tube.hint-from{transform:translateY(-12px) scale(1.05);border-color:#ffe27a;box-shadow:inset 0 0 14px rgba(255,226,122,.25),0 0 22px rgba(255,226,122,.55);}
   .tube.hint-target{border-color:#6ef0ff;box-shadow:inset 0 0 14px rgba(110,240,255,.25),0 0 22px rgba(110,240,255,.6);}
   .tube.complete{animation:pop .55s ease;border-color:rgba(255,214,107,.55);box-shadow:inset 0 0 16px rgba(255,214,107,.18),0 0 18px rgba(255,214,107,.35);cursor:default;}
   /* ── 마개: 한 색으로 꽉 찬 병은 코르크로 봉인 ── */
@@ -307,6 +309,7 @@
     <div class="spacer"></div>
     <button class="k-btn k-blue sq" id="undo" aria-label="되돌리기"><svg class="ki-o"><use href="#p-arrow-counter-clockwise"/></svg></button>
     <button class="k-btn k-teal sq" id="hint" aria-label="힌트"><svg class="ki-o"><use href="#p-lightbulb"/></svg></button>
+    <button class="k-btn k-violet sq" id="peek" aria-label="색 번호 보기 (꾹 누르기)"><svg class="ki-o"><use href="#p-eye"/></svg></button>
     <button class="k-btn k-coral sq" id="new" aria-label="새 게임"><svg class="ki-o"><use href="#p-arrows-clockwise"/></svg></button>
   </div>
 
