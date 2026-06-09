@@ -44,16 +44,16 @@
     el.querySelector('use').setAttribute('href', '#' + ev[1]);
   }
 
-  // 레벨마다 도는 배경 테마 — 단일 색조의 차분한 다크 톤 (액체가 주인공)
+  // 레벨마다 도는 배경 테마 — 밝은 파스텔 단일 색조 (위가 살짝 밝고 아래로 살짝 깊어짐)
   const THEMES = [
-    { base: '#232c39', deep: '#1a212c', vig: '#151b24' }, // 잉크 네이비
-    { base: '#1e3431', deep: '#172825', vig: '#12211f' }, // 딥 틸
-    { base: '#2f2622', deep: '#251d1a', vig: '#1f1815' }, // 에스프레소
-    { base: '#253124', deep: '#1d261c', vig: '#182117' }, // 포레스트
-    { base: '#2b2c3e', deep: '#222333', vig: '#1c1d2b' }, // 슬레이트
-    { base: '#34262f', deep: '#291e25', vig: '#22191f' }, // 플럼
-    { base: '#203040', deep: '#192633', vig: '#14202b' }, // 딥 오션
-    { base: '#342a1e', deep: '#292117', vig: '#231c13' }, // 앰버 브라운
+    { base: '#e3f1ff', deep: '#cfe6fb', vig: '#bcdaf6' }, // 하늘
+    { base: '#dcf4e8', deep: '#c8ecd8', vig: '#b6e2c9' }, // 민트
+    { base: '#ffe9d8', deep: '#ffdcc4', vig: '#fbceb0' }, // 피치
+    { base: '#ece3fb', deep: '#ddd2f6', vig: '#cec0f0' }, // 라벤더
+    { base: '#fff2cf', deep: '#ffe8b6', vig: '#fbdd9f' }, // 버터
+    { base: '#ffe2ec', deep: '#ffd2e0', vig: '#fbc2d3' }, // 로즈
+    { base: '#daf5f5', deep: '#c6eded', vig: '#b4e3e3' }, // 아쿠아
+    { base: '#f1e9d9', deep: '#e7dcc4', vig: '#dccfb0' }, // 샌드
   ];
   function applyTheme(lv) {
     const t = THEMES[(lv - 1) % THEMES.length];

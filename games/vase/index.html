@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#14112b">
+<meta name="theme-color" content="#d8ecff">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -24,9 +24,15 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Gowun+Dodum&display=swap');
   :root{
-    --glass:rgba(255,255,255,0.07);
-    --glass-border:rgba(255,255,255,0.16);
-    --gold:#ffd66b;
+    /* 밝은 파스텔 테마 — 유리는 프로스트 화이트, 텍스트/테두리는 차분한 다크 */
+    --glass:rgba(255,255,255,0.62);
+    --glass-border:rgba(70,60,105,0.18);
+    --gold:#f0a92e;
+    --ink:#39344e;        /* 본문 텍스트 */
+    --ink-soft:#736c8c;   /* 보조 텍스트 */
+    --card:#ffffff;       /* 모달 카드 */
+    --scrim:rgba(38,32,58,0.34);  /* 모달 뒤 어둑한 막 */
+    --pat:#475073;        /* 배경 물친구 패턴 색조 */
   }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{height:100%;}
@@ -34,45 +40,42 @@
     font-family:'Gowun Dodum',sans-serif;
     height:100vh;height:100dvh;width:100vw;overflow:hidden;
     /* 단일 색조 + 위가 살짝 밝은 비네트 — 차분한 보드게임 테이블 느낌 */
-    background:radial-gradient(130% 100% at 50% 0%, var(--base,#222b38) 0%, var(--deep,#1a212c) 55%, var(--vig,#161c26) 100%);
-    color:#f1edff;display:flex;flex-direction:column;align-items:center;
+    background:radial-gradient(130% 100% at 50% 0%, var(--base,#e3f1ff) 0%, var(--deep,#cfe6fb) 55%, var(--vig,#bfdcf6) 100%);
+    color:var(--ink);display:flex;flex-direction:column;align-items:center;
     padding:calc(8px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));
     position:relative;
     user-select:none;-webkit-user-select:none;touch-action:manipulation;
     overscroll-behavior:none;
   }
-  /* 미세 도트 질감 — 천천히 흐른다 (맥북 동적 배경처럼).
-     빈 병은 유리 너머로 이 움직임이 비치고, 까만 액체는 불투명해서 멈춰 있음 → 구분 */
-  body::before{
-    content:'';position:fixed;inset:-52px;z-index:0;pointer-events:none;
-    background-image:radial-gradient(rgba(255,255,255,.085) 1.3px, transparent 1.7px);
-    background-size:26px 26px;
-    animation:bg-drift 4.5s linear infinite;
+  /* 물친구 자가드 패턴 — 밝은 파스텔 위에 아주 옅게(정신없지 않게) 깔린다.
+     빈 병은 유리 너머로 이 패턴이 비쳐 보이고, 액체는 불투명해서 가림 → 구분 */
+  #bgpat{
+    position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;
+    color:var(--pat);fill:currentColor;opacity:.07;
   }
-  @keyframes bg-drift{from{transform:translate(0,0);}to{transform:translate(26px,26px);}}
-  /* 옅은 빛이 화면을 가로질러 숨쉬듯 지나간다 */
+  /* 옅은 빛이 화면을 가로질러 숨쉬듯 지나간다 (밝은 톤에선 부드러운 흰 블룸) */
   body::after{
     content:'';position:fixed;top:-30%;left:-45%;width:95%;height:85%;z-index:0;pointer-events:none;
-    background:radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,.09), transparent 70%);
+    background:radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,.55), transparent 70%);
     animation:bg-breathe 14s ease-in-out infinite alternate;
   }
   @keyframes bg-breathe{from{transform:translate(0,0) scale(1);}to{transform:translate(62vw,32vh) scale(1.3);}}
-  @media (prefers-reduced-motion:reduce){body::before,body::after,.tube .glass .sheen{animation:none;}}
+  @media (prefers-reduced-motion:reduce){body::after,.tube .glass .sheen{animation:none;}}
 
   /* ── 상단 바 ── */
   .topbar{display:flex;align-items:center;gap:8px;z-index:2;width:100%;max-width:560px;flex:0 0 auto;}
   .topbar.sub{margin-top:6px;}
   h1{
     font-family:'Fredoka',sans-serif;font-weight:600;font-size:20px;letter-spacing:-.3px;
-    color:#f3efe6;margin-right:auto;white-space:nowrap;
+    color:var(--ink);margin-right:auto;white-space:nowrap;
     display:flex;align-items:center;gap:7px;
   }
-  h1 .logo{width:21px;height:21px;fill:#9fb4c8;}
+  h1 .logo{width:21px;height:21px;fill:#5b86b3;}
   .pill{background:var(--glass);border:1px solid var(--glass-border);backdrop-filter:blur(10px);padding:6px 12px;border-radius:999px;font-size:12px;font-family:'Fredoka',sans-serif;display:flex;align-items:center;gap:5px;white-space:nowrap;}
-  button.pill{cursor:pointer;color:#f1edff;transition:transform .12s;}
+  button.pill{cursor:pointer;color:var(--ink);transition:transform .12s;}
   button.pill:active{transform:scale(.93);}
   #evo-icon{width:16px;height:16px;}
-  .pill .k-star{width:14px;height:14px;stroke-width:24;filter:none;}
+  .pill .k-star{width:14px;height:14px;stroke-width:24;filter:none;fill:#f0a92e;stroke:#a86a12;}
   .pill .par{opacity:.65;margin-left:2px;display:inline-flex;align-items:center;gap:3px;}
   .pill .par .ki{width:12px;height:12px;opacity:.8;}
   .spacer{margin-left:auto;}
@@ -84,13 +87,14 @@
   #board{flex:1 1 auto;display:grid;grid-template-columns:repeat(4,1fr);justify-items:center;align-items:center;gap:12px;z-index:2;width:100%;max-width:420px;min-height:0;padding:8px 0;}
   .tube{
     width:var(--w,42px);height:calc(var(--w,42px)*3.4);
-    border:2px solid rgba(255,255,255,.32);border-top:none;border-radius:6px 6px 20px 20px;
+    border:2px solid rgba(70,60,105,.30);border-top:none;border-radius:6px 6px 20px 20px;
     cursor:pointer;position:relative;transition:transform .2s cubic-bezier(.34,1.56,.64,1);
-    background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.02));
-    box-shadow:inset 0 0 14px rgba(255,255,255,.06), 0 8px 20px rgba(0,0,0,.4);
+    /* 투명한 프로스트 글래스 — 빈 병은 뒤 파스텔+물친구 패턴이 비쳐 보인다 */
+    background:linear-gradient(180deg,rgba(255,255,255,.34),rgba(255,255,255,.12));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.8), 0 6px 16px rgba(70,60,105,.18);
   }
-  .tube::before{content:'';position:absolute;top:-2px;left:-6px;right:-6px;height:6px;border:2px solid rgba(255,255,255,.32);border-bottom:none;border-radius:6px 6px 0 0;z-index:3;}
-  .tube::after{content:'';position:absolute;top:8%;left:5px;width:5px;height:78%;background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0));border-radius:4px;opacity:.5;pointer-events:none;z-index:4;}
+  .tube::before{content:'';position:absolute;top:-2px;left:-6px;right:-6px;height:6px;border:2px solid rgba(70,60,105,.30);border-bottom:none;border-radius:6px 6px 0 0;z-index:3;}
+  .tube::after{content:'';position:absolute;top:8%;left:5px;width:5px;height:78%;background:linear-gradient(180deg,rgba(255,255,255,.85),rgba(255,255,255,0));border-radius:4px;opacity:.6;pointer-events:none;z-index:4;}
   .tube.selected{transform:translateY(-12px) scale(1.05);border-color:#ffe27a;box-shadow:inset 0 0 14px rgba(255,226,122,.25),0 0 22px rgba(255,226,122,.55);}
   .tube.hint-target{border-color:#6ef0ff;box-shadow:inset 0 0 14px rgba(110,240,255,.25),0 0 22px rgba(110,240,255,.6);}
   .tube.complete{animation:pop .55s ease;border-color:rgba(255,214,107,.55);box-shadow:inset 0 0 16px rgba(255,214,107,.18),0 0 18px rgba(255,214,107,.35);cursor:default;}
@@ -129,7 +133,8 @@
   /* ── 토스트 ── */
   #toast{
     position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
-    background:rgba(20,15,40,.92);border:1px solid var(--glass-border);backdrop-filter:blur(12px);
+    background:rgba(255,255,255,.94);color:var(--ink);border:1px solid var(--glass-border);backdrop-filter:blur(12px);
+    box-shadow:0 6px 20px rgba(70,60,105,.2);
     padding:11px 20px;border-radius:999px;font-size:14px;z-index:60;opacity:0;pointer-events:none;
     transition:opacity .25s,transform .25s;white-space:nowrap;
   }
@@ -138,20 +143,20 @@
   /* ── 클리어 오버레이 (탭해서 진행 — 자동 넘어가지 않음) ── */
   #clear{
     position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;
-    background:rgba(8,6,20,.55);backdrop-filter:blur(6px);
+    background:var(--scrim);backdrop-filter:blur(6px);
     opacity:0;pointer-events:none;transition:opacity .3s;
   }
   #clear.show{opacity:1;pointer-events:auto;}
   .clear-card{
-    background:rgba(24,18,48,.92);border:1px solid var(--glass-border);
+    background:var(--card);border:1px solid var(--glass-border);
     border-radius:26px;padding:28px 26px 22px;text-align:center;width:min(330px,88vw);
-    box-shadow:0 24px 60px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08);
+    box-shadow:0 24px 60px rgba(50,40,80,.28), inset 0 1px 0 rgba(255,255,255,.9);
     transform:scale(.8);transition:transform .35s cubic-bezier(.2,1.4,.4,1);
   }
   #clear.show .clear-card{transform:scale(1);}
-  .clear-card h2{font-family:'Fredoka',sans-serif;font-size:26px;margin-bottom:4px;background:linear-gradient(135deg,#ffd6e8,#bdeaff 60%,#e0caff);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .clear-card h2{font-family:'Fredoka',sans-serif;font-size:26px;margin-bottom:4px;background:linear-gradient(135deg,#ff7eb3,#5b9cff 60%,#a06bff);-webkit-background-clip:text;background-clip:text;color:transparent;}
   #stars{display:flex;justify-content:center;gap:12px;margin:14px 0 6px;height:56px;align-items:center;}
-  #stars .k-star{width:42px;height:42px;fill:#3c3852;stroke:#23203a;filter:none;transform:scale(.75);}
+  #stars .k-star{width:42px;height:42px;fill:#e2dcef;stroke:#cabfe0;filter:none;transform:scale(.75);}
   #stars .k-star:nth-child(2){width:54px;height:54px;}
   #stars .k-star.on{
     fill:#ffc24b;stroke:#8a4d12;
@@ -173,29 +178,29 @@
   #levels{
     position:fixed;inset:0;z-index:80;
     display:flex;align-items:center;justify-content:center;
-    background:rgba(8,6,20,.6);backdrop-filter:blur(5px);
+    background:var(--scrim);backdrop-filter:blur(5px);
     animation:fadein .2s ease;
   }
   #levels.hidden{display:none;}
   .levels-card{
-    background:#1d1738;border:1px solid var(--glass-border);
+    background:var(--card);border:1px solid var(--glass-border);
     border-radius:26px;padding:22px 20px;width:min(350px,90vw);max-height:80dvh;
     display:flex;flex-direction:column;text-align:center;
-    box-shadow:0 18px 50px rgba(0,0,0,.5);
+    box-shadow:0 18px 50px rgba(50,40,80,.28);
     animation:pop-in .3s cubic-bezier(.2,1.2,.4,1);
   }
-  .levels-card h2{font-family:'Fredoka',sans-serif;font-size:20px;color:#ffd6e8;margin-bottom:12px;}
+  .levels-card h2{font-family:'Fredoka',sans-serif;font-size:20px;color:var(--ink);margin-bottom:12px;}
   #evo-box{
     display:flex;align-items:center;gap:14px;justify-content:center;
     background:var(--glass);border:1px solid var(--glass-border);
     border-radius:16px;padding:10px 16px;margin-bottom:14px;
   }
   #evo-emoji{font-size:40px;filter:drop-shadow(0 0 10px rgba(120,200,255,.5));}
-  #evo-text{font-size:12.5px;color:#c9bfe8;text-align:left;line-height:1.5;}
+  #evo-text{font-size:12.5px;color:var(--ink-soft);text-align:left;line-height:1.5;}
   #level-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;overflow-y:auto;padding:2px;min-height:0;}
   .lv-chip{
     border:1px solid var(--glass-border);background:var(--glass);border-radius:12px;
-    color:#f1edff;font-family:'Fredoka',sans-serif;font-size:15px;font-weight:600;
+    color:var(--ink);font-family:'Fredoka',sans-serif;font-size:15px;font-weight:600;
     padding:7px 0 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;
     transition:transform .12s;
   }
@@ -215,30 +220,30 @@
   #secret{
     position:fixed;inset:0;z-index:85;
     display:flex;align-items:center;justify-content:center;
-    background:rgba(8,6,20,.65);backdrop-filter:blur(5px);
+    background:var(--scrim);backdrop-filter:blur(5px);
     animation:fadein .2s ease;
   }
   #secret.hidden{display:none;}
   .secret-card{
-    background:#1d1738;border:1px solid var(--glass-border);
+    background:var(--card);border:1px solid var(--glass-border);
     border-radius:26px;padding:22px 20px;width:min(340px,90vw);max-height:84dvh;overflow-y:auto;
-    box-shadow:0 18px 50px rgba(0,0,0,.5);
+    box-shadow:0 18px 50px rgba(50,40,80,.28);
     animation:pop-in .3s cubic-bezier(.2,1.2,.4,1);
     display:flex;flex-direction:column;gap:14px;text-align:left;
   }
-  .secret-card h2{font-family:'Fredoka',sans-serif;font-size:19px;color:#ffd6e8;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px;}
+  .secret-card h2{font-family:'Fredoka',sans-serif;font-size:19px;color:var(--ink);text-align:center;display:flex;align-items:center;justify-content:center;gap:6px;}
   .secret-sec{display:flex;flex-direction:column;gap:7px;}
-  .secret-label{font-size:12px;color:#9d93c2;font-family:'Fredoka',sans-serif;}
+  .secret-label{font-size:12px;color:var(--ink-soft);font-family:'Fredoka',sans-serif;}
   .secret-card textarea{
     width:100%;height:54px;resize:none;border-radius:12px;padding:9px 11px;
-    background:var(--glass);border:1px solid var(--glass-border);color:#f1edff;
+    background:var(--glass);border:1px solid var(--glass-border);color:var(--ink);
     font-size:11px;font-family:monospace;word-break:break-all;
   }
   .secret-card textarea:focus{outline:1px solid #6e9fff;}
   .secret-row{display:flex;gap:8px;}
   .secret-row input{
     flex:1;min-width:0;border-radius:12px;padding:9px 11px;font-size:14px;
-    background:var(--glass);border:1px solid var(--glass-border);color:#f1edff;
+    background:var(--glass);border:1px solid var(--glass-border);color:var(--ink);
   }
   .secret-btn{
     flex:1;border:none;border-radius:12px;padding:10px 0;cursor:pointer;
@@ -250,7 +255,7 @@
   #secret-close{
     font-size:14px;font-weight:700;padding:11px 0;font-family:'Fredoka',sans-serif;
     border:none;border-radius:999px;cursor:pointer;
-    background:var(--glass);border:1px solid var(--glass-border);color:#c9bfe8;
+    background:var(--glass);border:1px solid var(--glass-border);color:var(--ink);
   }
 
   @keyframes fadein{from{opacity:0;}to{opacity:1;}}
@@ -269,6 +274,19 @@
 </style>
 </head>
 <body>
+  <!-- 물친구 자가드 패턴 배경: sprite의 g-* 심볼을 옅게 타일링 (z-index:0, 병 뒤) -->
+  <svg id="bgpat" aria-hidden="true">
+    <defs>
+      <pattern id="bgtile" width="208" height="208" patternUnits="userSpaceOnUse" patternTransform="rotate(-7)">
+        <use href="#g-tropical-fish" x="12" y="24" width="50" height="50"/>
+        <use href="#g-dolphin" x="124" y="96" width="54" height="54"/>
+        <use href="#g-drop" x="62" y="150" width="30" height="30"/>
+        <use href="#g-bubbles" x="158" y="18" width="38" height="38"/>
+        <use href="#g-octopus" x="6" y="150" width="42" height="42"/>
+      </pattern>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#bgtile)"/>
+  </svg>
   <div class="glow a"></div>
   <div class="glow b"></div>
 
