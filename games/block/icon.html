@@ -1,0 +1,31 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#fff;}</style></head>
+<body>
+<canvas id="c" width="512" height="512"></canvas>
+<script>
+const cv=document.getElementById('c'), x=cv.getContext('2d');
+// 파스텔 배경 (라일락→스카이, 명도폭 좁게)
+const g=x.createLinearGradient(0,0,0,512);
+g.addColorStop(0,'#f1f0fb'); g.addColorStop(1,'#e3e6f7');
+function rr(ctx,X,Y,W,H,R){ctx.beginPath();ctx.moveTo(X+R,Y);ctx.arcTo(X+W,Y,X+W,Y+H,R);ctx.arcTo(X+W,Y+H,X,Y+H,R);ctx.arcTo(X,Y+H,X,Y,R);ctx.arcTo(X,Y,X+W,Y,R);ctx.closePath();}
+// 둥근 사각 배경 (마스커블 안전영역 고려: 가장자리 여백)
+rr(x,0,0,512,512,112); x.fillStyle=g; x.fill();
+// 블록 3개 — 파스텔 단색 라운드 사각형 (이모지 없음)
+function block(cx,cy,s,col){
+  rr(x,cx,cy,s,s,s*0.26);
+  x.fillStyle=col; x.fill();
+  // 윗 림(밝게) + 하단 음영
+  x.save(); rr(x,cx,cy,s,s,s*0.26); x.clip();
+  let lg=x.createLinearGradient(0,cy,0,cy+s);
+  lg.addColorStop(0,'rgba(255,255,255,.45)'); lg.addColorStop(.5,'rgba(255,255,255,0)'); lg.addColorStop(1,'rgba(0,0,0,.12)');
+  x.fillStyle=lg; x.fillRect(cx,cy,s,s); x.restore();
+}
+const S=132, gap=18;
+const totalW=S*2+gap;
+const ox=(512-totalW)/2, oy=(512-totalW)/2 + 6;
+block(ox, oy, S, '#7eb6f0');
+block(ox+S+gap, oy, S, '#f5a8c0');
+block(ox, oy+S+gap, S, '#f6c982');
+block(ox+S+gap, oy+S+gap, S, '#9fd9a8');
+window.__png=()=>cv.toDataURL('image/png');
+</script>
+</body></html>

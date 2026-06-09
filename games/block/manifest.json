@@ -1,0 +1,15 @@
+{
+  "name": "블록 팡 — 한 줄 꽉 채워 팡!",
+  "short_name": "블록 팡",
+  "description": "조각을 드래그해 줄을 꽉 채우면 팡! 콤보와 폭탄 블록이 있는 손맛 블록 퍼즐.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e7e9fa",
+  "theme_color": "#eef1fb",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
