@@ -13,7 +13,7 @@
 :root{
   --k-ink:#1f2340;        /* 아이콘 중립 외곽선 */
   --k-radius:17px;
-  --k-font:'Fredoka',system-ui,sans-serif;
+  --k-font:"Pretendard Variable",-apple-system,system-ui,sans-serif;
 }
 
 /* ── 캔디 버튼 ─────────────────────────────────────────────── */

@@ -295,6 +295,8 @@
     document.getElementById('btn-start').textContent = '다시 장사하기!';
     ov.classList.add('gameover');
     document.body.classList.add('show-overlay');
+    // 게임오버 시 포털 공용 후원 모달 (시작 시엔 X)
+    if (window.GamePortal) setTimeout(function () { GamePortal.openSupport(); }, 1000);
   }
 
   // ── 업데이트 ──

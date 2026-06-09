@@ -22,7 +22,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <title>물병 정렬</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Gowun+Dodum&display=swap');
+  @font-face{font-family:"Pretendard Variable";font-weight:45 920;font-style:normal;font-display:swap;src:url("/fonts/PretendardVariable.woff2") format("woff2-variations");}
   :root{
     /* 밝은 파스텔 테마 — 유리는 프로스트 화이트, 텍스트/테두리는 차분한 다크 */
     --glass:rgba(255,255,255,0.62);
@@ -35,9 +35,9 @@
     --pat:#475073;        /* 배경 물친구 패턴 색조 */
   }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-  html,body{height:100%;}
+  html,body{height:100%;background:#cfe6fb;}
   body{
-    font-family:'Gowun Dodum',sans-serif;
+    font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
     height:100vh;height:100dvh;width:100vw;overflow:hidden;
     /* 단일 색조 + 위가 살짝 밝은 비네트 — 차분한 보드게임 테이블 느낌 */
     background:radial-gradient(130% 100% at 50% 0%, var(--base,#e3f1ff) 0%, var(--deep,#cfe6fb) 55%, var(--vig,#bfdcf6) 100%);
@@ -66,12 +66,12 @@
   .topbar{display:flex;align-items:center;gap:8px;z-index:2;width:100%;max-width:560px;flex:0 0 auto;}
   .topbar.sub{margin-top:6px;}
   h1{
-    font-family:'Fredoka',sans-serif;font-weight:600;font-size:20px;letter-spacing:-.3px;
+    font-family:"Pretendard Variable",-apple-system,sans-serif;font-weight:600;font-size:20px;letter-spacing:-.3px;
     color:var(--ink);margin-right:auto;white-space:nowrap;
     display:flex;align-items:center;gap:7px;
   }
   h1 .logo{width:21px;height:21px;fill:#5b86b3;}
-  .pill{background:var(--glass);border:1px solid var(--glass-border);backdrop-filter:blur(10px);padding:6px 12px;border-radius:999px;font-size:12px;font-family:'Fredoka',sans-serif;display:flex;align-items:center;gap:5px;white-space:nowrap;}
+  .pill{background:var(--glass);border:1px solid var(--glass-border);backdrop-filter:blur(10px);padding:6px 12px;border-radius:999px;font-size:12px;font-family:"Pretendard Variable",-apple-system,sans-serif;display:flex;align-items:center;gap:5px;white-space:nowrap;}
   button.pill{cursor:pointer;color:var(--ink);transition:transform .12s;}
   button.pill:active{transform:scale(.93);}
   #evo-icon{width:16px;height:16px;}
@@ -156,7 +156,7 @@
     transform:scale(.8);transition:transform .35s cubic-bezier(.2,1.4,.4,1);
   }
   #clear.show .clear-card{transform:scale(1);}
-  .clear-card h2{font-family:'Fredoka',sans-serif;font-size:26px;margin-bottom:4px;background:linear-gradient(135deg,#ff7eb3,#5b9cff 60%,#a06bff);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .clear-card h2{font-family:"Pretendard Variable",-apple-system,sans-serif;font-size:26px;margin-bottom:4px;background:linear-gradient(135deg,#ff7eb3,#5b9cff 60%,#a06bff);-webkit-background-clip:text;background-clip:text;color:transparent;}
   #stars{display:flex;justify-content:center;gap:12px;margin:14px 0 6px;height:56px;align-items:center;}
   #stars .k-star{width:42px;height:42px;fill:#e2dcef;stroke:#cabfe0;filter:none;transform:scale(.75);}
   #stars .k-star:nth-child(2){width:54px;height:54px;}
@@ -169,7 +169,7 @@
   #clear-stats{font-size:14px;opacity:.85;margin-bottom:2px;display:flex;align-items:center;justify-content:center;gap:5px;}
   #clear-stats .ki{width:14px;height:14px;opacity:.8;}
   #clear-record{
-    display:none;font-family:'Fredoka',sans-serif;font-size:13px;color:#1c1233;font-weight:700;
+    display:none;font-family:"Pretendard Variable",-apple-system,sans-serif;font-size:13px;color:#1c1233;font-weight:700;
     background:linear-gradient(135deg,#ffe27a,#ffb45e);border-radius:999px;padding:3px 12px;margin-top:6px;
   }
   #clear-record.show{display:inline-flex;align-items:center;gap:4px;animation:pop .5s ease;}
@@ -191,7 +191,7 @@
     box-shadow:0 18px 50px rgba(50,40,80,.28);
     animation:pop-in .3s cubic-bezier(.2,1.2,.4,1);
   }
-  .levels-card h2{font-family:'Fredoka',sans-serif;font-size:20px;color:var(--ink);margin-bottom:12px;}
+  .levels-card h2{font-family:"Pretendard Variable",-apple-system,sans-serif;font-size:20px;color:var(--ink);margin-bottom:12px;}
   #evo-box{
     display:flex;align-items:center;gap:14px;justify-content:center;
     background:var(--glass);border:1px solid var(--glass-border);
@@ -202,7 +202,7 @@
   #level-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;overflow-y:auto;padding:2px;min-height:0;}
   .lv-chip{
     border:1px solid var(--glass-border);background:var(--glass);border-radius:12px;
-    color:var(--ink);font-family:'Fredoka',sans-serif;font-size:15px;font-weight:600;
+    color:var(--ink);font-family:"Pretendard Variable",-apple-system,sans-serif;font-size:15px;font-weight:600;
     padding:7px 0 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;
     transition:transform .12s;
   }
@@ -211,7 +211,7 @@
   .lv-chip.lock{opacity:.35;cursor:default;}
   .lv-chip:active:not(.lock){transform:scale(.94);}
   #levels-close{
-    margin-top:14px;font-size:15px;font-weight:700;padding:11px 0;font-family:'Fredoka',sans-serif;
+    margin-top:14px;font-size:15px;font-weight:700;padding:11px 0;font-family:"Pretendard Variable",-apple-system,sans-serif;
     border:none;border-radius:999px;cursor:pointer;
     background:linear-gradient(135deg,#7c5bef,#1aa6ff);color:#fff;
     box-shadow:0 5px 16px rgba(60,80,220,.4);
@@ -233,9 +233,9 @@
     animation:pop-in .3s cubic-bezier(.2,1.2,.4,1);
     display:flex;flex-direction:column;gap:14px;text-align:left;
   }
-  .secret-card h2{font-family:'Fredoka',sans-serif;font-size:19px;color:var(--ink);text-align:center;display:flex;align-items:center;justify-content:center;gap:6px;}
+  .secret-card h2{font-family:"Pretendard Variable",-apple-system,sans-serif;font-size:19px;color:var(--ink);text-align:center;display:flex;align-items:center;justify-content:center;gap:6px;}
   .secret-sec{display:flex;flex-direction:column;gap:7px;}
-  .secret-label{font-size:12px;color:var(--ink-soft);font-family:'Fredoka',sans-serif;}
+  .secret-label{font-size:12px;color:var(--ink-soft);font-family:"Pretendard Variable",-apple-system,sans-serif;}
   .secret-card textarea{
     width:100%;height:54px;resize:none;border-radius:12px;padding:9px 11px;
     background:var(--glass);border:1px solid var(--glass-border);color:var(--ink);
@@ -249,13 +249,13 @@
   }
   .secret-btn{
     flex:1;border:none;border-radius:12px;padding:10px 0;cursor:pointer;
-    font-family:'Fredoka',sans-serif;font-size:13px;font-weight:600;color:#fff;
+    font-family:"Pretendard Variable",-apple-system,sans-serif;font-size:13px;font-weight:600;color:#fff;
     background:linear-gradient(135deg,#5b8def,#7c5bef);
   }
   .secret-btn.wide{width:100%;}
   .secret-btn:active{transform:scale(.96);}
   #secret-close{
-    font-size:14px;font-weight:700;padding:11px 0;font-family:'Fredoka',sans-serif;
+    font-size:14px;font-weight:700;padding:11px 0;font-family:"Pretendard Variable",-apple-system,sans-serif;
     border:none;border-radius:999px;cursor:pointer;
     background:var(--glass);border:1px solid var(--glass-border);color:var(--ink);
   }

@@ -31,11 +31,15 @@
     --snake-head: #5fb593;
     --glow: #ffd54f;
   }
+  @font-face {
+    font-family: "Pretendard Variable"; font-weight: 45 920; font-style: normal; font-display: swap;
+    src: url("/fonts/PretendardVariable.woff2") format("woff2-variations");
+  }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { height: 100%; overflow: hidden; }
+  html, body { height: 100%; overflow: hidden; background: var(--bg); }
   body {
     background: var(--bg);
-    font-family: "Segoe UI", "Apple SD Gothic Neo", sans-serif;
+    font-family: "Pretendard Variable", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
     display: flex; flex-direction: column; align-items: center;
     user-select: none; -webkit-user-select: none; touch-action: manipulation;
   }
@@ -343,7 +347,7 @@
     text-align: center; gap: 14px;
   }
   #overlay.hidden { display: none; }
-  #overlay h1 { font-size: 40px; color: #8d6e63; }
+  #overlay h1 { font-size: 30px; color: #8d6e63; }
   #overlay p { font-size: 20px; color: #a1887f; line-height: 1.5; }
   #overlay a { color: #e57373; font-weight: 700; }
   #overlay button {
@@ -1021,6 +1025,8 @@ if (typeof module !== 'undefined') {
     ov.querySelector('button').textContent = '다시 하기!';
     ov.classList.add('gameover'); // 간식 사주기 노출
     setTimeout(() => ov.classList.remove('hidden'), 700);
+    // 게임오버 시 포털 공용 후원 모달 (시작 시엔 X)
+    if (window.GamePortal) setTimeout(() => { GamePortal.openSupport(); }, 1000);
   }
 
   // ───────────────────────── 렌더링 ─────────────────────────

@@ -22,11 +22,15 @@
 <meta name="twitter:card" content="summary_large_image">
 <title>라면집 사장님</title>
 <style>
+  @font-face {
+    font-family: "Pretendard Variable"; font-weight: 45 920; font-style: normal; font-display: swap;
+    src: url("/fonts/PretendardVariable.woff2") format("woff2-variations");
+  }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { height: 100%; overflow: hidden; }
+  html, body { height: 100%; overflow: hidden; background: #150c08; }
   body {
     background: #150c08;
-    font-family: -apple-system, "Segoe UI", "Apple SD Gothic Neo", sans-serif;
+    font-family: "Pretendard Variable", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
     user-select: none; -webkit-user-select: none;
     touch-action: none; -webkit-touch-callout: none;
     color: #eef;
@@ -58,7 +62,7 @@
   /* 이모지는 그라데이션 텍스트에 넣으면 실루엣이 되므로 별도 요소 */
   #ov-emoji { font-size: 46px; margin-bottom: 2px; filter: drop-shadow(0 0 14px rgba(255,170,80,0.55)); }
   #overlay h1 {
-    font-size: clamp(28px, 8vw, 42px); font-weight: 800; letter-spacing: 1px;
+    font-size: clamp(26px, 7vw, 30px); font-weight: 800; letter-spacing: 1px;
     background: linear-gradient(110deg, #ff6b6b, #ffa94d 50%, #ffe066);
     -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
     filter: drop-shadow(0 0 18px rgba(255,150,60,0.5));

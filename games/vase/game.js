@@ -503,6 +503,8 @@
           A.record(); vibrate([20, 40, 20, 40, 60]);
         }, 380 + stars * 340 + 600);
       }
+      // 레벨 클리어 후 포털 공용 후원 모달 — 매판은 과해서 3레벨에 한 번만 (시작/로드 시엔 절대 X)
+      if (window.GamePortal && level % 3 === 0) setTimeout(() => { GamePortal.openSupport(); }, 1000);
     }, 780);
   }
 
@@ -622,8 +624,8 @@
   document.getElementById('secret-close').addEventListener('click', () => secretModal.classList.add('hidden'));
   secretModal.addEventListener('click', (e) => { if (e.target === secretModal) secretModal.classList.add('hidden'); });
 
-  // ── 간식 사주기: game-kit snack.js 모듈 (PC fallback 모달 포함) ──
-  initSnack(document.getElementById('snack-mount'));
+  // ── 간식 사주기: 포털 공용 후원 모달로 통일 (initSnack 호출 제거) ──
+  // 후원은 레벨 클리어 시점(onWin)에서 GamePortal.openSupport()로 띄운다 — 시작/로드 시 X.
 
   // ── 파티클 (fx 캔버스, 화면 좌표) ──
   let parts = [];      // {kind, x,y,vx,vy,g,life,age,color,size,rot,vr,sway}
