@@ -166,8 +166,8 @@ async def manifest(request: Request):
     """포털 PWA manifest. scope '/'로 게임별 manifest(scope /{game}/)와 분리."""
     data = {
         "id": "/",
-        "name": "한 판 하고 가요",
-        "short_name": "한판만",
+        "name": "미니게임",
+        "short_name": "미니게임",
         "description": "설치 없이 바로 하는 웹 미니게임 모음.",
         "start_url": "/?src=pwa",
         "scope": "/",
@@ -273,7 +273,7 @@ async def share_page(score_id: int, request: Request):
     for key, value in {
         "{{TITLE}}": og_title,
         "{{OG_TITLE}}": og_title,
-        "{{OG_DESC}}": "한판만 해봐. 설치 없이 바로 시작.",
+        "{{OG_DESC}}": "설치 없이 바로 즐기는 미니게임.",
         "{{OG_IMAGE}}": f"{base}/{score.game}/og/main.png",
         "{{GAME}}": score.game,
         "{{GAME_TITLE}}": info["title"],
