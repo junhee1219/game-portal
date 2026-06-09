@@ -68,8 +68,10 @@
         keepalive: true
       }).catch(function () {});
     },
-    // 후원 모달 열기 (게임/포털 어디서든 호출. 링크는 /api/support = 서버 .env)
-    openSupport: function () { gpOpenSupport(); }
+    // 후원+의견 모달 열기 (게임/포털 어디서든 호출. 링크는 /api/support = 서버 .env)
+    openSupport: function () { gpOpenSupport(false); },
+    // 의견 남기기로 바로 (textarea 펼친 채로) 열기
+    openFeedback: function () { gpOpenSupport(true); }
   };
 
   // ===== 후원(토스/카카오뱅크) — 포털 공용. 링크 없으면 아무것도 안 뜸 =====
@@ -99,10 +101,20 @@
       'font-size:15px;font-weight:800;text-decoration:none;}' +
       '.gp-sup-btn.toss{background:#2c66f6;color:#fff;}' +
       '.gp-sup-btn.kb{background:#fee500;color:#3c1e1e;}' +
-      '.gp-sup-soon{font-size:14px;color:#888;padding:8px 0 4px;}';
+      '.gp-sup-soon{font-size:14px;color:#888;padding:8px 0 4px;}' +
+      '.gp-sup-div{height:1px;background:#eee;margin:18px 0 14px;}' +
+      '.gp-fb-h{font-size:14px;font-weight:800;color:#333;margin-bottom:4px;text-align:left;}' +
+      '.gp-fb-sub{font-size:11px;color:#999;margin-bottom:8px;text-align:left;}' +
+      '.gp-fb-ta{width:100%;box-sizing:border-box;min-height:74px;resize:vertical;border:1px solid #e2e2e2;' +
+      'border-radius:12px;padding:11px;font:inherit;font-size:14px;color:#222;outline:none;}' +
+      '.gp-fb-ta:focus{border-color:#9aa6ff;}' +
+      '.gp-fb-send{width:100%;box-sizing:border-box;margin-top:8px;padding:12px;border:none;border-radius:12px;' +
+      'background:#5b6cff;color:#fff;font:inherit;font-size:14px;font-weight:800;cursor:pointer;}' +
+      '.gp-fb-send:disabled{opacity:.5;cursor:default;}' +
+      '.gp-fb-done{font-size:14px;color:#3aa76d;font-weight:700;padding:10px 0 2px;}';
     document.head.appendChild(st);
   }
-  function gpOpenSupport() {
+  function gpOpenSupport(focusFeedback) {
     gpFetchSupport().then(function (links) {
       gpEnsureSupportStyle();
       var isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent || '');
@@ -111,15 +123,21 @@
       if (links.toss) {
         var tossApp = !/^https?:/i.test(links.toss);
         rows += '<a class="gp-sup-btn toss" data-app="' + (tossApp ? '1' : '0') + '" href="' + gpEsc(links.toss) + '"' +
-          (tossApp ? '' : ' target="_blank" rel="noopener"') + '>토스로 후원</a>';
+          (tossApp ? '' : ' target="_blank" rel="noopener"') + '>토스로 간식 사주기</a>';
       }
-      if (links.kakaobank) rows += '<a class="gp-sup-btn kb" href="' + gpEsc(links.kakaobank) + '" target="_blank" rel="noopener">카카오페이로 후원</a>';
+      if (links.kakaobank) rows += '<a class="gp-sup-btn kb" href="' + gpEsc(links.kakaobank) + '" target="_blank" rel="noopener">카카오페이로 간식 사주기</a>';
       if (!rows) rows = '<p class="gp-sup-soon">후원 링크 준비 중이에요. 곧 열릴게요!</p>';
       var ov = document.createElement('div');
       ov.className = 'gp-sup-ov';
       ov.innerHTML = '<div class="gp-sup-card"><button class="gp-sup-x" aria-label="닫기">&times;</button>' +
-        '<div class="gp-sup-h">♡ 후원하기</div>' +
-        '<p class="gp-sup-desc">광고 없이 즐기셨다면, 다음 게임 만들 힘이 됩니다.</p>' + rows + '</div>';
+        '<div class="gp-sup-h">♡ 개발자에게 간식 사주기</div>' +
+        '<p class="gp-sup-desc">재밌게 즐기셨다면, 다음 게임 만들 힘이 됩니다.</p>' + rows +
+        '<div class="gp-sup-div"></div>' +
+        '<div class="gp-fb-h">의견 남기기</div>' +
+        '<div class="gp-fb-sub">버그 · 아이디어 · 불만 뭐든 환영! 바로 전달돼요.</div>' +
+        '<textarea class="gp-fb-ta" maxlength="2000" placeholder="여기에 적어주세요"></textarea>' +
+        '<button class="gp-fb-send" type="button">보내기</button>' +
+        '</div>';
       document.body.appendChild(ov);
       function close() { if (ov.parentNode) ov.parentNode.removeChild(ov); }
       ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
@@ -133,6 +151,31 @@
           tossBtn.style.opacity = '.5';
         });
       }
+      // 의견 남기기 → /api/feedback 즉시 저장
+      var ta = ov.querySelector('.gp-fb-ta');
+      var send = ov.querySelector('.gp-fb-send');
+      send.addEventListener('click', function () {
+        var txt = (ta.value || '').trim();
+        if (!txt) { ta.focus(); return; }
+        send.disabled = true; send.textContent = '보내는 중…';
+        fetch('/api/feedback', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: txt, page: game, visitor_id: vid })
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          if (d && d.ok) {
+            ta.style.display = 'none'; send.style.display = 'none';
+            ov.querySelector('.gp-fb-sub').style.display = 'none';
+            var done = document.createElement('div');
+            done.className = 'gp-fb-done';
+            done.textContent = '고맙습니다! 잘 받았어요 :)';
+            ov.querySelector('.gp-fb-h').textContent = '의견 보냄';
+            ov.querySelector('.gp-fb-h').after(done);
+          } else {
+            send.disabled = false; send.textContent = '다시 보내기';
+          }
+        }).catch(function () { send.disabled = false; send.textContent = '다시 보내기'; });
+      });
+      if (focusFeedback) { try { ta.focus(); ta.scrollIntoView({ block: 'center' }); } catch (e) {} }
     });
   }
   // 노출 헬퍼: 링크가 있을 때만 콜백(true) — 게임이 후원 버튼 보일지 결정

@@ -8,7 +8,7 @@ from sqlalchemy import desc, func, or_, select, text
 from app import database, games
 from app.auth_session import current_user
 from app.database import kst_now
-from app.models import CreditTransaction, Event, Score, User, Visitor
+from app.models import CreditTransaction, Event, Feedback, Score, User, Visitor
 
 logger = logging.getLogger(__name__)
 
@@ -179,6 +179,39 @@ async def my_scores(request: Request):
     except Exception:
         logger.exception("me/scores 조회 실패")
         return {"ok": False, "scores": {}}
+
+
+class FeedbackIn(BaseModel):
+    text: str = Field(max_length=2000)
+    page: str | None = Field(default=None, max_length=32)
+    visitor_id: str | None = Field(default=None, max_length=64)
+
+
+@router.post("/feedback")
+async def submit_feedback(body: FeedbackIn, request: Request):
+    """의견 남기기 — 익명/로그인 무관 즉시 DB 저장. DB 죽어도 게임엔 영향 없게 fail-soft."""
+    text = (body.text or "").strip()
+    if not text:
+        return {"ok": False, "reason": "empty"}
+    if database.async_session is None:
+        return {"ok": False, "reason": "no-db"}
+    try:
+        user = await current_user(request)
+        async with database.async_session() as db:
+            db.add(
+                Feedback(
+                    visitor_id=body.visitor_id,
+                    user_id=user.id if user else None,
+                    nickname=user.nickname if user else None,
+                    page=body.page,
+                    text=text[:2000],
+                )
+            )
+            await db.commit()
+        return {"ok": True}
+    except Exception:
+        logger.exception("feedback 저장 실패")
+        return {"ok": False, "reason": "db-error"}
 
 
 class VisibilityIn(BaseModel):

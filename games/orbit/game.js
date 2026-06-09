@@ -569,6 +569,8 @@
       ovSub.textContent = isRec ? '새로운 우주 최고 기록!' : `최고 기록 ${best}점`;
       startBtn.textContent = '다시 시작';
       overlay.classList.add('show');
+      // 게임 끝나면 후원+의견 (포털 공용 모달 — 모든 게임 동일)
+      if (window.GamePortal) setTimeout(function () { GamePortal.openSupport(); }, 700);
     }, 600);
   }
 

@@ -451,6 +451,8 @@
     const rec=document.getElementById('over-record');
     rec.classList.toggle('show', isRec);
     setTimeout(()=>overEl.classList.add('show'), 350);
+    // 게임 끝나면 후원+의견 (포털 공용 모달 — 모든 게임 동일)
+    if (window.GamePortal) setTimeout(function(){ GamePortal.openSupport(); }, 1100);
   }
   function start(){
     grid=Array.from({length:N},()=>Array(N).fill(null));

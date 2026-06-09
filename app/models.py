@@ -148,3 +148,23 @@ class Friendship(Base):
         Index("ix_friendships_follower", "follower_id"),
         Index("ix_friendships_followee", "followee_id"),
     )
+
+
+class Feedback(Base):
+    """사용자 의견 (어디서든 textarea로 즉시 저장). 로그인이면 user_id, 익명이면 visitor_id."""
+
+    __tablename__ = "feedbacks"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    visitor_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    user_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    nickname: Mapped[str | None] = mapped_column(String(32), nullable=True)  # 작성 시점 스냅샷
+    page: Mapped[str | None] = mapped_column(String(32), nullable=True)      # 어느 게임/페이지에서 남겼나
+    text: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=kst_now)
+
+    # 신규 테이블 — collation 명시(서버 기본 0900_ai_ci로 새지 않게, JOIN 대비). CLAUDE.md quirk.
+    __table_args__ = (
+        Index("ix_feedbacks_created", "created_at"),
+        {"mysql_charset": "utf8mb4", "mysql_collate": "utf8mb4_unicode_ci"},
+    )
