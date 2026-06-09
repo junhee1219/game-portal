@@ -168,7 +168,7 @@ async def manifest(request: Request):
         "id": "/",
         "name": "미니게임",
         "short_name": "미니게임",
-        "description": "설치 없이 바로 하는 웹 미니게임 모음.",
+        "description": "여러 미니게임 모음. 기록 세우고 친구랑 겨뤄보세요.",
         "start_url": "/?src=pwa",
         "scope": "/",
         "display": "standalone",
@@ -273,7 +273,7 @@ async def share_page(score_id: int, request: Request):
     for key, value in {
         "{{TITLE}}": og_title,
         "{{OG_TITLE}}": og_title,
-        "{{OG_DESC}}": "설치 없이 바로 즐기는 미니게임.",
+        "{{OG_DESC}}": "내 기록 깰 수 있어?",
         "{{OG_IMAGE}}": f"{base}/{score.game}/og/main.png",
         "{{GAME}}": score.game,
         "{{GAME_TITLE}}": info["title"],

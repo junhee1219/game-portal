@@ -105,9 +105,15 @@
   function gpOpenSupport() {
     gpFetchSupport().then(function (links) {
       gpEnsureSupportStyle();
+      var isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent || '');
       var rows = '';
-      if (links.toss) rows += '<a class="gp-sup-btn toss" href="' + gpEsc(links.toss) + '" target="_blank" rel="noopener">토스로 후원</a>';
-      if (links.kakaobank) rows += '<a class="gp-sup-btn kb" href="' + gpEsc(links.kakaobank) + '" target="_blank" rel="noopener">카카오뱅크로 후원</a>';
+      // 토스는 앱 스킴(supertoss://)이라 새 탭 X. http면 일반 링크.
+      if (links.toss) {
+        var tossApp = !/^https?:/i.test(links.toss);
+        rows += '<a class="gp-sup-btn toss" data-app="' + (tossApp ? '1' : '0') + '" href="' + gpEsc(links.toss) + '"' +
+          (tossApp ? '' : ' target="_blank" rel="noopener"') + '>토스로 후원</a>';
+      }
+      if (links.kakaobank) rows += '<a class="gp-sup-btn kb" href="' + gpEsc(links.kakaobank) + '" target="_blank" rel="noopener">카카오페이로 후원</a>';
       if (!rows) rows = '<p class="gp-sup-soon">후원 링크 준비 중이에요. 곧 열릴게요!</p>';
       var ov = document.createElement('div');
       ov.className = 'gp-sup-ov';
@@ -118,6 +124,15 @@
       function close() { if (ov.parentNode) ov.parentNode.removeChild(ov); }
       ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
       ov.querySelector('.gp-sup-x').addEventListener('click', close);
+      // PC에서 토스 앱 스킴 클릭 → 폰 안내 (snack.js와 동일 동작)
+      var tossBtn = ov.querySelector('.gp-sup-btn.toss[data-app="1"]');
+      if (tossBtn && !isMobile) {
+        tossBtn.addEventListener('click', function (e) {
+          e.preventDefault();
+          ov.querySelector('.gp-sup-desc').textContent = '토스 송금은 폰에서 열려요. 폰으로 접속해 눌러주세요!';
+          tossBtn.style.opacity = '.5';
+        });
+      }
     });
   }
   // 노출 헬퍼: 링크가 있을 때만 콜백(true) — 게임이 후원 버튼 보일지 결정

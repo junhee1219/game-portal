@@ -96,7 +96,7 @@
     el.className = 'tile';
     el.style.setProperty('--fc', FRUITS[type].color);
     el.innerHTML = '<div class="ti"><svg class="frt" viewBox="0 0 512 512" aria-hidden="true"><use href="#' + FRUITS[type].id + '"/></svg></div>';
-    el.addEventListener('pointerdown', function () { onTap(t); });
+    el.addEventListener('pointerdown', function (e) { onPointerDown(t, e); });
     t.el = el;
     board.appendChild(el);
     return t;
@@ -170,6 +170,34 @@
     var a = sel; a.el.classList.remove('sel'); sel = null;
     trySwap(a, t);
   }
+
+  // 드래그(스와이프)로 스왑 — 끌면 그 방향 이웃과 교체, 안 끌면 탭(탭-탭도 그대로 지원)
+  var drag = null;
+  function onPointerDown(t, e) {
+    if (!playing || busy) return;
+    A.init();
+    drag = { tile: t, x: e.clientX, y: e.clientY, fired: false };
+  }
+  function onPointerMove(e) {
+    if (!drag || drag.fired || busy) return;
+    var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    var ax = Math.abs(dx), ay = Math.abs(dy);
+    if (Math.max(ax, ay) < Math.max(12, tileSize * 0.35)) return;
+    var nr = drag.tile.r, nc = drag.tile.c;
+    if (ax > ay) nc += (dx > 0 ? 1 : -1); else nr += (dy > 0 ? 1 : -1);
+    if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS || !grid[nr][nc]) return; // 가장자리 — 발화 안 함
+    drag.fired = true;
+    if (sel) { sel.el.classList.remove('sel'); sel = null; }
+    trySwap(drag.tile, grid[nr][nc]);
+  }
+  function onPointerUp() {
+    if (drag && !drag.fired) onTap(drag.tile); // 안 끌었으면 탭으로 처리
+    drag = null;
+  }
+  window.addEventListener('pointermove', onPointerMove, { passive: true });
+  window.addEventListener('pointerup', onPointerUp);
+  window.addEventListener('pointercancel', function () { drag = null; });
+
   function swapModel(a, b) {
     grid[a.r][a.c] = b; grid[b.r][b.c] = a;
     var r = a.r, c = a.c; a.r = b.r; a.c = b.c; b.r = r; b.c = c;
