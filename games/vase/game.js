@@ -69,6 +69,8 @@
   let fillAmt = [];     // 화면에 그릴 액체량(연속값, 붓기 보간용)
   let wave = [];        // 수면 출렁 진폭/위상
   let bubbles = [];     // 병 속 기포
+  let hiddenBelow = []; // ② 병별 가려진 바닥 칸 수(0=안 가림). 단조 감소 — 한 번 본 칸은 계속 보임
+  let levelHasHidden = false, hiddenIntroShown = false;
   let pour = null;      // 붓기 진행 상태
   let hintTimer = null;
   let tubeDirty = [];   // 변화 있는 병만 다시 그린다 (유휴 시 CPU 절약)
@@ -144,14 +146,29 @@
     fillAmt = tubes.map((t) => t.length);
     wave = tubes.map(() => ({ a: 0, p: Math.random() * 6.28 }));
     bubbles = tubes.map(() => []);
+    // ② 숨겨진 층: lv30+ 일부 병의 바닥 칸을 가린다(맨 위 1칸만 보임). 생성/솔버는 완전정보라 영향 없음.
+    hiddenBelow = tubes.map(() => 0);
+    const hiddenCount = level < 30 ? 0 : Math.min(2 + Math.floor((level - 30) / 3), 8);
+    levelHasHidden = false;
+    if (hiddenCount > 0) {
+      const cand = [];
+      tubes.forEach((t, i) => { if (t.length > 1) cand.push(i); }); // 1칸짜리는 가릴 게 없음
+      for (let i = cand.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [cand[i], cand[j]] = [cand[j], cand[i]]; }
+      cand.slice(0, hiddenCount).forEach((i) => { hiddenBelow[i] = tubes[i].length - 1; });
+      levelHasHidden = cand.length > 0 && hiddenCount > 0;
+    }
     localStorage.setItem('vaseLevel', String(level));
     updateHUD(); render();
+    if (levelHasHidden && !hiddenIntroShown) {
+      hiddenIntroShown = true;
+      setTimeout(() => toast('가려진 병이 생겼어요 — 위를 비우면 아래가 드러나요!', 3200), 500);
+    }
   }
 
   function updateHUD() {
     document.getElementById('level').textContent = level;
     document.getElementById('moves').textContent = moves;
-    document.getElementById('par').textContent = '≤' + par;
+    document.getElementById('par').textContent = '≤' + (levelHasHidden ? Math.ceil(par * 1.5) : par);
     document.getElementById('total-stars').textContent = totalStars();
     setEvoIcon(document.getElementById('evo-icon'), evoFor(getMaxClear()));
   }
@@ -225,12 +242,13 @@
     if (amt <= 0.001 && tube.length === 0) { bubbles[idx].length = 0; return; }
 
     const unitH = H / CAP;
-    // 같은 색 연속 칸은 경계 없는 한 덩어리(run)로 합쳐 그린다
+    const mask = hiddenBelow[idx] || 0;   // ② 바닥 mask칸은 색 대신 ?(MASK=-1)로
+    // 같은 색 연속 칸은 경계 없는 한 덩어리(run)로 합쳐 그린다 (가려진 칸은 색 무관하게 한 덩어리)
     const runs = [];
     let remain = amt;
     for (let i = 0; i < tube.length && remain > 0.001; i++) {
       const u = Math.min(1, remain);
-      const c = tube[i];
+      const c = (i < mask) ? -1 : tube[i];
       if (runs.length && runs[runs.length - 1].c === c) runs[runs.length - 1].u += u;
       else runs.push({ c, u });
       remain -= u;
@@ -245,6 +263,20 @@
     runs.forEach((r, i) => {
       const segH = r.u * unitH;
       const top = y - segH;
+      if (r.c === -1) {
+        // ② 가려진 칸: 중립 회색 + 물음표 (색·수면·기포 대신 마스킹)
+        const grad = ctx.createLinearGradient(0, top, 0, y);
+        grad.addColorStop(0, '#5b6470'); grad.addColorStop(1, '#474e58');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, top, W, segH + 0.5);
+        ctx.fillStyle = 'rgba(255,255,255,0.30)';
+        ctx.font = `700 ${Math.round(unitH * 0.46)}px -apple-system, sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        const cells = Math.max(1, Math.round(r.u));
+        for (let k = 0; k < cells; k++) ctx.fillText('?', W / 2, y - (k + 0.5) * unitH);
+        y = top;
+        return;
+      }
       const c = COLORS[r.c];
       const grad = ctx.createLinearGradient(0, top, 0, y);
       grad.addColorStop(0, shade(c, SHADE_HI[r.c] || 1.14));
@@ -369,6 +401,8 @@
     if (!pour) return;
     fillAmt[from] = pour.srcEnd; fillAmt[to] = pour.dstEnd;
     for (let i = 0; i < n; i++) tubes[to].push(tubes[from].pop());
+    // ② from 병의 위를 비웠으니 새 top 칸이 드러난다 (단조 감소 — 다시 가려지지 않음)
+    hiddenBelow[from] = Math.min(hiddenBelow[from], Math.max(0, tubes[from].length - 1));
     moves++;
     pour = null;
     updateHUD();
@@ -400,7 +434,7 @@
   // ── 클리어 ──
   function onWin() {
     busy = true;
-    const stars = C.starsFor(moves, par);
+    const stars = C.starsFor(moves, par, levelHasHidden);  // ② 숨김 레벨은 3★ 기준 완화
     const elapsed = Date.now() - levelStart;
     // 진행 저장 (별/베스트는 더 좋아진 경우만 갱신)
     const starsMap = loadJSON('vaseStars');

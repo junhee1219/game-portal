@@ -277,9 +277,12 @@ const VaseCore = (() => {
 
   // ── 별점 ──
   // 3★: 솔버(봇)와 같거나 더 적은 이동 / 2★: par×1.5 이내 / 1★: 클리어
-  function starsFor(moves, par) {
-    if (moves <= par) return 3;
-    if (moves <= Math.ceil(par * 1.5)) return 2;
+  // relaxed=true (숨김 병 레벨): par는 완전정보 기준이라 가린 판에서 ≤par는 사실상 불가 →
+  // 3★ 기준을 par×1.5로 완화. 일반 레벨은 그대로(relaxed 생략).
+  function starsFor(moves, par, relaxed) {
+    const f = relaxed ? 1.5 : 1;
+    if (moves <= Math.ceil(par * f)) return 3;
+    if (moves <= Math.ceil(par * f * 1.5)) return 2;
     return 1;
   }
 
