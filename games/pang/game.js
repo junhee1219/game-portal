@@ -444,6 +444,11 @@
   goals = [];
   newBoard(); layout();
   window.addEventListener('resize', layout);
+  // PWA standalone에서 innerHeight가 늦게 확정돼 보드가 화면을 못 채우고 하단 빈공간 — 정착 후 재계산.
+  window.addEventListener('orientationchange', layout);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', layout);
+  setTimeout(layout, 300);
+  window.addEventListener('load', layout);
   document.addEventListener('pointerdown', function () { A.init(); }, { passive: true });
   muteBtn.addEventListener('click', function () { A.init(); A.setMuted(!A.muted); renderMute(); });
   document.getElementById('btn-start').addEventListener('click', function () { A.init(); startGame(); });

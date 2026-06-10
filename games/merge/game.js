@@ -853,10 +853,19 @@
     requestAnimationFrame(frame);
   }
   let resizeRaf = 0;
-  window.addEventListener('resize', () => {
+  function scheduleResize() {
     cancelAnimationFrame(resizeRaf);
     resizeRaf = requestAnimationFrame(resize);
-  });
+  }
+  window.addEventListener('resize', scheduleResize);
+  window.addEventListener('orientationchange', scheduleResize);
+  // PWA standalone 등에서 레이아웃이 로드 후 뒤늦게 커질 때 window 'resize'가 안 와도
+  // 보드(wrap) 실제 크기 변화를 직접 감지해 H·바닥 벽을 재동기화 (공이 바닥 밑으로 빠지는 버그 방지).
+  if (window.ResizeObserver && wrap) {
+    new ResizeObserver(scheduleResize).observe(wrap);
+  }
+  // standalone 진입 시 dvh가 한 박자 늦게 확정되는 경우 대비한 안전망
+  setTimeout(scheduleResize, 300);
   document.addEventListener('visibilitychange', () => { if (document.hidden && actx) actx.suspend && actx.suspend(); });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

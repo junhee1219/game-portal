@@ -24,14 +24,18 @@
     --fs-3: 13px;                     /* 라벨 / caption */
   }
   html, body { height: 100%; overflow: hidden; }
+  html { background: #ffe6cf; }  /* 바닥색: PWA standalone 하단 안전영역 흰틈 방지 */
   body {
+    min-height: 100dvh;
     background: linear-gradient(170deg, #fff5e9 0%, #ffe6cf 100%);
     font-family: "Pretendard Variable", -apple-system, "Apple SD Gothic Neo", sans-serif;
     color: var(--ink);
     user-select: none; -webkit-user-select: none;
     touch-action: manipulation; -webkit-touch-callout: none;
-    display: flex; flex-direction: column; align-items: center;
+    /* 세로 중앙정렬 — 남는 공간이 하단에만 몰리지 않게(PWA 하단 빈공간 해소) */
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
     padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   /* ── HUD ── */

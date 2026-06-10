@@ -959,6 +959,12 @@
 
   resize();
   window.addEventListener('resize', resize);
+  // PWA standalone에서 innerHeight가 로드 후 늦게 확정돼 캔버스가 화면을 못 채우고
+  // 하단에 빈 배경이 남는 문제 — 정착 후/뷰포트 변화 시 재계산.
+  window.addEventListener('orientationchange', resize);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
+  setTimeout(resize, 300);
+  window.addEventListener('load', resize);
   document.body.classList.add('show-overlay');
   requestAnimationFrame(frame);
 })();
