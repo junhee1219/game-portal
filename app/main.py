@@ -119,7 +119,13 @@ def _render_cards() -> str:
 async def portal_index(request: Request):
     page = (PORTAL_DIR / "index.html").read_text(encoding="utf-8")
     base = str(request.base_url).rstrip("/")
-    page = page.replace("{{BASE}}", base).replace("{{CARDS}}", _render_cards())
+    canonical = settings.base_url.rstrip("/")  # canonical 호스트는 고정 도메인
+    head_extra = f'<link rel="canonical" href="{canonical}/">{_verification_meta()}'
+    page = (
+        page.replace("{{BASE}}", base)
+        .replace("{{CARDS}}", _render_cards())
+        .replace("{{HEAD_EXTRA}}", head_extra)
+    )
     return HTMLResponse(page, headers={"Cache-Control": "no-cache"})
 
 
@@ -227,6 +233,57 @@ async def account_widget_js():
     return Response(
         (PORTAL_DIR / "account-widget.js").read_bytes(), media_type="text/javascript"
     )
+
+
+def _verification_meta() -> str:
+    """검색엔진 소유확인 메타태그. 코드가 있을 때만 박는다 (빈 content 금지)."""
+    tags = []
+    if settings.google_site_verification:
+        tags.append(
+            f'<meta name="google-site-verification" content="{html.escape(settings.google_site_verification)}">'
+        )
+    if settings.naver_site_verification:
+        tags.append(
+            f'<meta name="naver-site-verification" content="{html.escape(settings.naver_site_verification)}">'
+        )
+    return "".join(tags)
+
+
+@app.get("/robots.txt")
+async def robots_txt():
+    """크롤러 가이드. 공개 페이지는 색인 허용, 계정/동적 페이지는 차단. sitemap 위치 명시."""
+    base = settings.base_url.rstrip("/")
+    body = (
+        "User-agent: *\n"
+        "Allow: /\n"
+        # 계정/운영/동적(무한 생성) 경로는 색인 낭비 — 차단
+        "Disallow: /account\n"
+        "Disallow: /dash\n"
+        "Disallow: /onboard\n"
+        "Disallow: /follow/\n"
+        "Disallow: /s/\n"
+        "Disallow: /api/\n"
+        f"\nSitemap: {base}/sitemap.xml\n"
+    )
+    return Response(body, media_type="text/plain")
+
+
+@app.get("/sitemap.xml")
+async def sitemap_xml():
+    """색인 대상 URL 목록. canonical과 바이트 일치(트레일링 슬래시 포함)시켜야 한다.
+
+    호스트는 settings.base_url(canonical 도메인) 고정 — request.base_url(직접 IP/http일 수 있음) 금지.
+    """
+    base = settings.base_url.rstrip("/")
+    urls = [f"{base}/", f"{base}/rank"]
+    urls += [f"{base}/{gid}/" for gid in games.playable_ids()]
+    items = "".join(f"<url><loc>{html.escape(u)}</loc></url>" for u in urls)
+    body = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        f"{items}</urlset>"
+    )
+    return Response(body, media_type="application/xml")
 
 
 @app.get("/rank", response_class=HTMLResponse)
@@ -347,6 +404,17 @@ async def serve_game(request: Request, game: str, path: str = ""):
     # HTML에는 계측 스크립트 주입. 캐시 금지 — 게임 업데이트 즉시 반영
     if target.suffix == ".html":
         page = _rewrite_share_urls(target.read_text(encoding="utf-8"), game, base)
+        # 게임 진입 페이지(index)에는 SEO 메타 주입 — 원본은 무수정, 서빙 시점에만.
+        # canonical 호스트는 고정 도메인(settings.base_url), 트레일링 슬래시는 sitemap과 일치.
+        if path in ("", "index.html") and "<head>" in page:
+            canonical = settings.base_url.rstrip("/")
+            seo = f'<link rel="canonical" href="{canonical}/{html.escape(game)}/">'
+            # description이 이미 있으면 중복 주입 금지 — 없는 게임만 tagline으로 채운다
+            if 'name="description"' not in page:
+                g = games.games_by_id().get(game)
+                tagline = (g or {}).get("tagline") or (g or {}).get("title", game)
+                seo += f'<meta name="description" content="{html.escape(tagline)}">'
+            page = page.replace("<head>", f"<head>{seo}", 1)
         snippet = _inject_snippet(game)
         if "</body>" in page:
             page = page.replace("</body>", f"{snippet}\n</body>", 1)
