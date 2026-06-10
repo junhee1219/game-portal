@@ -14,7 +14,14 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
+from fastapi.responses import (
+    FileResponse,
+    HTMLResponse,
+    JSONResponse,
+    RedirectResponse,
+    Response,
+)
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import database, games
 from app.config import settings
@@ -88,6 +95,19 @@ app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(state_router)
 app.include_router(friends_router)
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """404는 브라우저(HTML) 요청에 한해 스타일 페이지로. 그 외(API JSON·401 등)는 기본 동작 유지."""
+    if exc.status_code == 404 and "text/html" in request.headers.get("accept", ""):
+        page = (PORTAL_DIR / "404.html").read_text(encoding="utf-8")  # HTML 즉시 반영(no-cache)
+        return HTMLResponse(page, status_code=404, headers={"Cache-Control": "no-cache"})
+    return JSONResponse(
+        {"detail": exc.detail},
+        status_code=exc.status_code,
+        headers=getattr(exc, "headers", None),
+    )
 
 
 @app.get("/health")

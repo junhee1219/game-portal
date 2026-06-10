@@ -35,6 +35,7 @@
     touch-action: none; -webkit-touch-callout: none;
     color: #eef;
   }
+  button { font-family: inherit; }  /* UA 기본(Arial) 대신 본문 Pretendard 상속 */
   #game { position: fixed; inset: 0; display: block; touch-action: none; }
 
   /* ── 음소거 버튼 ── */
@@ -107,40 +108,6 @@
     border: 1px solid rgba(255,255,255,0.18); border-radius: 999px; cursor: pointer;
   }
 
-  /* ── 간식 사주기 (게임오버 화면에만, 은은하게 — cube 패턴) ── */
-  #snack { display: none; margin-top: 22px; font-size: 13px; color: #9aa0d0; }
-  #overlay.gameover #snack { display: block; }
-  #snack .snack-btns { margin-left: 6px; }
-  #snack a {
-    display: inline-block; padding: 5px 12px; margin-left: 5px; border-radius: 999px;
-    font-weight: 700; font-size: 12.5px; text-decoration: none;
-    opacity: 0.85; transition: all 0.15s;
-  }
-  #snack a:hover { opacity: 1; transform: translateY(-1px); }
-  #snack a.toss { background: #3182f6; color: #fff; }
-  #snack a.kakao { background: #fee500; color: #3c1e1e; }
-
-  /* ── PC 딥링크 폴백 모달 ── */
-  #thanks {
-    position: fixed; inset: 0; z-index: 40; display: flex;
-    align-items: center; justify-content: center;
-    background: rgba(4,4,16,0.7);
-  }
-  #thanks.hidden { display: none; }
-  .thanks-card {
-    background: #171530; border: 1px solid rgba(255,255,255,0.14);
-    border-radius: 20px; padding: 30px 26px; text-align: center; max-width: 320px;
-    box-shadow: 0 12px 50px rgba(0,0,0,0.6);
-  }
-  .thanks-emoji { font-size: 38px; margin-bottom: 10px; }
-  .thanks-card h2 { font-size: 19px; margin-bottom: 10px; color: #fff; }
-  .thanks-card p { font-size: 14px; line-height: 1.6; color: #cfd2ff; margin-bottom: 8px; }
-  .thanks-sub { font-size: 12px; color: #9aa0d0; }
-  #thanks-close {
-    margin-top: 12px; padding: 10px 28px; border: none; border-radius: 999px;
-    background: linear-gradient(110deg, #27e8ff, #7dffb1); color: #0a0820;
-    font-weight: 800; font-size: 15px; cursor: pointer;
-  }
 </style>
 </head>
 <body>
@@ -159,25 +126,8 @@
     <div id="best-label"></div>
     <button id="btn-start">개업!</button>
     <button id="btn-share"><svg class="ki"><use href="#p-share-network"/></svg><span id="share-label">친구에게 자랑하기</span></button>
-    <div id="snack">
-      <span class="snack-label">재밌었다면 개발자 간식 사주기</span> <svg class="ki" style="width:18px;height:18px;vertical-align:-4px;fill:#e8a163"><use href="#g-donut"/></svg>
-      <span class="snack-btns">
-        <a class="toss" href="supertoss://send?bank=토스뱅크&accountNo=100025266940&amount=3000">토스</a>
-        <a class="kakao" href="https://qr.kakaopay.com/FP0dZW9ip" target="_blank" rel="noopener">카카오페이</a>
-      </span>
-    </div>
+    <!-- 후원은 게임오버 시 포털 공용 모달(GamePortal.openSupport)로 통일 — 인라인 strip 제거 -->
     <div class="k-credit">Icons: <a href="https://game-icons.net" target="_blank" rel="noopener">game-icons.net</a> (CC BY 3.0) · Phosphor</div>
-  </div>
-
-  <!-- PC에서 앱 딥링크가 안 열릴 때 띄우는 "마음만으로도 고마워요" 모달 -->
-  <div id="thanks" class="hidden">
-    <div class="thanks-card">
-      <div class="thanks-emoji"><svg class="ki" style="width:38px;height:38px;color:#ffcf8a"><use href="#p-coffee"/></svg></div>
-      <h2>마음만으로도 감동이에요!</h2>
-      <p>송금은 폰에서 열어야 동작하지만,<br>여기까지 눌러주신 것만으로도<br>개발자는 이미 커피 한 잔 마신 기분이에요 💛</p>
-      <p class="thanks-sub">정 보내고 싶다면 폰으로 접속해서 눌러주세요!</p>
-      <button id="thanks-close">고마워요 😊</button>
-    </div>
   </div>
 
 <script>

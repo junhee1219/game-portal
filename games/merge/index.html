@@ -32,8 +32,13 @@
     --scrim:rgba(70,48,32,0.34);
     --accent:#ff9a6b;     /* 포인트 코랄 */
     --line:#ff7a59;       /* 위험선 */
+    /* 타입 스케일 — 딱 3종(portal 기준). 위계는 font-weight + color로. */
+    --fs-1:26px;          /* 큰 숫자 / 히어로 */
+    --fs-2:16px;          /* 본문 / 제목(굵게) / 버튼 */
+    --fs-3:13px;          /* 라벨 / 캡션 */
   }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  button{font-family:inherit;}  /* UA 기본(Arial) 대신 본문 Pretendard 상속 */
   html,body{height:100%;background:var(--vig);}  /* html 배경 = 바닥색: PWA standalone 하단 안전영역 흰틈 방지 */
   body{
     font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
@@ -58,22 +63,22 @@
   /* ── 상단 바 ── */
   .topbar{display:flex;align-items:center;gap:8px;z-index:2;width:100%;max-width:480px;flex:0 0 auto;}
   h1{
-    font-weight:800;font-size:24px;letter-spacing:-.5px;
+    font-weight:800;font-size:var(--fs-2);letter-spacing:-.5px;
     color:var(--ink);margin-right:auto;white-space:nowrap;display:flex;align-items:center;gap:6px;
   }
-  h1 .logo{font-size:22px;line-height:1;}
+  h1 .logo{font-size:var(--fs-2);line-height:1;}
   .pill{
     background:var(--glass);border:1px solid var(--glass-border);backdrop-filter:blur(10px);
-    padding:6px 13px;border-radius:999px;font-size:13px;font-weight:600;
+    padding:6px 13px;border-radius:999px;font-size:var(--fs-3);font-weight:600;
     display:flex;align-items:center;gap:5px;white-space:nowrap;color:var(--ink);
   }
-  .pill .lab{font-size:12px;font-weight:600;color:var(--ink-soft);}
-  .pill b{font-size:16px;font-weight:800;}
+  .pill .lab{font-size:var(--fs-3);font-weight:600;color:var(--ink-soft);}
+  .pill b{font-size:var(--fs-2);font-weight:800;}
   #score-pill b{color:var(--accent);}
   .sq{
     min-height:40px;min-width:44px;width:44px;border-radius:13px;cursor:pointer;
     background:var(--glass);border:1px solid var(--glass-border);backdrop-filter:blur(10px);
-    color:var(--ink);font-size:20px;display:flex;align-items:center;justify-content:center;
+    color:var(--ink);font-size:var(--fs-2);display:flex;align-items:center;justify-content:center;
     transition:transform .12s;box-shadow:0 3px 7px rgba(120,85,55,.12);
   }
   .sq:active{transform:scale(.92);}
@@ -99,17 +104,17 @@
   #next{
     position:absolute;top:8px;left:8px;z-index:3;display:flex;align-items:center;gap:5px;
     background:rgba(255,255,255,.72);border:1px solid var(--glass-border);border-radius:999px;
-    padding:3px 9px 3px 6px;font-size:12px;font-weight:600;color:var(--ink-soft);
+    padding:3px 9px 3px 6px;font-size:var(--fs-3);font-weight:600;color:var(--ink-soft);
     backdrop-filter:blur(8px);
   }
-  #next .nface{font-size:18px;line-height:1;}
+  #next .nface{font-size:var(--fs-2);line-height:1;}
 
   /* 콤보 배지 — 연쇄 합체 시 펄스 (우상단) */
   #combo{
     position:absolute;top:8px;right:8px;z-index:4;
     display:flex;align-items:center;gap:3px;
     background:linear-gradient(135deg,#ff9a6b,#ff6f4d);color:#fff;
-    border-radius:999px;padding:4px 11px;font-size:14px;font-weight:800;letter-spacing:-.3px;
+    border-radius:999px;padding:4px 11px;font-size:var(--fs-2);font-weight:800;letter-spacing:-.3px;
     box-shadow:0 4px 12px rgba(255,110,80,.45),inset 0 1px 0 rgba(255,255,255,.5);
     opacity:0;transform:scale(.6);transition:opacity .12s;pointer-events:none;
   }
@@ -117,7 +122,7 @@
   #combo.pulse{animation:combo-pulse .42s cubic-bezier(.2,1.5,.4,1);}
   @keyframes combo-pulse{0%{transform:scale(.6)}45%{transform:scale(1.25)}100%{transform:scale(1)}}
 
-  #credit{font-size:13px;font-weight:600;color:var(--ink-soft);opacity:.7;z-index:2;margin-top:2px;flex:0 0 auto;}
+  #credit{font-size:var(--fs-3);font-weight:600;color:var(--ink-soft);opacity:.7;z-index:2;margin-top:2px;flex:0 0 auto;}
 
   /* 진화 표 (항상 보임, 하단) — 작은→큰 순서로 "다음에 뭐가 되는지". flex-wrap 금지(한 줄 유지 → 높이 예측 가능) */
   .evo{display:flex;gap:3px;z-index:2;margin-top:4px;justify-content:center;max-width:480px;flex:0 0 auto;}
@@ -127,7 +132,7 @@
   /* 최상위(잭팟) 동물엔 은은한 반짝임 — 기대감 */
   .evo .e.top{animation:evo-shimmer 2.4s ease-in-out infinite;box-shadow:inset 0 1px 2px rgba(255,255,255,.7),0 0 0 1.5px rgba(255,200,90,.55),0 0 8px rgba(255,190,80,.5);}
   @keyframes evo-shimmer{0%,100%{filter:brightness(1)}50%{filter:brightness(1.18)}}
-  #icredit{font-size:11px;color:var(--ink-soft);opacity:.5;z-index:2;margin-top:2px;flex:0 0 auto;}
+  #icredit{font-size:11px;color:var(--ink-soft);opacity:.5;z-index:2;margin-top:2px;flex:0 0 auto;}  /* 아이콘 크레딧 = 미세 fine-print(한 줄 유지), 본문 스케일 예외 */
   @media (prefers-reduced-motion:reduce){.evo .e.top,#combo.pulse{animation:none;}}
 
   /* ── 게임오버 / 시작 오버레이 ── */
@@ -145,23 +150,23 @@
   }
   #over.show .over-card{transform:scale(1);}
   .over-card .face{font-size:54px;line-height:1;margin-bottom:6px;}
-  .over-card h2{font-size:26px;font-weight:800;margin-bottom:10px;color:var(--ink);letter-spacing:-.5px;}
+  .over-card h2{font-size:var(--fs-2);font-weight:800;margin-bottom:10px;color:var(--ink);letter-spacing:-.5px;}
   .over-stats{display:flex;gap:10px;justify-content:center;margin:8px 0 4px;}
   .stat{
     background:var(--glass);border:1px solid var(--glass-border);border-radius:16px;
     padding:9px 16px;min-width:88px;
   }
-  .stat .lab{font-size:12px;font-weight:600;color:var(--ink-soft);}
-  .stat .val{font-size:24px;font-weight:800;color:var(--ink);}
+  .stat .lab{font-size:var(--fs-3);font-weight:600;color:var(--ink-soft);}
+  .stat .val{font-size:var(--fs-1);font-weight:800;color:var(--ink);}
   .stat.best .val{color:var(--accent);}
   #over-record{
-    display:none;font-size:14px;color:#7a3a12;font-weight:800;
+    display:none;font-size:var(--fs-2);color:#7a3a12;font-weight:800;
     background:linear-gradient(135deg,#ffe2a6,#ffba7a);border-radius:999px;padding:4px 14px;margin-top:10px;
   }
   #over-record.show{display:inline-flex;align-items:center;gap:5px;animation:pop .5s ease;}
   @keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.12)}100%{transform:scale(1)}}
   #btn-again{
-    margin-top:16px;width:100%;font-size:16px;font-weight:800;padding:13px 0;
+    margin-top:16px;width:100%;font-size:var(--fs-2);font-weight:800;padding:13px 0;
     border:none;border-radius:16px;cursor:pointer;color:#fff;
     background:linear-gradient(135deg,#ff9a6b,#ff7a59);
     box-shadow:0 6px 16px rgba(255,120,80,.4);transition:transform .12s;
@@ -171,7 +176,7 @@
   .evo-row .e{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;
     box-shadow:inset 0 1px 2px rgba(255,255,255,.55);}
   .evo-row .e svg{width:15px;height:15px;display:block;}
-  .evo-row .arr{font-size:11px;color:var(--ink-soft);align-self:center;}
+  .evo-row .arr{font-size:var(--fs-3);color:var(--ink-soft);align-self:center;}
   .over-card .face svg{width:54px;height:54px;display:block;margin:0 auto;}
 </style>
 </head>

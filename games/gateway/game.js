@@ -921,16 +921,6 @@
     } catch (e) { /* 공유 취소 무시 */ }
   });
 
-  // 간식 딥링크: PC에선 앱 스킴이 안 열리므로 "고마워요" 모달 (cube 패턴)
-  const thanksModal = document.getElementById('thanks');
-  document.getElementById('thanks-close').addEventListener('click', () => thanksModal.classList.add('hidden'));
-  thanksModal.addEventListener('click', (e) => { if (e.target === thanksModal) thanksModal.classList.add('hidden'); });
-  document.querySelectorAll('#snack a').forEach((a) => {
-    a.addEventListener('click', (e) => {
-      if (!isMobile()) { e.preventDefault(); thanksModal.classList.remove('hidden'); }
-    });
-  });
-
   // 서비스 워커 (localhost 개발 중엔 캐시 꼬임 방지를 위해 미등록)
   if ('serviceWorker' in navigator && location.protocol !== 'file:' && !/^(localhost|127\.)/.test(location.hostname)) {
     // 새 SW가 컨트롤을 잡으면(=배포 업데이트) 시작 10초 이내일 때 한 번 자동 새로고침

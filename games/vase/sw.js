@@ -1,6 +1,6 @@
 // VASE 서비스 워커 — 게임 업데이트 배포 시 CACHE 버전을 올릴 것
 const CACHE = 'vase-v7';
-const ASSETS = ['./', './index.html', './core.js', './audio.js', './game.js', './kit.css', './snack.js', './sprite.svg', './manifest.json', './icon-192.png', './icon-512.png', './icon-180.png'];
+const ASSETS = ['./', './index.html', './core.js', './audio.js', './game.js', './kit.css', './sprite.svg', './manifest.json', './icon-192.png', './icon-512.png', './icon-180.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));

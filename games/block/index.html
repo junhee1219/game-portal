@@ -32,6 +32,10 @@
     --glass:rgba(255,255,255,.66);
     --glass-border:rgba(80,72,120,.16);
     --shadow:rgba(80,72,120,.22);
+    /* 타입 스케일 — 딱 3종(portal 기준). 위계는 font-weight + color로. */
+    --fs-1:clamp(34px,11vw,46px);  /* 큰 숫자 / 히어로 (점수·콤보) */
+    --fs-2:16px;                    /* 본문 / 제목(굵게) / 버튼 */
+    --fs-3:13px;                    /* 라벨 / 캡션 */
   }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{
@@ -50,11 +54,12 @@
     user-select:none;-webkit-user-select:none;touch-action:none;
     overscroll-behavior:none;
   }
+  button{font-family:inherit;}  /* UA 기본(Arial) 대신 본문 Pretendard 상속 */
 
   /* ── 상단 바 ── */
   .topbar{display:flex;align-items:center;gap:8px;z-index:2;width:100%;max-width:480px;flex:0 0 auto;}
   h1{
-    font-family:"Pretendard Variable",-apple-system,sans-serif;font-weight:600;font-size:20px;letter-spacing:-.3px;
+    font-family:"Pretendard Variable",-apple-system,sans-serif;font-weight:600;font-size:var(--fs-2);letter-spacing:-.3px;
     color:var(--ink);margin-right:auto;white-space:nowrap;display:flex;align-items:center;gap:8px;
   }
   h1 .logo{display:inline-flex;gap:2px;}
@@ -64,11 +69,11 @@
   h1 .logo i:nth-child(3){background:#9fd9a8;}
   .pill{
     background:var(--glass);border:1px solid var(--glass-border);backdrop-filter:blur(10px);
-    padding:6px 13px;border-radius:999px;font-size:12px;font-family:"Pretendard Variable",-apple-system,sans-serif;
+    padding:6px 13px;border-radius:999px;font-size:var(--fs-3);font-family:"Pretendard Variable",-apple-system,sans-serif;
     display:flex;align-items:center;gap:6px;white-space:nowrap;color:var(--ink);line-height:1;
   }
-  .pill .lbl{color:var(--ink-soft);font-size:10.5px;letter-spacing:.3px;}
-  .pill b{font-size:15px;}
+  .pill .lbl{color:var(--ink-soft);font-size:var(--fs-3);letter-spacing:.3px;}
+  .pill b{font-size:var(--fs-2);}
   #best-pill b{color:#e8943a;}
   .mute-btn{
     width:42px;height:42px;flex:0 0 auto;border-radius:13px;cursor:pointer;
@@ -144,7 +149,7 @@
   #fx{position:fixed;inset:0;width:100vw;height:100dvh;z-index:50;pointer-events:none;}
   #combo{
     position:fixed;left:50%;top:38%;transform:translate(-50%,-50%) scale(.4);
-    font-family:"Pretendard Variable",-apple-system,sans-serif;font-weight:700;font-size:46px;z-index:55;pointer-events:none;
+    font-family:"Pretendard Variable",-apple-system,sans-serif;font-weight:700;font-size:var(--fs-1);z-index:55;pointer-events:none;
     color:#fff;opacity:0;text-shadow:0 3px 0 rgba(120,90,160,.35), 0 6px 16px rgba(0,0,0,.25);
     white-space:nowrap;
   }
@@ -170,31 +175,27 @@
     transform:scale(.82);transition:transform .35s cubic-bezier(.2,1.4,.4,1);
   }
   #over.show .over-card{transform:scale(1);}
-  .over-card h2{font-family:"Pretendard Variable",-apple-system,sans-serif;font-size:26px;margin-bottom:4px;color:var(--ink);}
-  .over-card .sc{font-family:"Pretendard Variable",-apple-system,sans-serif;font-size:44px;font-weight:700;color:#7c7af0;margin:8px 0 2px;line-height:1;}
-  .over-card .sc-lbl{font-size:12px;color:var(--ink-soft);letter-spacing:.5px;}
-  #over-best{font-size:13px;color:var(--ink-soft);margin-top:8px;}
+  .over-card h2{font-family:"Pretendard Variable",-apple-system,sans-serif;font-size:var(--fs-2);font-weight:800;margin-bottom:4px;color:var(--ink);}
+  .over-card .sc{font-family:"Pretendard Variable",-apple-system,sans-serif;font-size:var(--fs-1);font-weight:700;color:#7c7af0;margin:8px 0 2px;line-height:1;}
+  .over-card .sc-lbl{font-size:var(--fs-3);color:var(--ink-soft);letter-spacing:.5px;}
+  #over-best{font-size:var(--fs-3);color:var(--ink-soft);margin-top:8px;}
   #over-record{
-    display:none;font-family:"Pretendard Variable",-apple-system,sans-serif;font-size:13px;color:#7a4d00;font-weight:700;
+    display:none;font-family:"Pretendard Variable",-apple-system,sans-serif;font-size:var(--fs-3);color:#7a4d00;font-weight:700;
     background:linear-gradient(135deg,#ffe6a3,#ffcf7e);border-radius:999px;padding:4px 14px;margin-top:10px;
   }
   #over-record.show{display:inline-block;animation:rec-pop .5s ease;}
   @keyframes rec-pop{0%{transform:scale(.5);}60%{transform:scale(1.12);}100%{transform:scale(1);}}
   #btn-again{
     margin-top:18px;width:100%;border:none;border-radius:16px;cursor:pointer;
-    font-family:"Pretendard Variable",-apple-system,sans-serif;font-size:18px;font-weight:600;color:#fff;padding:14px 0;
+    font-family:"Pretendard Variable",-apple-system,sans-serif;font-size:var(--fs-2);font-weight:800;color:#fff;padding:14px 0;
     background:linear-gradient(180deg,#8f8df3,#6e6cdd);
     box-shadow:0 4px 0 #5755bf, 0 6px 14px rgba(90,80,200,.4);
     transition:transform .1s;
   }
   #btn-again:active{transform:translateY(2px);box-shadow:0 2px 0 #5755bf;}
 
-  .credit{position:fixed;left:0;right:0;bottom:calc(4px + env(safe-area-inset-bottom));text-align:center;font-size:10px;color:var(--ink-soft);opacity:.6;font-family:"Pretendard Variable",-apple-system,sans-serif;z-index:1;}
-
-  @media (max-width:380px){
-    h1{font-size:18px;}
-    #combo{font-size:38px;}
-  }
+  .credit{position:fixed;left:0;right:0;bottom:calc(4px + env(safe-area-inset-bottom));text-align:center;font-size:10px;color:var(--ink-soft);opacity:.6;font-family:"Pretendard Variable",-apple-system,sans-serif;z-index:1;}  /* 아이콘 크레딧 = 미세 fine-print, 본문 스케일 예외 */
+  /* 좁은 화면: fs-1은 clamp로 이미 축소되므로 별도 폰트 override 불필요 */
 </style>
 </head>
 <body>

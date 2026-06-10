@@ -112,17 +112,6 @@ button.k-pill:active{transform:scale(.93);}
 }
 .k-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
-/* ── 간식 사주기 (snack.js와 세트) ─────────────────────────── */
-.k-snack{margin-top:18px;font-size:12px;opacity:.85;}
-.k-snack .k-snack-btns{display:flex;gap:8px;justify-content:center;margin-top:9px;}
-.k-snack a{
-  display:inline-flex;align-items:center;gap:5px;text-decoration:none;font-weight:700;font-size:12px;
-  padding:6px 13px;border-radius:999px;transition:transform .15s;
-}
-.k-snack a:active{transform:scale(.94);}
-.k-snack a.toss{background:#3182f6;color:#fff;}
-.k-snack a.kakao{background:#fee500;color:#3c1e1e;}
-
 /* ── 아이콘 크레딧 (CC BY 표기 — 모달 하단 등에 배치) ───────── */
 .k-credit{font-size:10px;opacity:.45;margin-top:12px;font-family:var(--k-font);}
 .k-credit a{color:inherit;}

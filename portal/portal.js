@@ -161,7 +161,7 @@
       function close() { if (ov.parentNode) ov.parentNode.removeChild(ov); }
       ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
       ov.querySelector('.gp-sup-x').addEventListener('click', close);
-      // PC에서 토스 앱 스킴 클릭 → 폰 안내 (snack.js와 동일 동작)
+      // PC에서 토스 앱 스킴 클릭 → 폰 안내 (앱 스킴은 폰에서만 열림)
       var tossBtn = ov.querySelector('.gp-sup-btn.toss[data-app="1"]');
       if (tossBtn && !isMobile) {
         tossBtn.addEventListener('click', function (e) {

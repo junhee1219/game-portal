@@ -453,29 +453,6 @@
   muteBtn.addEventListener('click', function () { A.init(); A.setMuted(!A.muted); renderMute(); });
   document.getElementById('btn-start').addEventListener('click', function () { A.init(); startGame(); });
   document.getElementById('btn-again').addEventListener('click', function () { A.init(); startGame(); });
-  // 후원 버튼 (포털 공용 모달) — 시작/게임오버 화면에서만, 플레이 중 X.
-  // portal.js는 서빙 주입이라 game.js보다 늦게 뜸 → GamePortal 준비를 기다린다.
-  // 링크(서버 .env) 없으면 버튼 자체를 숨긴다(기본 숨김).
-  function whenPortal(cb, tries) {
-    tries = tries || 0;
-    if (window.GamePortal && window.GamePortal.openSupport) { cb(); return; }
-    if (tries > 25) return;
-    setTimeout(function () { whenPortal(cb, tries + 1); }, 100);
-  }
-  ['btn-support-start', 'btn-support-over'].forEach(function (id) {
-    var b = document.getElementById(id);
-    if (!b) return;
-    b.style.display = 'none';
-    b.addEventListener('click', function () {
-      if (window.GamePortal && window.GamePortal.openSupport) window.GamePortal.openSupport();
-    });
-  });
-  whenPortal(function () {
-    window.GamePortal.supportAvailable(function (ok) {
-      if (!ok) return;
-      ['btn-support-start', 'btn-support-over'].forEach(function (id) {
-        var b = document.getElementById(id); if (b) b.style.display = '';
-      });
-    });
-  });
+  // 후원은 게임오버 시 포털 공용 모달(GamePortal.openSupport, 위 startGame 종료부)로 통일.
+  // 시작 화면·수동 버튼 없음 — 6게임 공통(끝나는 시점에만 후원).
 })();
