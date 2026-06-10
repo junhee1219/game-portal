@@ -58,6 +58,10 @@
     visitorId: vid,
     game: game,
     reportScore: function (score, meta) {
+      // 비회원 점수는 저장하지 않는다 — 기록실은 회원 전용. 로그인(gp_auth) 상태에서만 전송.
+      // (가입 직후 직전 점수는 로그인 감지 시 localStorage 최고점을 1회 claim POST해서 귀속)
+      var authed = false; try { authed = localStorage.getItem('gp_auth') === '1'; } catch (e) {}
+      if (!authed) return;
       fetch('/api/score', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -111,7 +115,11 @@
       '.gp-fb-send{width:100%;box-sizing:border-box;margin-top:8px;padding:12px;border:none;border-radius:12px;' +
       'background:#5b6cff;color:#fff;font:inherit;font-size:14px;font-weight:800;cursor:pointer;}' +
       '.gp-fb-send:disabled{opacity:.5;cursor:default;}' +
-      '.gp-fb-done{font-size:14px;color:#3aa76d;font-weight:700;padding:10px 0 2px;}';
+      '.gp-fb-done{font-size:14px;color:#3aa76d;font-weight:700;padding:10px 0 2px;}' +
+      '.gp-join{display:block;width:100%;box-sizing:border-box;padding:14px;border-radius:14px;' +
+      'background:linear-gradient(180deg,#ff9a6b,#ff7a4d);color:#fff;font-size:15px;font-weight:800;' +
+      'text-decoration:none;text-align:center;box-shadow:0 4px 12px rgba(255,110,70,.35);}' +
+      '.gp-join-sub{font-size:12px;color:#999;margin:8px 2px 0;line-height:1.5;}';
     document.head.appendChild(st);
   }
   function gpOpenSupport(focusFeedback) {
@@ -127,9 +135,20 @@
       }
       if (links.kakaobank) rows += '<a class="gp-sup-btn kb" href="' + gpEsc(links.kakaobank) + '" target="_blank" rel="noopener">카카오페이로 간식 사주기</a>';
       if (!rows) rows = '<p class="gp-sup-soon">후원 링크 준비 중이에요. 곧 열릴게요!</p>';
+      // 비회원이면 게임오버 모달 맨 위에 가입 CTA — 가입하고 게임으로 돌아오면 방금 점수가 귀속된다.
+      var authed = false; try { authed = localStorage.getItem('gp_auth') === '1'; } catch (e) {}
+      var joinHtml = '';
+      if (!authed) {
+        var nextp = location.pathname + location.search;
+        joinHtml = '<div class="gp-sup-h">기록을 남겨보세요</div>' +
+          '<a class="gp-join" href="/account?next=' + gpEsc(encodeURIComponent(nextp)) + '">가입하고 이 점수 남기기 &rsaquo;</a>' +
+          '<p class="gp-join-sub">가입하면 이 점수가 기록실에 올라가고 친구와 겨룰 수 있어요. (비회원 기록은 저장되지 않아요)</p>' +
+          '<div class="gp-sup-div"></div>';
+      }
       var ov = document.createElement('div');
       ov.className = 'gp-sup-ov';
       ov.innerHTML = '<div class="gp-sup-card"><button class="gp-sup-x" aria-label="닫기">&times;</button>' +
+        joinHtml +
         '<div class="gp-sup-h">♡ 개발자에게 간식 사주기</div>' +
         '<p class="gp-sup-desc">재밌게 즐기셨다면, 다음 게임 만들 힘이 됩니다.</p>' + rows +
         '<div class="gp-sup-div"></div>' +
@@ -333,6 +352,12 @@
           if (scoreKey) { try { lastScore = numOf(localStorage.getItem(scoreKey)); } catch (e) {} }
         } finally { window.__gpApplying = false; }
         try { sessionStorage.setItem('gp_synced:' + game, '1'); } catch (e) {}
+        // 가입/로그인 직후: 직전(비회원) 플레이의 localStorage 최고점을 회원 기록으로 1회 귀속.
+        // (비회원 땐 /api/score 저장을 안 하므로, 여기서 claim해야 방금 게임 점수가 기록실에 올라간다)
+        if (scoreKey) {
+          var localBest = numOf(localStorage.getItem(scoreKey));
+          if (localBest > 0) window.GamePortal.reportScore(localBest, { metric: scoreMetric, claim: true });
+        }
         // 양방향: 로컬 현재값 전체를 1회 push (reconcile + 초기 병합, merge가 멱등이라 안전)
         pushChanges(collectLocal());
         // init_cache 게임이 stale 변수를 들고 있으면 1회 reload — 단 유저 입력 전에만

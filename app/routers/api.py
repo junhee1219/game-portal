@@ -3,7 +3,7 @@ import logging
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import desc, func, or_, select, text
+from sqlalchemy import desc, func, select, text
 
 from app import database, games
 from app.auth_session import current_user
@@ -96,6 +96,10 @@ async def record_score(body: ScoreIn, request: Request):
                 visitor = await db.get(Visitor, body.visitor_id)
                 user_id = visitor.user_id if visitor else None
                 nickname = body.nickname
+            # 비회원(귀속 user 없음) 점수는 저장하지 않는다 — 기록실은 회원 전용.
+            # 가입 직후 직전 점수 귀속은 클라가 로그인 후 localStorage 최고점을 1회 POST(그땐 user 있음).
+            if user_id is None:
+                return {"ok": True, "saved": False}
             score = Score(
                 visitor_id=body.visitor_id,
                 user_id=user_id,
@@ -128,18 +132,13 @@ async def leaderboard(game: str, limit: int = 10):
                 .group_by(subject)
                 .subquery()
             )
-            # 닉네임 우선순위: users.nickname(로그인) > visitors.nickname(익명) > '익명'
+            # 전역 기록실은 회원만 — 비회원(익명) 기록은 올리지 않는다.
+            # User INNER JOIN으로 user_id 있는 기록만, 그중 public=1만 노출(비공개 회원 제외).
             rows = (
                 await db.execute(
-                    select(
-                        best.c.subject,
-                        best.c.best_score,
-                        func.coalesce(User.nickname, Visitor.nickname).label("nick"),
-                    )
-                    .outerjoin(User, User.id == best.c.subject)
-                    .outerjoin(Visitor, Visitor.id == best.c.subject)
-                    # 비공개(public=0) user는 전역 랭킹에서 제외. 익명(User 미매칭=NULL)은 그대로 노출.
-                    .where(or_(User.id.is_(None), User.public.is_(True)))
+                    select(best.c.subject, best.c.best_score, User.nickname.label("nick"))
+                    .join(User, User.id == best.c.subject)
+                    .where(User.public.is_(True))
                     .order_by(desc(best.c.best_score))
                     .limit(limit)
                 )
