@@ -234,6 +234,13 @@
       }).catch(function () {});
     }
 
+    // 닉네임 등 사용자 입력을 innerHTML에 넣을 때 escape (저장형 XSS 방지)
+    function esc(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+
     function loadScores(board, scope, unit) {
       var game = board.dataset.game;
       var ol = board.querySelector('ol');
@@ -251,7 +258,7 @@
         ol.innerHTML = entries.map(function (e) {
           return '<li' + (e.is_me ? ' class="me-row"' : '') + '>' +
             '<span class="rank-no">' + e.rank + '</span>' +
-            '<span class="who">' + (e.nickname || '익명') + (e.is_me ? ' (나)' : '') + '</span>' +
+            '<span class="who">' + esc(e.nickname || '익명') + (e.is_me ? ' (나)' : '') + '</span>' +
             '<span class="pts">' + e.score.toLocaleString() + unit + '</span></li>';
         }).join('');
       }).catch(function () {});
