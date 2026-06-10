@@ -36,18 +36,29 @@ _RL_WINDOW = 300  # 5분
 _RL_MAX = 5
 _attempts: dict[tuple[str, str], list[float]] = {}
 
+# 닉네임 단위 글로벌 백스톱. (ip, nickname) 키만 쓰면 X-Forwarded-For를 매 요청
+# 바꿔치기해 IP를 위조하는 순간 키가 갈려 제한이 무력화된다. IP와 무관하게
+# 계정당 총 시도 수를 캡해, 닉(=로그인ID는 공개)을 아는 공격자의 무차별 대입을 막는다.
+_RL_NICK_WINDOW = 900  # 15분
+_RL_NICK_MAX = 20
+_nick_attempts: dict[str, list[float]] = {}
+
 
 def _rate_limited(ip: str, nickname: str) -> bool:
-    key = (ip, nickname.lower())
     now = time.monotonic()
+    key = (ip, nickname.lower())
     hist = [t for t in _attempts.get(key, []) if now - t < _RL_WINDOW]
     _attempts[key] = hist
-    return len(hist) >= _RL_MAX
+    nk = nickname.lower()
+    nhist = [t for t in _nick_attempts.get(nk, []) if now - t < _RL_NICK_WINDOW]
+    _nick_attempts[nk] = nhist
+    return len(hist) >= _RL_MAX or len(nhist) >= _RL_NICK_MAX
 
 
 def _record_attempt(ip: str, nickname: str) -> None:
-    key = (ip, nickname.lower())
-    _attempts.setdefault(key, []).append(time.monotonic())
+    now = time.monotonic()
+    _attempts.setdefault((ip, nickname.lower()), []).append(now)
+    _nick_attempts.setdefault(nickname.lower(), []).append(now)
 
 
 def _client_ip(request: Request) -> str:
