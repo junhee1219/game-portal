@@ -348,6 +348,9 @@ async def share_page(score_id: int, request: Request):
     record = f"{score.score:,}"
     base_title = f"{info['title']} — {record}{info['unit']}"
     og_title = f"{nick}님의 {base_title}" if nick else base_title
+    # 닉네임은 사용자 입력 — <title>/<meta content>에 raw로 박으면 저장형 XSS.
+    # 나머지 값(게임 제목·점수)도 함께 escape해 일관 처리 (출처 무관 안전).
+    og_title = html.escape(og_title)
     page = (PORTAL_DIR / "share.html").read_text(encoding="utf-8")
     for key, value in {
         "{{TITLE}}": og_title,
