@@ -1,0 +1,15 @@
+{
+  "name": "리듬 타일 — 박자 맞춰 톡톡",
+  "short_name": "리듬 타일",
+  "description": "내려오는 타일을 순서대로 톡! 탭마다 음이 울려 멜로디가 돼요. 놓치거나 빈 칸을 누르면 끝. 점점 빨라지는 리듬 반사 게임.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e6f2ec",
+  "theme_color": "#e9f6ef",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

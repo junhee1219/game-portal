@@ -1,0 +1,29 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#fff;}</style></head>
+<body>
+<canvas id="c" width="512" height="512"></canvas>
+<script>
+const cv=document.getElementById('c'), x=cv.getContext('2d');
+function rr(ctx,X,Y,W,H,R){R=Math.min(R,W/2,H/2);ctx.beginPath();ctx.moveTo(X+R,Y);ctx.arcTo(X+W,Y,X+W,Y+H,R);ctx.arcTo(X+W,Y+H,X,Y+H,R);ctx.arcTo(X,Y+H,X,Y,R);ctx.arcTo(X,Y,X+W,Y,R);ctx.closePath();}
+// 파스텔 민트 배경
+const g=x.createLinearGradient(0,0,0,512);
+g.addColorStop(0,'#f1faf4'); g.addColorStop(1,'#dfeee5');
+rr(x,0,0,512,512,112); x.fillStyle=g; x.fill();
+// 4레인 구분선
+x.strokeStyle='rgba(70,110,90,.12)'; x.lineWidth=2;
+for(let l=1;l<4;l++){ x.beginPath(); x.moveTo(60+l*98,80); x.lineTo(60+l*98,432); x.stroke(); }
+function tile(lane,top,hue){
+  const x0=60+lane*98+10, w=98-20, h=86;
+  rr(x,x0,top,w,h,18); x.fillStyle='hsl('+hue+',44%,64%)'; x.fill();
+  x.save(); rr(x,x0,top,w,h,18); x.clip();
+  let lg=x.createLinearGradient(0,top,0,top+h);
+  lg.addColorStop(0,'rgba(255,255,255,.42)'); lg.addColorStop(.5,'rgba(255,255,255,0)'); lg.addColorStop(1,'rgba(0,0,0,.12)');
+  x.fillStyle=lg; x.fillRect(x0,top,w,h); x.restore();
+}
+// 계단식으로 내려오는 타일들(색 순환)
+tile(0, 96,  158);
+tile(2, 182, 262);
+tile(1, 268, 192);
+tile(3, 354, 28);
+window.__png=()=>cv.toDataURL('image/png');
+</script>
+</body></html>
