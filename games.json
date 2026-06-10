@@ -74,6 +74,18 @@
         { "key": "blockBest", "merge": "max" },
         { "key": "blockMuted", "merge": "lww" }
       ]
+    },
+    {
+      "id": "stack",
+      "title": "탑 쌓기",
+      "tagline": "좌우로 움직이는 블록을 톡! 어긋난 만큼 깎여요 — 몇 층까지 쌓을까?",
+      "unit": "층",
+      "score_key": "stackBest",
+      "score_metric": "best",
+      "state_keys": [
+        { "key": "stackBest", "merge": "max" },
+        { "key": "stackMuted", "merge": "lww" }
+      ]
     }
   ]
 }
