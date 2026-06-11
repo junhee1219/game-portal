@@ -2,6 +2,7 @@
   "games": [
     {
       "id": "vase",
+      "shell_mode": "panel",
       "title": "물병 정렬",
       "tagline": "알록달록 물을 옮겨 담는 퍼즐. 봇보다 적게 움직이면 별 셋.",
       "unit": "레벨",
@@ -13,23 +14,24 @@
         { "key": "vaseStars", "merge": "union" },
         { "key": "vaseBest", "merge": "union_min" },
         { "key": "vaseMuted", "merge": "lww" }
-      ],
-      "launcher_pos": "bl"
+      ]
     },
     {
-      "id": "gateway",
-      "title": "라면집 사장님",
-      "tagline": "세 줄로 밀려드는 손님, 서빙은 한 줄씩. 줄이 터지면 가게도 끝.",
+      "id": "merge",
+      "shell_mode": "panel",
+      "title": "동물 합치기",
+      "tagline": "동그란 동물을 떨어뜨려 합치는 중독성 드롭 퍼즐 — 넘치기 전에 최고 점수에!",
       "unit": "점",
-      "score_key": "gatewayBest",
-      "score_metric": "best",
+      "score_key": "mergeBest",
+      "score_metric": "score",
       "state_keys": [
-        { "key": "gatewayBest", "merge": "max", "init_cache": true },
-        { "key": "gatewayMuted", "merge": "lww" }
+        { "key": "mergeBest", "merge": "max" },
+        { "key": "mergeMuted", "merge": "lww" }
       ]
     },
     {
       "id": "cube",
+      "shell_mode": "fullscreen",
       "title": "Cube Snake",
       "tagline": "3D 큐브 표면을 기어다니는 스네이크. 모서리를 넘으면 세상이 돌아간다.",
       "unit": "점",
@@ -41,32 +43,21 @@
       ]
     },
     {
-      "id": "pang",
-      "title": "과일 팡팡",
-      "tagline": "과일을 모아 목표 달성! 레벨이 오를수록 짜릿한 매치 퍼즐.",
-      "unit": "레벨",
-      "score_key": "pangBest",
-      "score_metric": "level",
+      "id": "tiles",
+      "shell_mode": "panel",
+      "title": "리듬 타일",
+      "tagline": "내려오는 타일을 순서대로 톡! 탭마다 음이 울려 멜로디가 돼요 — 점점 빨라져요.",
+      "unit": "타일",
+      "score_key": "tilesBest",
+      "score_metric": "best",
       "state_keys": [
-        { "key": "pangBest", "merge": "max" },
-        { "key": "pangMuted", "merge": "lww" }
+        { "key": "tilesBest", "merge": "max" },
+        { "key": "tilesMuted", "merge": "lww" }
       ]
     },
     {
-      "id": "merge",
-      "title": "동물 합치기",
-      "tagline": "동그란 동물을 떨어뜨려 합치는 중독성 드롭 퍼즐 — 넘치기 전에 최고 점수에!",
-      "unit": "점",
-      "score_key": "mergeBest",
-      "score_metric": "score",
-      "state_keys": [
-        { "key": "mergeBest", "merge": "max" },
-        { "key": "mergeMuted", "merge": "lww" }
-      ],
-      "launcher_pos": "bl"
-    },
-    {
       "id": "block",
+      "shell_mode": "compact",
       "title": "블록 팡",
       "tagline": "조각을 드래그해 줄을 꽉 채우면 팡! 콤보와 폭탄 블록까지.",
       "unit": "점",
@@ -78,7 +69,21 @@
       ]
     },
     {
+      "id": "pang",
+      "shell_mode": "compact",
+      "title": "과일 팡팡",
+      "tagline": "과일을 모아 목표 달성! 레벨이 오를수록 짜릿한 매치 퍼즐.",
+      "unit": "레벨",
+      "score_key": "pangBest",
+      "score_metric": "level",
+      "state_keys": [
+        { "key": "pangBest", "merge": "max" },
+        { "key": "pangMuted", "merge": "lww" }
+      ]
+    },
+    {
       "id": "stack",
+      "shell_mode": "panel",
       "title": "탑 쌓기",
       "tagline": "좌우로 움직이는 블록을 톡! 어긋난 만큼 깎여요 — 몇 층까지 쌓을까?",
       "unit": "층",
@@ -87,19 +92,19 @@
       "state_keys": [
         { "key": "stackBest", "merge": "max" },
         { "key": "stackMuted", "merge": "lww" }
-      ],
-      "launcher_pos": "bl"
+      ]
     },
     {
-      "id": "tiles",
-      "title": "리듬 타일",
-      "tagline": "내려오는 타일을 순서대로 톡! 탭마다 음이 울려 멜로디가 돼요 — 점점 빨라져요.",
-      "unit": "타일",
-      "score_key": "tilesBest",
+      "id": "gateway",
+      "shell_mode": "fullscreen",
+      "title": "라면집 사장님",
+      "tagline": "세 줄로 밀려드는 손님, 서빙은 한 줄씩. 줄이 터지면 가게도 끝.",
+      "unit": "점",
+      "score_key": "gatewayBest",
       "score_metric": "best",
       "state_keys": [
-        { "key": "tilesBest", "merge": "max" },
-        { "key": "tilesMuted", "merge": "lww" }
+        { "key": "gatewayBest", "merge": "max", "init_cache": true },
+        { "key": "gatewayMuted", "merge": "lww" }
       ]
     }
   ]

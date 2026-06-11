@@ -42,15 +42,14 @@
   html,body{height:100%;background:var(--vig);}  /* html 배경 = 바닥색: PWA standalone 하단 안전영역 흰틈 방지 */
   body{
     font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
-    height:100vh;height:100dvh;width:100vw;overflow:hidden;
     background:radial-gradient(130% 100% at 50% 0%, var(--base) 0%, var(--deep) 55%, var(--vig) 100%);
-    color:var(--ink);display:flex;flex-direction:column;align-items:center;
-    /* 세로 패딩 작게 — 좁은 화면에서 진화표까지 다 보이도록 */
-    padding:calc(6px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) calc(4px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));
-    position:relative;
+    color:var(--ink);
     user-select:none;-webkit-user-select:none;touch-action:manipulation;
-    overscroll-behavior:none;
+    /* 레이아웃(높이·flex·safe-area·overscroll·정렬)은 공통 game-shell.css가 소유 */
   }
+  /* 공통 shell 헤더가 제목을 표시 — 게임 자체 제목 중복 숨김, 점수는 우측 정렬 유지 */
+  .topbar h1{display:none;}
+  #score-pill{margin-left:auto;}
   /* 옅은 흰 블룸이 숨쉬듯 — 단일 빛 표현 */
   body::after{
     content:'';position:fixed;top:-25%;left:-40%;width:90%;height:80%;z-index:0;pointer-events:none;

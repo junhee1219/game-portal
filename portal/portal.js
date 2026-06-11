@@ -19,7 +19,6 @@
   // 점수 config는 서버가 주입한 data-* 속성에서 동기 읽기 (fetch 금지 — setItem 후킹 race 방지)
   var scoreKey = ds.scoreKey || null;
   var scoreMetric = ds.scoreMetric || 'best';
-  var launcherPos = ds.launcherPos || 'tl';  // 게임 내 런처 위치(tl/tr/bl/br) — 게임별 빈 코너
 
   function send(payload, useBeacon) {
     payload.visitor_id = vid;
@@ -208,10 +207,9 @@
   };
 
   // ===== 게임 내 포털 런처 (메인으로 + 공유) — 게임 페이지에만 주입 =====
-  // 게임 원본엔 메인 복귀/공유 동선이 없다(원본 무수정). 포털이 일괄 주입해
-  // 모든 게임에 '메인으로(이탈 확인)'와 '기록 공유'를 자동 제공한다.
-  // 아이콘은 이모지 금지 — Phosphor fill 글리프를 인라인(viewBox 0 0 256 256).
-  var GP_ICON_HOME = '<svg viewBox="0 0 256 256" aria-hidden="true"><path fill="currentColor" d="M218.83,103.77l-80-75.48a1.14,1.14,0,0,1-.11-.11,16,16,0,0,0-21.53,0l-.11.11L37.17,103.77A16,16,0,0,0,32,115.55V208a16,16,0,0,0,16,16H96a16,16,0,0,0,16-16V160h32v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V115.55A16,16,0,0,0,218.83,103.77Z"/></svg>';
+  // 게임 원본엔 메인 복귀/공유 동선이 없다(원본 무수정). 메인 복귀(홈)는 공통 Game Shell이
+  // 서버에서 헤더에 주입하고, portal.js는 클릭에 이탈 확인 모달을 연결한다. 공유는 신기록 시점.
+  // 아이콘은 이모지 금지 — Phosphor fill 글리프 인라인. (홈 아이콘은 shell이 주입)
   var GP_ICON_SHARE = '<svg viewBox="0 0 256 256" aria-hidden="true"><path fill="currentColor" d="M176,160a39.89,39.89,0,0,0-28.62,12.09l-46.1-29.63a39.8,39.8,0,0,0,0-28.92l46.1-29.63a40,40,0,1,0-8.66-13.45l-46.1,29.63a40,40,0,1,0,0,55.82l46.1,29.63A40,40,0,1,0,176,160Z"/></svg>';
 
   function gpEnsureLauncherStyle() {
@@ -219,18 +217,6 @@
     var st = document.createElement('style');
     st.id = 'gp-launcher-style';
     st.textContent =
-      '#gp-launcher{position:fixed;z-index:9000;display:flex;gap:6px;opacity:.55;transition:opacity .2s ease;}' +
-      '#gp-launcher.gp-pos-tl{top:calc(env(safe-area-inset-top,0px) + 8px);left:calc(env(safe-area-inset-left,0px) + 8px);}' +
-      '#gp-launcher.gp-pos-tr{top:calc(env(safe-area-inset-top,0px) + 8px);right:calc(env(safe-area-inset-right,0px) + 8px);}' +
-      '#gp-launcher.gp-pos-bl{bottom:calc(env(safe-area-inset-bottom,0px) + 8px);left:calc(env(safe-area-inset-left,0px) + 8px);}' +
-      '#gp-launcher.gp-pos-br{bottom:calc(env(safe-area-inset-bottom,0px) + 8px);right:calc(env(safe-area-inset-right,0px) + 8px);}' +
-      '#gp-launcher:hover,#gp-launcher:active{opacity:1;}' +
-      '.gp-lb{width:38px;height:38px;padding:0;border-radius:11px;border:1px solid rgba(255,255,255,.22);' +
-      'background:rgba(20,20,26,.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);' +
-      'color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;' +
-      'box-shadow:0 2px 8px rgba(0,0,0,.25);}' +
-      '.gp-lb:active{transform:scale(.93);}' +
-      '.gp-lb svg{width:20px;height:20px;display:block;}' +
       '.gp-cf-ov{position:fixed;inset:0;z-index:9998;display:flex;align-items:center;justify-content:center;' +
       'background:rgba(0,0,0,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);padding:24px;' +
       'font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;}' +
@@ -336,16 +322,10 @@
     gpShareOfferTimer = setTimeout(close, 7000);
   }
 
-  // 게임 페이지에 '메인으로' 런처 주입 (공유는 신기록 시점으로 이동 — 여기엔 홈만).
-  if (game !== 'portal' && document.body && !document.getElementById('gp-launcher')) {
-    gpEnsureLauncherStyle();
-    var gpLauncher = document.createElement('div');
-    gpLauncher.id = 'gp-launcher';
-    gpLauncher.className = 'gp-pos-' + (/^(tl|tr|bl|br)$/.test(launcherPos) ? launcherPos : 'tl');
-    gpLauncher.innerHTML =
-      '<button class="gp-lb" type="button" data-act="home" aria-label="메인으로">' + GP_ICON_HOME + '</button>';
-    document.body.appendChild(gpLauncher);
-    gpLauncher.querySelector('[data-act="home"]').addEventListener('click', gpConfirmHome);
+  // '메인으로' — 공통 Game Shell이 헤더에 주입한 홈 버튼(data-gp-home)에 이탈 확인 모달 연결.
+  if (game !== 'portal') {
+    var gpHomeBtn = document.querySelector('[data-gp-home]');
+    if (gpHomeBtn) gpHomeBtn.addEventListener('click', gpConfirmHome);
   }
 
   // ===== 상태 동기화 manifest (서버 주입, 로그인 시에만 동작) =====

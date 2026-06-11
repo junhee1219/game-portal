@@ -38,15 +38,15 @@
   html,body{height:100%;background:#cfe6fb;}
   body{
     font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
-    height:100vh;height:100dvh;width:100vw;overflow:hidden;
     /* 단일 색조 + 위가 살짝 밝은 비네트 — 차분한 보드게임 테이블 느낌 */
     background:radial-gradient(130% 100% at 50% 0%, var(--base,#e3f1ff) 0%, var(--deep,#cfe6fb) 55%, var(--vig,#bfdcf6) 100%);
-    color:var(--ink);display:flex;flex-direction:column;align-items:center;
-    padding:calc(8px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));
-    position:relative;
+    color:var(--ink);
     user-select:none;-webkit-user-select:none;touch-action:manipulation;
-    overscroll-behavior:none;
+    /* 레이아웃(높이·flex·safe-area·overscroll·정렬)은 공통 game-shell.css가 소유 */
   }
+  /* 공통 shell 헤더가 제목을 표시 — 게임 자체 제목 중복 숨김, 컨트롤은 우측 정렬 유지 */
+  .topbar h1{display:none;}
+  #level-btn{margin-left:auto;}
   /* 물친구 자가드 패턴 — 밝은 파스텔 위에 아주 옅게(정신없지 않게) 깔린다.
      빈 병은 유리 너머로 이 패턴이 비쳐 보이고, 액체는 불투명해서 가림 → 구분 */
   #bgpat{

@@ -1,0 +1,118 @@
+/* ===== Game Shell — 모든 게임 공통 모바일 레이아웃 (서빙 시점 주입) =====
+ *
+ * 목적: 게임마다 복붙되던 html/body·safe-area·헤더·푸터·홈버튼·중앙정렬을 한 곳에서 소유.
+ * - body 자체가 shell 컨테이너(flex column). wrapper div를 끼우지 않는다(canvas/3D 안전).
+ * - 게임 본문(기존 #stage/#board/canvas)은 가운데, 위는 공통 헤더, 아래는 공통 푸터.
+ * - iPhone PWA: 100dvh 기준(+100vh fallback) + safe-area 패딩 + html/body 배경으로 하단 흰영역 차단.
+ * - 모드: panel(상단HUD+중앙보드) / compact(하단 보조UI) / fullscreen(canvas·3D 전체).
+ *
+ * 게임별 CSS는 자기 html/body 레이아웃 규칙을 제거하고 이 파일에 위임한다(중복 제거).
+ * 이 파일은 게임 <head>에 주입되고, body[data-shell-mode]는 attribute라 게임의 plain body{}보다
+ * 우선한다(specificity) — 게임 정리 전에도 shell이 레이아웃 권위를 갖는다.
+ */
+
+/* 하단/측면 흰영역 방지: html에도 배경(게임 배경이 늦게 그려져도 어둡게). 게임 CSS가 덮어씀. */
+html { height: 100%; background: #101014; }
+
+body[data-shell-mode] {
+  margin: 0;
+  box-sizing: border-box;
+  width: 100vw;
+  min-height: 100vh;   /* fallback (구형) */
+  min-height: 100dvh;  /* 실제 기준 — 주소창 동적 높이 대응 */
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  overscroll-behavior: none;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+  /* safe-area는 shell이 일괄 — 게임은 더 이상 직접 안 넣는다 */
+  padding:
+    calc(6px + env(safe-area-inset-top))
+    calc(8px + env(safe-area-inset-right))
+    calc(6px + env(safe-area-inset-bottom))
+    calc(8px + env(safe-area-inset-left));
+  /* 헤더/푸터 글자색 기본값(밝은 배경 게임용). 어두운 게임은 아래 모드/게임별로 덮음 */
+  --gp-shell-fg: #1b1b22;
+}
+
+/* ===== 공통 헤더: [홈] [제목] [actions] ===== */
+.gp-shell-header {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  margin-bottom: 4px;
+  z-index: 100;
+  color: var(--gp-shell-fg);
+}
+.gp-shell-home {
+  flex: 0 0 auto;
+  width: 38px; height: 38px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none; border-radius: 11px;
+  background: rgba(0, 0, 0, .10);
+  color: inherit; cursor: pointer;
+  transition: transform .12s ease, background .15s ease;
+}
+.gp-shell-home:hover { background: rgba(0, 0, 0, .16); }
+.gp-shell-home:active { transform: scale(.92); }
+.gp-shell-home svg { width: 21px; height: 21px; display: block; }
+.gp-shell-title {
+  flex: 1 1 auto; min-width: 0;
+  font-weight: 800; font-size: 17px; letter-spacing: -.01em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: inherit;
+}
+.gp-shell-actions { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; }
+
+/* ===== 본문: 게임 콘텐츠가 남은 공간을 채우고 가운데 정렬 =====
+ * 게임의 기존 #stage/#board가 flex:1을 갖는 구조라 자동으로 늘어난다.
+ * shell은 헤더/푸터만 flex:0으로 고정하면 나머지가 본문. */
+
+/* ===== 공통 푸터(크레딧) ===== */
+.gp-shell-footer {
+  flex: 0 0 auto;
+  width: 100%;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.4;
+  opacity: .55;
+  padding-top: 4px;
+  color: var(--gp-shell-fg);
+  z-index: 100;
+}
+.gp-shell-footer a { color: inherit; }
+
+/* ===== 모드별 ===== */
+/* panel / compact: 동일 베이스(상단 헤더 + 중앙 보드). compact는 게임이 하단 tray 등을 둠. */
+
+/* fullscreen: canvas/3D가 화면 전체. 헤더는 떠 있는(투명) 형태, 제목·푸터 숨김. */
+body[data-shell-mode="fullscreen"] {
+  padding: 0;            /* 본문(canvas)이 화면을 꽉 채움 — 내부 요소가 각자 safe-area */
+  --gp-shell-fg: #f2f2f0;
+}
+body[data-shell-mode="fullscreen"] .gp-shell-header {
+  position: fixed;
+  top: calc(6px + env(safe-area-inset-top));
+  left: calc(8px + env(safe-area-inset-left));
+  right: auto;
+  width: auto; max-width: none;
+  margin: 0;
+  min-height: 0;
+  pointer-events: none;  /* 헤더 빈 영역은 게임으로 통과, 버튼만 받음 */
+}
+body[data-shell-mode="fullscreen"] .gp-shell-home {
+  pointer-events: auto;
+  background: rgba(0, 0, 0, .35);
+  color: #fff;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+body[data-shell-mode="fullscreen"] .gp-shell-title { display: none; }
+body[data-shell-mode="fullscreen"] .gp-shell-footer { display: none; }

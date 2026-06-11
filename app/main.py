@@ -68,10 +68,43 @@ def _inject_snippet(game: str) -> str:
         # 상태 sync manifest (키별 merge 방식 + init_cache) — JSON을 속성에 동기 전달
         state_json = json.dumps(g["state_keys"], ensure_ascii=False, separators=(",", ":"))
         attrs += f' data-state-keys="{html.escape(state_json, quote=True)}"'
-    # 게임 내 런처(메인 버튼) 위치 — 게임마다 빈 코너가 달라 게임별 선언. 기본 tl(상단좌).
-    if g and g.get("launcher_pos"):
-        attrs += f' data-launcher-pos="{html.escape(g["launcher_pos"])}"'
     return f'<script src="/portal.js" {attrs}></script>'
+
+
+# 공통 헤더의 홈 아이콘 (Phosphor house-fill 인라인 — 이모지 금지)
+_SHELL_HOME_SVG = (
+    '<svg viewBox="0 0 256 256" aria-hidden="true"><path fill="currentColor" '
+    'd="M218.83,103.77l-80-75.48a1.14,1.14,0,0,1-.11-.11,16,16,0,0,0-21.53,0l-.11.11L37.17,'
+    '103.77A16,16,0,0,0,32,115.55V208a16,16,0,0,0,16,16H96a16,16,0,0,0,16-16V160h32v48a16,16,'
+    '0,0,0,16,16h48a16,16,0,0,0,16-16V115.55A16,16,0,0,0,218.83,103.77Z"/></svg>'
+)
+
+
+def _inject_game_shell(page: str, game: str) -> str:
+    """게임 메인 HTML에 공통 Game Shell을 주입한다(원본 무수정 — 서빙 시점).
+
+    - <head>에 game-shell.css 링크
+    - <body>에 data-shell-mode 속성(게임별 games.json 선언)
+    - <body> 바로 안에 공통 헤더([홈][제목]) 주입 — 홈 버튼 위치·동선 일괄 통일
+    홈 버튼 클릭(이탈 확인 모달)은 portal.js가 data-gp-home에 연결한다.
+    """
+    g = games.games_by_id().get(game) or {}
+    mode = g.get("shell_mode", "panel")
+    title = g.get("title", game)
+    if "/game-shell.css" not in page and "<head>" in page:
+        page = page.replace("<head>", '<head><link rel="stylesheet" href="/game-shell.css">', 1)
+    # data-shell-mode 속성을 <body> 여는 태그에 추가(기존 속성 보존)
+    page = re.sub(r"<body\b", f'<body data-shell-mode="{html.escape(mode)}"', page, count=1)
+    header = (
+        '<header class="gp-shell-header">'
+        '<button type="button" class="gp-shell-home" data-gp-home aria-label="홈으로">'
+        f"{_SHELL_HOME_SVG}</button>"
+        f'<div class="gp-shell-title">{html.escape(title)}</div>'
+        "</header>"
+    )
+    # 헤더는 <body ...> 여는 태그 바로 뒤(첫 자식)로 — flex column의 맨 위 행
+    page = re.sub(r"<body[^>]*>", lambda m: m.group(0) + header, page, count=1)
+    return page
 
 # 게임이 갖고 있던 sw.js를 대체하는 무력화 SW —
 # 설치 즉시 게임 캐시를 비우고 스스로 등록 해제한다 (stale cache 방지).
@@ -249,6 +282,16 @@ async def portal_js():
 @app.get("/portal.css")
 async def portal_css():
     return Response((PORTAL_DIR / "portal.css").read_bytes(), media_type="text/css")
+
+
+@app.get("/game-shell.css")
+async def game_shell_css():
+    """게임 공통 레이아웃(헤더/푸터/safe-area/중앙정렬). serve_game이 게임 <head>에 주입."""
+    return Response(
+        (PORTAL_DIR / "game-shell.css").read_bytes(),
+        media_type="text/css",
+        headers={"Cache-Control": "public, max-age=600"},
+    )
 
 
 @app.get("/account-widget.js")
@@ -441,6 +484,8 @@ async def serve_game(request: Request, game: str, path: str = ""):
                 tagline = (g or {}).get("tagline") or (g or {}).get("title", game)
                 seo += f'<meta name="description" content="{html.escape(tagline)}">'
             page = page.replace("<head>", f"<head>{seo}", 1)
+            # 공통 Game Shell(헤더/레이아웃) 주입 — 게임 메인 페이지에만
+            page = _inject_game_shell(page, game)
         snippet = _inject_snippet(game)
         if "</body>" in page:
             page = page.replace("</body>", f"{snippet}\n</body>", 1)

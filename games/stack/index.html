@@ -39,15 +39,16 @@
   html,body{height:100%;background:var(--bg-b);}
   body{
     font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
-    min-height:100vh;min-height:100dvh;width:100vw;overflow:hidden;
     background-color:var(--bg-b);
     background-image:radial-gradient(130% 100% at 50% 0%, var(--bg-a) 0%, var(--bg-b) 55%, var(--bg-c) 100%);
-    color:var(--ink);display:flex;flex-direction:column;align-items:center;
-    padding:calc(8px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));
-    position:relative;
+    color:var(--ink);
     user-select:none;-webkit-user-select:none;touch-action:none;
-    overscroll-behavior:none;
+    /* 레이아웃(높이·flex·safe-area·overscroll·정렬)은 공통 game-shell.css가 소유 */
   }
+  /* 공통 shell 헤더가 제목 표시 — 게임명 중복(제목·하단 워터마크) 숨김, 점수 우측정렬 */
+  .topbar h1{display:none;}
+  .topbar h1 + *{margin-left:auto;}
+  .credit{display:none;}
   button{font-family:inherit;}
 
   /* ── 상단 바 ── */

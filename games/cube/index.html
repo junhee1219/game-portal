@@ -128,7 +128,7 @@
 
   /* ── 상단 점수 ── */
   #hud {
-    margin-top: 18px; font-size: 22px; font-weight: 700; color: #8d6e63;
+    margin-top: calc(18px + env(safe-area-inset-top)); font-size: 22px; font-weight: 700; color: #8d6e63;
     background: #fff; padding: 8px 22px; border-radius: 999px;
     box-shadow: 0 4px 0 #ecdcc3; z-index: 10; white-space: nowrap;
   }
@@ -267,7 +267,7 @@
   #controls {
     width: 100%; max-width: 560px;
     display: flex; justify-content: space-between;
-    padding: 0 28px 30px; z-index: 10;
+    padding: 0 calc(28px + env(safe-area-inset-right)) calc(30px + env(safe-area-inset-bottom)) calc(28px + env(safe-area-inset-left)); z-index: 10;
   }
   .turn-btn {
     width: 86px; height: 86px; border-radius: 50%;
@@ -316,7 +316,7 @@
 
   /* ── 음소거 버튼 ── */
   #mute {
-    position: fixed; top: 18px; right: 18px; z-index: 21;
+    position: fixed; top: calc(18px + env(safe-area-inset-top)); right: calc(18px + env(safe-area-inset-right)); z-index: 21;
     width: 46px; height: 46px; border-radius: 50%; border: none; cursor: pointer;
     background: #fff; font-size: 20px; box-shadow: 0 4px 0 #ecdcc3;
   }
