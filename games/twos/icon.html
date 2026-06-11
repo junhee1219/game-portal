@@ -1,0 +1,31 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#fff;}</style></head>
+<body>
+<canvas id="c" width="512" height="512"></canvas>
+<script>
+const cv=document.getElementById('c'), x=cv.getContext('2d');
+function rr(ctx,X,Y,W,H,R){R=Math.min(R,W/2,H/2);ctx.beginPath();ctx.moveTo(X+R,Y);ctx.arcTo(X+W,Y,X+W,Y+H,R);ctx.arcTo(X+W,Y+H,X,Y+H,R);ctx.arcTo(X,Y+H,X,Y,R);ctx.arcTo(X,Y,X+W,Y,R);ctx.closePath();}
+// 파스텔 배경 (하늘→크림, 명도폭 좁게), 마스커블 안전영역 고려해 라운드 사각
+const g=x.createLinearGradient(0,0,0,512);
+g.addColorStop(0,'#f2f8ff'); g.addColorStop(1,'#e1ebf8');
+rr(x,0,0,512,512,112); x.fillStyle=g; x.fill();
+// 캔디 타일 (윗 림 + 하단 음영) + 숫자
+function tile(cx,cy,w,bg,fg,label,fontK){
+  const r=w*0.20;
+  rr(x,cx,cy,w,w,r); x.fillStyle=bg; x.fill();
+  x.save(); rr(x,cx,cy,w,w,r); x.clip();
+  let lg=x.createLinearGradient(0,cy,0,cy+w);
+  lg.addColorStop(0,'rgba(255,255,255,.42)'); lg.addColorStop(.5,'rgba(255,255,255,0)'); lg.addColorStop(1,'rgba(0,0,0,.12)');
+  x.fillStyle=lg; x.fillRect(cx,cy,w,w); x.restore();
+  x.fillStyle=fg; x.textAlign='center'; x.textBaseline='middle';
+  x.font='800 '+Math.round(w*fontK)+'px "Pretendard Variable",-apple-system,sans-serif';
+  x.fillText(label, cx+w/2, cy+w/2+w*0.02);
+}
+// 2×2 합치기 타일 — 파랑→초록→앰버→골드 ramp, 골드 칸이 2048 브랜드
+const W=176, G=22, ox=(512-(W*2+G))/2, oy=ox;
+tile(ox,        oy,        W, '#8fc0f0', '#ffffff', '2',    0.52);
+tile(ox+W+G,    oy,        W, '#7fcf9f', '#ffffff', '8',    0.52);
+tile(ox,        oy+W+G,    W, '#efb65f', '#ffffff', '64',   0.40);
+tile(ox+W+G,    oy+W+G,    W, '#f5a623', '#ffffff', '2048', 0.27);
+window.__png=()=>cv.toDataURL('image/png');
+</script>
+</body></html>

@@ -58,6 +58,19 @@
       ]
     },
     {
+      "id": "twos",
+      "shell_mode": "panel",
+      "title": "2048",
+      "tagline": "같은 수가 만나면 두 배! 한 방향으로 쓱 밀어 2048 타일에 도전하세요.",
+      "unit": "점",
+      "score_key": "twosBest",
+      "score_metric": "score",
+      "state_keys": [
+        { "key": "twosBest", "merge": "max" },
+        { "key": "twosMuted", "merge": "lww" }
+      ]
+    },
+    {
       "id": "tiles",
       "shell_mode": "panel",
       "title": "리듬 타일",
