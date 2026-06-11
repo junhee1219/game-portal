@@ -1,0 +1,63 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#fff;}</style></head>
+<body>
+<canvas id="c" width="512" height="512"></canvas>
+<script>
+const cv=document.getElementById('c'), x=cv.getContext('2d');
+function rr(X,Y,W,H,R){R=Math.min(R,W/2,H/2);x.beginPath();x.moveTo(X+R,Y);x.arcTo(X+W,Y,X+W,Y+H,R);x.arcTo(X+W,Y+H,X,Y+H,R);x.arcTo(X,Y+H,X,Y,R);x.arcTo(X,Y,X+W,Y,R);x.closePath();}
+// 배경 — 잔디 들판 (명도폭 좁게) + 마스커블 라운드
+const g=x.createLinearGradient(0,0,0,512);
+g.addColorStop(0,'#c8e2a2'); g.addColorStop(1,'#b3d586');
+rr(0,0,512,512,112); x.fillStyle=g; x.fill();
+x.save(); rr(0,0,512,512,112); x.clip();
+// 도로 띠 (상단)
+x.fillStyle='#b2aca0'; x.fillRect(0,64,512,128);
+x.fillStyle='rgba(255,255,255,.25)'; x.fillRect(0,66,512,6); x.fillRect(0,184,512,6);
+// 횡단보도 줄무늬
+x.fillStyle='rgba(255,255,255,.7)';
+for(let i=0;i<6;i++)x.fillRect(40+i*78,84,42,88);
+// 달리는 승용차 (티어 오브젝트)
+(function(){
+  const bx=300,by=92,bw=170,bh=74;
+  x.fillStyle='rgba(30,40,25,.22)'; rr(bx+4,by+8,bw,bh,24); x.fill();
+  const cg=x.createLinearGradient(0,by,0,by+bh);
+  cg.addColorStop(0,'#f2a78f'); cg.addColorStop(1,'#dd8266');
+  rr(bx,by,bw,bh,24); x.fillStyle=cg; x.fill();
+  x.fillStyle='rgba(40,55,70,.4)'; rr(bx+118,by+12,26,bh-24,8); x.fill();
+  x.fillStyle='#fff4c2';
+  x.beginPath();x.arc(bx+bw-6,by+16,6,0,7);x.fill();
+  x.beginPath();x.arc(bx+bw-6,by+bh-16,6,0,7);x.fill();
+})();
+// 병아리 (주인공) — 하드 섀도 + 캔디 셰이딩
+const C=256, CY=336, R=118;
+x.fillStyle='rgba(40,60,30,.28)';
+x.beginPath(); x.ellipse(C,CY+R*0.82,R*0.86,R*0.3,0,0,7); x.fill();
+const bg=x.createLinearGradient(0,CY-R,0,CY+R);
+bg.addColorStop(0,'#ffe27a'); bg.addColorStop(1,'#f5c33b');
+x.beginPath(); x.ellipse(C,CY,R,R,0,0,7); x.fillStyle=bg; x.fill();
+x.lineWidth=6; x.strokeStyle='rgba(150,110,20,.35)';
+x.beginPath(); x.ellipse(C,CY,R,R,0,0,7); x.stroke();
+// 날개
+x.fillStyle='#eeb637';
+x.beginPath(); x.ellipse(C-R*0.86,CY+R*0.05,R*0.3,R*0.44,-0.4,0,7); x.fill();
+x.beginPath(); x.ellipse(C+R*0.86,CY+R*0.05,R*0.3,R*0.44,0.4,0,7); x.fill();
+// 부리 (위 = 진행 방향)
+x.fillStyle='#f08a3c';
+x.beginPath(); x.moveTo(C-R*0.16,CY-R*0.5); x.lineTo(C+R*0.16,CY-R*0.5); x.lineTo(C,CY-R*0.9); x.closePath(); x.fill();
+// 눈 + 하이라이트
+x.fillStyle='#3a3128';
+x.beginPath(); x.arc(C-R*0.34,CY-R*0.28,R*0.1,0,7); x.fill();
+x.beginPath(); x.arc(C+R*0.34,CY-R*0.28,R*0.1,0,7); x.fill();
+x.fillStyle='rgba(255,255,255,.95)';
+x.beginPath(); x.arc(C-R*0.31,CY-R*0.32,R*0.035,0,7); x.fill();
+x.beginPath(); x.arc(C+R*0.37,CY-R*0.32,R*0.035,0,7); x.fill();
+// 볼터치
+x.fillStyle='rgba(240,140,120,.4)';
+x.beginPath(); x.arc(C-R*0.56,CY-R*0.04,R*0.12,0,7); x.fill();
+x.beginPath(); x.arc(C+R*0.56,CY-R*0.04,R*0.12,0,7); x.fill();
+// 머리 깃
+x.strokeStyle='#eeb637'; x.lineWidth=9; x.lineCap='round';
+x.beginPath(); x.moveTo(C,CY-R*0.96); x.quadraticCurveTo(C+R*0.14,CY-R*1.22,C+R*0.05,CY-R*1.28); x.stroke();
+x.restore();
+window.__png=()=>cv.toDataURL('image/png');
+</script>
+</body></html>

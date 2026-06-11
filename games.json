@@ -1,6 +1,25 @@
 {
   "games": [
     {
+      "id": "hop",
+      "shell_mode": "panel",
+      "title": "삐약이 건널목",
+      "tagline": "내가 멈추면 세상도 멈춰요. 길을 읽고 한 칸씩 폴짝 — 안개보다 멀리!",
+      "unit": "m",
+      "score_key": "hopBest",
+      "score_metric": "best",
+      "state_keys": [
+        {
+          "key": "hopBest",
+          "merge": "max"
+        },
+        {
+          "key": "hopMuted",
+          "merge": "lww"
+        }
+      ]
+    },
+    {
       "id": "marble",
       "shell_mode": "panel",
       "title": "구슬 광산",

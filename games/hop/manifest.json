@@ -1,0 +1,15 @@
+{
+  "name": "삐약이 건널목 — 내가 멈추면 세상도 멈추는 길건너기",
+  "short_name": "삐약이 건널목",
+  "description": "세상은 내가 폴짝할 때만 움직여요. 느긋하게 길을 읽고 한 칸씩 — 안개보다 멀리 가면 신기록!",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e7efdc",
+  "theme_color": "#e7efdc",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
