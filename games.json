@@ -1,6 +1,25 @@
 {
   "games": [
     {
+      "id": "marble",
+      "shell_mode": "panel",
+      "title": "구슬 광산",
+      "tagline": "튕기는 구슬로 내려오는 바위를 부숴요. 조준은 느긋하게, 한 발은 짜릿하게!",
+      "unit": "라운드",
+      "score_key": "marbleBest",
+      "score_metric": "best",
+      "state_keys": [
+        {
+          "key": "marbleBest",
+          "merge": "max"
+        },
+        {
+          "key": "marbleMuted",
+          "merge": "lww"
+        }
+      ]
+    },
+    {
       "id": "vase",
       "shell_mode": "panel",
       "title": "물병 정렬",
@@ -9,11 +28,26 @@
       "score_key": "vaseMaxClear",
       "score_metric": "level",
       "state_keys": [
-        { "key": "vaseMaxClear", "merge": "max" },
-        { "key": "vaseLevel", "merge": "max" },
-        { "key": "vaseStars", "merge": "union" },
-        { "key": "vaseBest", "merge": "union_min" },
-        { "key": "vaseMuted", "merge": "lww" }
+        {
+          "key": "vaseMaxClear",
+          "merge": "max"
+        },
+        {
+          "key": "vaseLevel",
+          "merge": "max"
+        },
+        {
+          "key": "vaseStars",
+          "merge": "union"
+        },
+        {
+          "key": "vaseBest",
+          "merge": "union_min"
+        },
+        {
+          "key": "vaseMuted",
+          "merge": "lww"
+        }
       ]
     },
     {
@@ -25,8 +59,14 @@
       "score_key": "mergeBest",
       "score_metric": "score",
       "state_keys": [
-        { "key": "mergeBest", "merge": "max" },
-        { "key": "mergeMuted", "merge": "lww" }
+        {
+          "key": "mergeBest",
+          "merge": "max"
+        },
+        {
+          "key": "mergeMuted",
+          "merge": "lww"
+        }
       ]
     },
     {
@@ -38,8 +78,14 @@
       "score_key": "cubeSnakeBest",
       "score_metric": "best",
       "state_keys": [
-        { "key": "cubeSnakeBest", "merge": "max" },
-        { "key": "cubeSnakeMuted", "merge": "lww" }
+        {
+          "key": "cubeSnakeBest",
+          "merge": "max"
+        },
+        {
+          "key": "cubeSnakeMuted",
+          "merge": "lww"
+        }
       ]
     },
     {
@@ -51,10 +97,22 @@
       "score_key": "escapeBest",
       "score_metric": "level",
       "state_keys": [
-        { "key": "escapeBest", "merge": "max" },
-        { "key": "escapeLevel", "merge": "max" },
-        { "key": "escapeStars", "merge": "union" },
-        { "key": "escapeMuted", "merge": "lww" }
+        {
+          "key": "escapeBest",
+          "merge": "max"
+        },
+        {
+          "key": "escapeLevel",
+          "merge": "max"
+        },
+        {
+          "key": "escapeStars",
+          "merge": "union"
+        },
+        {
+          "key": "escapeMuted",
+          "merge": "lww"
+        }
       ]
     },
     {
@@ -66,8 +124,14 @@
       "score_key": "twosBest",
       "score_metric": "score",
       "state_keys": [
-        { "key": "twosBest", "merge": "max" },
-        { "key": "twosMuted", "merge": "lww" }
+        {
+          "key": "twosBest",
+          "merge": "max"
+        },
+        {
+          "key": "twosMuted",
+          "merge": "lww"
+        }
       ]
     },
     {
@@ -79,10 +143,22 @@
       "score_key": "railBest",
       "score_metric": "level",
       "state_keys": [
-        { "key": "railBest", "merge": "max" },
-        { "key": "railLevel", "merge": "max" },
-        { "key": "railStars", "merge": "union" },
-        { "key": "railMuted", "merge": "lww" }
+        {
+          "key": "railBest",
+          "merge": "max"
+        },
+        {
+          "key": "railLevel",
+          "merge": "max"
+        },
+        {
+          "key": "railStars",
+          "merge": "union"
+        },
+        {
+          "key": "railMuted",
+          "merge": "lww"
+        }
       ]
     },
     {
@@ -94,8 +170,14 @@
       "score_key": "tilesBest",
       "score_metric": "best",
       "state_keys": [
-        { "key": "tilesBest", "merge": "max" },
-        { "key": "tilesMuted", "merge": "lww" }
+        {
+          "key": "tilesBest",
+          "merge": "max"
+        },
+        {
+          "key": "tilesMuted",
+          "merge": "lww"
+        }
       ]
     },
     {
@@ -107,8 +189,14 @@
       "score_key": "blockBest",
       "score_metric": "score",
       "state_keys": [
-        { "key": "blockBest", "merge": "max" },
-        { "key": "blockMuted", "merge": "lww" }
+        {
+          "key": "blockBest",
+          "merge": "max"
+        },
+        {
+          "key": "blockMuted",
+          "merge": "lww"
+        }
       ]
     },
     {
@@ -120,8 +208,14 @@
       "score_key": "pangBest",
       "score_metric": "level",
       "state_keys": [
-        { "key": "pangBest", "merge": "max" },
-        { "key": "pangMuted", "merge": "lww" }
+        {
+          "key": "pangBest",
+          "merge": "max"
+        },
+        {
+          "key": "pangMuted",
+          "merge": "lww"
+        }
       ]
     },
     {
@@ -133,8 +227,14 @@
       "score_key": "stackBest",
       "score_metric": "best",
       "state_keys": [
-        { "key": "stackBest", "merge": "max" },
-        { "key": "stackMuted", "merge": "lww" }
+        {
+          "key": "stackBest",
+          "merge": "max"
+        },
+        {
+          "key": "stackMuted",
+          "merge": "lww"
+        }
       ]
     },
     {
@@ -146,10 +246,22 @@
       "score_key": "crateBest",
       "score_metric": "level",
       "state_keys": [
-        { "key": "crateBest", "merge": "max" },
-        { "key": "crateLevel", "merge": "max" },
-        { "key": "crateStars", "merge": "union" },
-        { "key": "crateMuted", "merge": "lww" }
+        {
+          "key": "crateBest",
+          "merge": "max"
+        },
+        {
+          "key": "crateLevel",
+          "merge": "max"
+        },
+        {
+          "key": "crateStars",
+          "merge": "union"
+        },
+        {
+          "key": "crateMuted",
+          "merge": "lww"
+        }
       ]
     },
     {
@@ -161,22 +273,18 @@
       "score_key": "hiveBest",
       "score_metric": "level",
       "state_keys": [
-        { "key": "hiveBest", "merge": "max" },
-        { "key": "hiveLevel", "merge": "max" },
-        { "key": "hiveMuted", "merge": "lww" }
-      ]
-    },
-    {
-      "id": "marble",
-      "shell_mode": "panel",
-      "title": "구슬 광산",
-      "tagline": "튕기는 구슬로 내려오는 바위를 부숴요. 조준은 느긋하게, 한 발은 짜릿하게!",
-      "unit": "라운드",
-      "score_key": "marbleBest",
-      "score_metric": "best",
-      "state_keys": [
-        { "key": "marbleBest", "merge": "max" },
-        { "key": "marbleMuted", "merge": "lww" }
+        {
+          "key": "hiveBest",
+          "merge": "max"
+        },
+        {
+          "key": "hiveLevel",
+          "merge": "max"
+        },
+        {
+          "key": "hiveMuted",
+          "merge": "lww"
+        }
       ]
     },
     {
@@ -188,8 +296,15 @@
       "score_key": "gatewayBest",
       "score_metric": "best",
       "state_keys": [
-        { "key": "gatewayBest", "merge": "max", "init_cache": true },
-        { "key": "gatewayMuted", "merge": "lww" }
+        {
+          "key": "gatewayBest",
+          "merge": "max",
+          "init_cache": true
+        },
+        {
+          "key": "gatewayMuted",
+          "merge": "lww"
+        }
       ]
     }
   ]
