@@ -450,7 +450,7 @@
           balls=[]; endRound();
         }
       }else if(state==='shift'){
-        shiftT+=dt/200;
+        shiftT+=dt/480; // 바위 하강 — 천천히 무게감 있게 (200ms는 너무 빨랐음)
         if(shiftT>=1){
           shiftT=0;
           if(spawnRowPending){ spawnRowPending=false; spawnRow(); afterShift(); }
