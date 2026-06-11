@@ -19,7 +19,7 @@ def test_health():
 def test_portal_index():
     res = client.get("/")
     assert res.status_code == 200
-    assert "한 판 하고" in res.text
+    assert "미니게임" in res.text
     # og:image의 {{BASE}}가 실제 주소로 치환됐는지
     assert "{{BASE}}" not in res.text
     assert 'og:image" content="http' in res.text
@@ -235,7 +235,7 @@ def test_award_not_implemented():
 # --- Phase 4: 친구 ---
 
 def test_follow_requires_login():
-    assert client.post("/api/follow", json={"followee_id": "x"}).status_code == 401
+    assert client.post("/api/friend-request", json={"other_id": "x"}).status_code == 401
     assert client.get("/api/friends").status_code == 401
     assert client.get("/api/friends/leaderboard/vase").status_code == 401
 
@@ -260,7 +260,7 @@ def test_manifest():
     assert "application/manifest+json" in res.headers["content-type"]
     data = res.json()
     assert data["scope"] == "/"
-    assert data["name"] == "한 판 하고 가요"
+    assert data["name"] == "미니게임"
     assert any(i["purpose"] == "maskable" for i in data["icons"])
 
 

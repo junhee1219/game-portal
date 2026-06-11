@@ -71,6 +71,21 @@
       ]
     },
     {
+      "id": "rail",
+      "shell_mode": "panel",
+      "title": "철길 배달부",
+      "tagline": "철로를 톡톡 돌려 화물차 길을 만들어요. 시간제한 없이 생각하고, 준비되면 보내기!",
+      "unit": "레벨",
+      "score_key": "railBest",
+      "score_metric": "level",
+      "state_keys": [
+        { "key": "railBest", "merge": "max" },
+        { "key": "railLevel", "merge": "max" },
+        { "key": "railStars", "merge": "union" },
+        { "key": "railMuted", "merge": "lww" }
+      ]
+    },
+    {
       "id": "tiles",
       "shell_mode": "panel",
       "title": "리듬 타일",

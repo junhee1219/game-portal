@@ -25,6 +25,7 @@ portal/               # 메인 목록 페이지 + 주입용 portal.js
   서빙 레이어(main.py의 HTML 주입)에서 해결한다.
 - 게임 원본이 업데이트되면 해당 게임 폴더를 통째로 교체한다.
 - DB가 죽어도 게임 플레이는 동작해야 한다. 계측 API는 실패 시 조용히 무시.
+- 새 게임의 제작/UX 기준은 [`GAME_PRINCIPLES.md`](./GAME_PRINCIPLES.md)를 따른다.
 
 ## 로컬 실행
 

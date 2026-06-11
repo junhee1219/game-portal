@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#edf3f4">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="철길 배달부">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="철길 배달부 — 철로를 돌려 화물차 보내기">
+  <meta property="og:description" content="시간제한 없이 철길을 맞추고, 준비되면 화물차를 보내는 한 손 경로 퍼즐.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>철길 배달부</title>
+  <style>
+    @font-face{font-family:"Pretendard Variable";font-weight:45 920;font-style:normal;font-display:swap;src:url("/fonts/PretendardVariable.woff2") format("woff2-variations");}
+    :root{
+      --bg-a:#f4f7f3;
+      --bg-b:#e6eef0;
+      --bg-c:#d8e2e6;
+      --ink:#28333b;
+      --ink-soft:#71808b;
+      --card:#ffffff;
+      --line:#b9c8ce;
+      --board:#d0dce0;
+      --cell:#eef3f4;
+      --cell-2:#e1eaec;
+      --rail:#3f5966;
+      --rail-hi:#f5c86d;
+      --accent:#2f9b83;
+      --accent-deep:#227765;
+      --warn:#e35d4f;
+      --shadow:rgba(61,78,88,.22);
+      --fs-1:clamp(32px,10vw,44px);
+      --fs-2:16px;
+      --fs-3:13px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    html,body{height:100%;background:var(--bg-b);}
+    body{
+      font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
+      background-color:var(--bg-b);
+      background-image:radial-gradient(130% 100% at 50% 0%,var(--bg-a) 0%,var(--bg-b) 56%,var(--bg-c) 100%);
+      color:var(--ink);
+      user-select:none;-webkit-user-select:none;touch-action:manipulation;
+    }
+    button{font:inherit;}
+    .topbar{display:flex;align-items:center;gap:8px;width:100%;max-width:500px;flex:0 0 auto;z-index:2;}
+    .pill{
+      display:flex;align-items:center;gap:6px;white-space:nowrap;
+      border:1px solid rgba(63,89,102,.16);background:rgba(255,255,255,.68);
+      border-radius:999px;padding:7px 12px;box-shadow:0 2px 0 rgba(70,90,100,.10);
+      color:var(--ink-soft);font-size:var(--fs-3);font-weight:700;
+    }
+    .pill b{color:var(--ink);font-size:var(--fs-2);}
+    .sp{margin-left:auto;}
+    .icon-btn{
+      width:42px;height:42px;border:1px solid rgba(63,89,102,.16);border-radius:13px;
+      background:linear-gradient(180deg,#fff,#edf3f4);color:#536674;
+      display:flex;align-items:center;justify-content:center;box-shadow:0 3px 0 rgba(70,90,100,.15);
+      cursor:pointer;transition:transform .1s ease,box-shadow .1s ease;
+    }
+    .icon-btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(70,90,100,.15);}
+    .ki{width:23px;height:23px;fill:currentColor;display:block;}
+
+    #stage{flex:1 1 auto;width:100%;max-width:500px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;min-height:0;}
+    #board-wrap{position:relative;width:min(92vw,430px);aspect-ratio:1;}
+    #board{
+      position:absolute;inset:0;display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(5,1fr);gap:6px;
+      padding:8px;border-radius:22px;background:var(--board);
+      box-shadow:inset 0 2px 6px rgba(61,78,88,.20),0 8px 0 #bdcbd0,0 18px 34px var(--shadow);
+      touch-action:manipulation;
+    }
+    .cell{
+      position:relative;border:none;border-radius:13px;background:var(--cell);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.72),inset 0 -2px 0 rgba(61,78,88,.08);
+      overflow:hidden;cursor:pointer;color:var(--rail);
+    }
+    .cell.empty{cursor:default;background:var(--cell-2);}
+    .cell.fixed{cursor:default;}
+    .cell::after{
+      content:"";position:absolute;inset:7px;border-radius:10px;border:1px solid rgba(63,89,102,.06);pointer-events:none;
+    }
+    .cell svg{position:absolute;inset:7%;width:86%;height:86%;overflow:visible;transition:transform .16s cubic-bezier(.2,.9,.3,1.2);}
+    .track-base{fill:none;stroke:rgba(63,89,102,.18);stroke-width:22;stroke-linecap:round;}
+    .track{fill:none;stroke:var(--rail);stroke-width:13;stroke-linecap:round;}
+    .sleeper{stroke:rgba(245,200,109,.95);stroke-width:5;stroke-linecap:round;}
+    .station{fill:#fff;stroke:var(--rail);stroke-width:7;}
+    .cell.good{animation:good .34s ease;}
+    .cell.bad{animation:bad .36s ease;background:#f7d9d6;}
+    @keyframes good{0%{transform:scale(1);}45%{transform:scale(1.08);}100%{transform:scale(1);}}
+    @keyframes bad{0%,100%{transform:translateX(0);}25%{transform:translateX(-4px);}75%{transform:translateX(4px);}}
+    .cart{
+      position:absolute;z-index:12;width:10%;aspect-ratio:1.28;border-radius:9px;
+      background:linear-gradient(180deg,#55b99f,#2f9b83);box-shadow:inset 0 2px 0 rgba(255,255,255,.45),0 4px 0 rgba(30,90,78,.35);
+      transform:translate(-50%,-50%);transition:left .16s cubic-bezier(.25,.8,.25,1),top .16s cubic-bezier(.25,.8,.25,1);
+      pointer-events:none;
+    }
+    .cart::before,.cart::after{content:"";position:absolute;bottom:-5px;width:9px;height:9px;border-radius:50%;background:#314650;}
+    .cart::before{left:13%;}.cart::after{right:13%;}
+
+    .actionbar{width:min(92vw,430px);display:grid;grid-template-columns:1fr auto;gap:8px;}
+    .primary{
+      height:52px;border:none;border-radius:16px;background:var(--accent);color:#fff;font-weight:900;font-size:var(--fs-2);
+      box-shadow:0 4px 0 var(--accent-deep),0 10px 20px rgba(47,155,131,.24);cursor:pointer;
+      transition:transform .1s ease,box-shadow .1s ease;
+    }
+    .primary:active{transform:translateY(3px);box-shadow:0 1px 0 var(--accent-deep);}
+    .primary:disabled{opacity:.55;cursor:default;transform:none;}
+    .ghost{
+      min-width:86px;height:52px;border:1px solid rgba(63,89,102,.16);border-radius:16px;background:rgba(255,255,255,.68);
+      color:var(--ink);font-weight:800;box-shadow:0 3px 0 rgba(70,90,100,.12);cursor:pointer;
+    }
+    #note{min-height:19px;color:var(--ink-soft);font-size:var(--fs-3);font-weight:700;text-align:center;}
+
+    #clear{
+      position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:24px;
+      background:rgba(29,39,45,.48);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
+      opacity:0;pointer-events:none;transition:opacity .25s ease;
+    }
+    #clear.show{opacity:1;pointer-events:auto;}
+    .card{
+      width:min(330px,88vw);border-radius:24px;background:#fff;color:var(--ink);padding:26px 22px 20px;text-align:center;
+      box-shadow:0 24px 60px rgba(20,30,40,.34);transform:translateY(12px);transition:transform .25s ease;
+    }
+    #clear.show .card{transform:none;}
+    .card h2{font-size:24px;font-weight:900;}
+    .card .sub{margin-top:6px;color:var(--ink-soft);font-size:14px;line-height:1.45;}
+    .stars{display:flex;justify-content:center;gap:7px;margin:16px 0 8px;}
+    .stars svg{width:34px;height:34px;fill:#e4e9eb;}
+    .stars svg.on{fill:#f2b94f;}
+    .result{font-size:14px;color:var(--ink-soft);margin-bottom:16px;}
+    .result b{color:var(--ink);}
+    .card .primary{width:100%;height:50px;}
+    .card .secondary{
+      width:100%;height:48px;margin-top:9px;border:none;border-radius:14px;background:#edf3f4;color:var(--ink);
+      font-weight:850;cursor:pointer;
+    }
+    .mini{display:flex;justify-content:center;gap:16px;margin-top:15px;}
+    .mini a,.mini button{border:none;background:none;color:var(--ink-soft);font-size:13px;font-weight:800;text-decoration:none;cursor:pointer;}
+    .credit{flex:0 0 auto;font-size:10px;color:var(--ink-soft);opacity:.55;padding-top:2px;}
+  </style>
+</head>
+<body>
+  <svg style="display:none" aria-hidden="true">
+    <symbol id="p-speaker-high" viewBox="0 0 256 256"><path d="M160,32.25V223.69a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.57-51A4,4,0,0,1,80,176.16V79.84a4,4,0,0,1,1.55-3.15l65.57-51a8,8,0,0,1,10,.16A8.27,8.27,0,0,1,160,32.25ZM60,80H32A16,16,0,0,0,16,96v64a16,16,0,0,0,16,16H60a4,4,0,0,0,4-4V84A4,4,0,0,0,60,80Zm126.77,20.84a8,8,0,0,0-.72,11.3,24,24,0,0,1,0,31.72,8,8,0,1,0,12,10.58,40,40,0,0,0,0-52.88A8,8,0,0,0,186.74,100.84Zm40.89-26.17a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66Z"/></symbol>
+    <symbol id="p-speaker-slash" viewBox="0 0 256 256"><path d="M213.92,210.62a8,8,0,1,1-11.84,10.76L160,175.09v48.6a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.55-51A4,4,0,0,1,80,176.18V87.09L42.08,45.38A8,8,0,1,1,53.92,34.62Zm-27.21-55.46a8,8,0,0,0,11.29-.7,40,40,0,0,0,0-52.88,8,8,0,1,0-12,10.57,24,24,0,0,1,0,31.72A8,8,0,0,0,186.71,155.16Zm40.92-80.49a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66ZM153,119.87a4,4,0,0,0,7-2.7V32.25a8.27,8.27,0,0,0-2.88-6.4,8,8,0,0,0-10-.16L103.83,59.33a4,4,0,0,0-.5,5.85Z"/></symbol>
+    <symbol id="p-arrow-clockwise" viewBox="0 0 256 256"><path d="M240,56v48a8,8,0,0,1-8,8H184a8,8,0,0,1-5.66-13.66L197.77,78.9A88,88,0,1,0,216,128a8,8,0,0,1,16,0A104,104,0,1,1,186.9,42.23L226.34,2.34A8,8,0,0,1,240,8Z"/></symbol>
+    <symbol id="p-star" viewBox="0 0 256 256"><path d="M234.5,114.38l-45.1,39.36,13.51,58.6a16,16,0,0,1-23.84,17.34l-51.11-31-51,31a16,16,0,0,1-23.84-17.34L66.6,153.74,21.5,114.38a16,16,0,0,1,9.11-28.06l59.46-5.15,23.21-55.36a15.95,15.95,0,0,1,29.44,0L166,81.17l59.44,5.15a16,16,0,0,1,9.11,28.06Z"/></symbol>
+  </svg>
+
+  <div class="topbar">
+    <div class="pill">레벨 <b id="level">1</b></div>
+    <div class="pill">최고 <b id="best">0</b></div>
+    <div class="pill">출발 <b id="tries">0</b></div>
+    <div class="sp"></div>
+    <button class="icon-btn" id="reset" aria-label="레벨 다시 시작"><svg class="ki"><use href="#p-arrow-clockwise"/></svg></button>
+    <button class="icon-btn" id="mute" aria-label="소리 켜기/끄기"><svg class="ki" id="mute-ic"><use href="#p-speaker-high"/></svg></button>
+  </div>
+
+  <div id="stage">
+    <div id="board-wrap">
+      <div id="board" aria-label="철길 퍼즐판"></div>
+    </div>
+    <div class="actionbar">
+      <button class="primary" id="send">화물차 보내기</button>
+      <button class="ghost" id="hint">정리</button>
+    </div>
+    <div id="note">타일을 톡톡 돌려 길을 이어보세요</div>
+  </div>
+
+  <div class="credit">Icons: Phosphor</div>
+
+  <div id="clear">
+    <div class="card">
+      <h2>배송 완료</h2>
+      <p class="sub" id="clear-sub">철길이 매끄럽게 이어졌어요.</p>
+      <div class="stars" id="stars"></div>
+      <p class="result">출발 <b id="clear-tries">1</b>번 · 현재 최고 <b id="clear-best">0</b>레벨</p>
+      <button class="primary" id="next">다음 레벨</button>
+      <button class="secondary" id="again">이 레벨 다시</button>
+      <div class="mini">
+        <a href="/rank">기록실</a>
+        <button id="support">후원 · 의견</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    var N=5;
+    var KEY={best:'railBest',level:'railLevel',stars:'railStars',muted:'railMuted'};
+    var DIRS=[[-1,0],[0,1],[1,0],[0,-1]], OPP=[2,3,0,1];
+    var LEVELS=[
+      {name:'첫 배송', cells:[
+        [2,0,'start',0],[2,1,'straight',1],[2,2,'curve',2],[3,2,'curve',0],[3,3,'straight',1],[3,4,'end',0],
+        [0,1,'curve',1],[1,3,'straight',0],[4,1,'curve',3]
+      ]},
+      {name:'창고 뒤편', cells:[
+        [1,0,'start',0],[1,1,'straight',1],[1,2,'curve',2],[2,2,'straight',0],[3,2,'curve',0],[3,3,'straight',1],[3,4,'curve',3],[2,4,'end',3],
+        [0,3,'curve',0],[4,0,'straight',1],[4,1,'curve',2]
+      ]},
+      {name:'강변 선로', cells:[
+        [4,0,'start',3],[3,0,'straight',0],[2,0,'curve',1],[2,1,'straight',1],[2,2,'curve',2],[3,2,'curve',0],[3,3,'curve',3],[2,3,'straight',0],[1,3,'straight',0],[0,3,'end',3],
+        [0,0,'curve',1],[1,1,'straight',0],[4,1,'curve',0]
+      ]},
+      {name:'시장 골목', cells:[
+        [0,4,'start',2],[0,3,'straight',1],[0,2,'curve',1],[1,2,'straight',0],[2,2,'curve',3],[2,1,'straight',1],[2,0,'curve',1],[3,0,'curve',0],[3,1,'straight',1],[3,2,'curve',2],[4,2,'end',1],
+        [1,4,'curve',3],[4,4,'straight',0],[1,0,'curve',2]
+      ]},
+      {name:'언덕역', cells:[
+        [0,0,'start',1],[1,0,'curve',0],[1,1,'straight',1],[1,2,'curve',2],[2,2,'curve',0],[2,3,'straight',1],[2,4,'curve',2],[3,4,'straight',0],[4,4,'end',1],
+        [0,2,'straight',0],[3,1,'curve',0],[4,0,'curve',3]
+      ]},
+      {name:'마지막 환승', cells:[
+        [4,4,'start',3],[3,4,'curve',2],[3,3,'straight',1],[3,2,'curve',0],[2,2,'straight',0],[1,2,'curve',1],[1,3,'straight',1],[1,4,'curve',3],[0,4,'end',3],
+        [0,0,'curve',1],[0,1,'straight',1],[2,0,'straight',0],[4,1,'curve',2]
+      ]}
+    ];
+
+    function gi(k){try{return parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){return 0;}}
+    function gj(k){try{return JSON.parse(localStorage.getItem(k)||'{}')||{};}catch(e){return {};}}
+    function set(k,v){try{localStorage.setItem(k,String(v));}catch(e){}}
+    function setJson(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+
+    var best=gi(KEY.best), savedLevel=gi(KEY.level), levelIdx=Math.min(savedLevel,LEVELS.length-1);
+    var starMap=gj(KEY.stars), muted=false; try{muted=localStorage.getItem(KEY.muted)==='1';}catch(e){}
+    var board=document.getElementById('board'), wrap=document.getElementById('board-wrap');
+    var levelEl=document.getElementById('level'), bestEl=document.getElementById('best'), triesEl=document.getElementById('tries');
+    var note=document.getElementById('note'), send=document.getElementById('send'), clear=document.getElementById('clear');
+    var cells=[], grid=[], tries=0, running=false, cart=null;
+
+    var ac=null;
+    function ctx(){ if(!ac){ try{ac=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} } return ac; }
+    function tone(f,t,d,type,vol){ if(muted)return; var c=ctx(); if(!c)return; var o=c.createOscillator(),g=c.createGain(); o.type=type||'sine'; o.frequency.value=f; o.connect(g); g.connect(c.destination); var x=c.currentTime+(t||0); g.gain.setValueAtTime(.0001,x); g.gain.exponentialRampToValueAtTime(vol||.14,x+.01); g.gain.exponentialRampToValueAtTime(.0001,x+(d||.12)); o.start(x); o.stop(x+(d||.12)+.03); }
+    function sTurn(){tone(360,0,.06,'triangle',.10);}
+    function sSend(){tone(220,0,.09,'square',.08);tone(330,.08,.08,'triangle',.10);}
+    function sBad(){tone(130,0,.16,'sawtooth',.10);}
+    function sClear(){[523,659,784,1047].forEach(function(f,i){tone(f,i*.08,.14,'triangle',.16);});}
+    function sRecord(){[784,988,1319].forEach(function(f,i){tone(f,.42+i*.08,.13,'sine',.14);});}
+
+    function modOf(t){return t==='straight'?2:4;}
+    function baseConns(t){
+      if(t==='straight')return [0,2];
+      if(t==='curve')return [0,1];
+      if(t==='start')return [1];
+      if(t==='end')return [3];
+      return [];
+    }
+    function conns(cell){
+      var b=baseConns(cell.type), r=cell.rot||0;
+      return b.map(function(d){return (d+r)%4;});
+    }
+    function posOf(r,c){
+      var rect=board.getBoundingClientRect(), gap=6, pad=8;
+      var size=(rect.width-pad*2-gap*(N-1))/N;
+      return {x:pad+c*(size+gap)+size/2,y:pad+r*(size+gap)+size/2};
+    }
+    function svgFor(cell){
+      if(!cell)return '';
+      var kind=cell.type, body='';
+      if(kind==='straight') body='<path class="track-base" d="M50 4 V96"/><path class="sleeper" d="M35 24 H65 M35 50 H65 M35 76 H65"/><path class="track" d="M50 4 V96"/>';
+      if(kind==='curve') body='<path class="track-base" d="M50 4 Q50 50 96 50"/><path class="sleeper" d="M47 24 L69 28 M62 44 L80 62"/><path class="track" d="M50 4 Q50 50 96 50"/>';
+      if(kind==='start') body='<path class="track-base" d="M50 50 H96"/><path class="track" d="M50 50 H96"/><rect class="station" x="12" y="28" width="38" height="44" rx="10"/><path class="sleeper" d="M65 36 V64 M84 36 V64"/>';
+      if(kind==='end') body='<path class="track-base" d="M4 50 H50"/><path class="track" d="M4 50 H50"/><rect class="station" x="50" y="25" width="40" height="50" rx="11"/><path class="sleeper" d="M18 36 V64 M34 36 V64"/>';
+      return '<svg viewBox="0 0 100 100" style="transform:rotate('+(cell.rot*90)+'deg)">'+body+'</svg>';
+    }
+    function buildLevel(idx){
+      running=false; clear.classList.remove('show'); if(cart&&cart.parentNode)cart.parentNode.removeChild(cart); cart=null;
+      tries=0; grid=Array.from({length:N},function(){return Array(N).fill(null);});
+      LEVELS[idx].cells.forEach(function(raw,i){
+        var r=raw[0],c=raw[1],type=raw[2],sol=raw[3], fixed=(type==='start'||type==='end');
+        var m=modOf(type), off=fixed?0:((idx+r*2+c+i)%m||1);
+        grid[r][c]={r:r,c:c,type:type,rot:fixed?sol:(sol+off)%m,sol:sol,fixed:fixed};
+      });
+      render();
+      updateHud();
+      note.textContent=LEVELS[idx].name+' · 천천히 맞춘 뒤 보내세요';
+    }
+    function render(){
+      board.innerHTML=''; cells=[];
+      for(var r=0;r<N;r++)for(var c=0;c<N;c++){
+        var cell=grid[r][c], el=document.createElement(cell&&!cell.fixed?'button':'div');
+        el.className='cell'+(cell?'':' empty')+(cell&&cell.fixed?' fixed':'');
+        el.dataset.r=r; el.dataset.c=c;
+        if(cell){ el.innerHTML=svgFor(cell); el.setAttribute('aria-label','철길 타일'); }
+        if(cell&&!cell.fixed){ el.addEventListener('click',rotateCell); }
+        board.appendChild(el); cells.push(el);
+      }
+    }
+    function updateHud(){
+      levelEl.textContent=String(levelIdx+1);
+      bestEl.textContent=String(best);
+      triesEl.textContent=String(tries);
+      document.getElementById('mute-ic').innerHTML='<use href="'+(muted?'#p-speaker-slash':'#p-speaker-high')+'"/>';
+    }
+    function rotateCell(e){
+      if(running)return;
+      var el=e.currentTarget, r=+el.dataset.r, c=+el.dataset.c, cell=grid[r][c];
+      cell.rot=(cell.rot+1)%modOf(cell.type);
+      el.innerHTML=svgFor(cell);
+      el.classList.remove('good'); void el.offsetWidth; el.classList.add('good');
+      note.textContent='준비되면 화물차를 보내세요';
+      sTurn();
+    }
+    function startCell(){
+      for(var r=0;r<N;r++)for(var c=0;c<N;c++)if(grid[r][c]&&grid[r][c].type==='start')return grid[r][c];
+    }
+    function checkPath(){
+      var cur=startCell(), cs=conns(cur), dir=cs[0], path=[[cur.r,cur.c]], seen={};
+      for(var guard=0;guard<40;guard++){
+        var nr=cur.r+DIRS[dir][0], nc=cur.c+DIRS[dir][1], incoming=OPP[dir];
+        if(nr<0||nc<0||nr>=N||nc>=N||!grid[nr][nc]) return {ok:false,path:path,bad:[cur.r,cur.c]};
+        cur=grid[nr][nc]; path.push([cur.r,cur.c]);
+        var cc=conns(cur);
+        if(cc.indexOf(incoming)<0) return {ok:false,path:path,bad:[cur.r,cur.c]};
+        if(cur.type==='end') return {ok:true,path:path};
+        if(cc.length!==2) return {ok:false,path:path,bad:[cur.r,cur.c]};
+        dir=cc[0]===incoming?cc[1]:cc[0];
+        var key=cur.r+','+cur.c+','+dir;
+        if(seen[key]) return {ok:false,path:path,bad:[cur.r,cur.c]};
+        seen[key]=1;
+      }
+      return {ok:false,path:path,bad:[cur.r,cur.c]};
+    }
+    function placeCart(rc){
+      if(!cart){ cart=document.createElement('div'); cart.className='cart'; wrap.appendChild(cart); }
+      var p=posOf(rc[0],rc[1]); cart.style.left=p.x+'px'; cart.style.top=p.y+'px';
+    }
+    function animate(result){
+      running=true; send.disabled=true; sSend();
+      var i=0; placeCart(result.path[0]);
+      function step(){
+        i++;
+        if(i<result.path.length){ placeCart(result.path[i]); setTimeout(step,170); return; }
+        setTimeout(function(){
+          if(result.ok){ finishLevel(); }
+          else { failAt(result.bad); }
+        },150);
+      }
+      setTimeout(step,140);
+    }
+    function failAt(rc){
+      running=false; send.disabled=false; sBad();
+      if(cart&&cart.parentNode)cart.parentNode.removeChild(cart); cart=null;
+      var idx=rc[0]*N+rc[1], el=cells[idx];
+      if(el){ el.classList.remove('bad'); void el.offsetWidth; el.classList.add('bad'); }
+      note.textContent='막힌 지점이 있어요. 천천히 다시 이어보세요';
+    }
+    function starCount(){ return tries<=1?3:(tries<=3?2:1); }
+    function finishLevel(){
+      running=false; send.disabled=false; sClear();
+      if(cart&&cart.parentNode)cart.parentNode.removeChild(cart); cart=null;
+      var cleared=levelIdx+1, stars=starCount(), oldBest=best;
+      best=Math.max(best,cleared);
+      starMap[String(cleared)]=Math.max(starMap[String(cleared)]||0,stars);
+      set(KEY.best,best);
+      set(KEY.level,Math.min(levelIdx+1,LEVELS.length-1));
+      setJson(KEY.stars,starMap);
+      if(best>oldBest)sRecord();
+      showClear(stars,cleared,best>oldBest);
+    }
+    function showClear(stars,cleared,record){
+      var box=document.getElementById('stars'); box.innerHTML='';
+      for(var i=1;i<=3;i++) box.innerHTML+='<svg class="'+(i<=stars?'on':'')+'" viewBox="0 0 256 256"><use href="#p-star"/></svg>';
+      document.getElementById('clear-sub').textContent=record?'신기록! '+cleared+'레벨까지 배송했어요.':'철길이 매끄럽게 이어졌어요.';
+      document.getElementById('clear-tries').textContent=String(tries);
+      document.getElementById('clear-best').textContent=String(best);
+      document.getElementById('next').textContent=levelIdx>=LEVELS.length-1?'마지막 레벨 다시':'다음 레벨';
+      clear.classList.add('show'); updateHud();
+    }
+
+    send.addEventListener('click',function(){
+      if(running)return;
+      tries++; updateHud(); note.textContent='화물차가 길을 확인하고 있어요';
+      animate(checkPath());
+    });
+    document.getElementById('hint').addEventListener('click',function(){
+      if(running)return;
+      note.textContent='출발역과 도착역 사이에 끊긴 곳이 없으면 됩니다';
+    });
+    document.getElementById('reset').addEventListener('click',function(){ buildLevel(levelIdx); });
+    document.getElementById('mute').addEventListener('click',function(){ muted=!muted; set(KEY.muted,muted?'1':'0'); updateHud(); if(!muted)sTurn(); });
+    document.getElementById('next').addEventListener('click',function(){ levelIdx=Math.min(levelIdx+1,LEVELS.length-1); buildLevel(levelIdx); });
+    document.getElementById('again').addEventListener('click',function(){ buildLevel(levelIdx); });
+    document.getElementById('support').addEventListener('click',function(){ if(window.GamePortal&&GamePortal.openSupport)GamePortal.openSupport(); });
+
+    buildLevel(levelIdx);
+  })();
+  </script>
+  <script>
+    if('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('./sw.js');
+  </script>
+</body>
+</html>

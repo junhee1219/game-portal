@@ -1,0 +1,15 @@
+{
+  "name": "철길 배달부 — 철로를 돌려 화물차 보내기",
+  "short_name": "철길 배달부",
+  "description": "시간제한 없이 철길을 맞추고, 준비되면 화물차를 보내는 한 손 경로 퍼즐.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e6eef0",
+  "theme_color": "#edf3f4",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
