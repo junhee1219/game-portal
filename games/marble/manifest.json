@@ -1,0 +1,15 @@
+{
+  "name": "구슬 광산 — 튕기는 구슬로 바위 부수기",
+  "short_name": "구슬 광산",
+  "description": "구슬을 쏘아 내려오는 바위를 부수는 발사 퍼즐. 조준은 느긋하게, 한 발은 짜릿하게!",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e3eaf2",
+  "theme_color": "#e9eef4",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

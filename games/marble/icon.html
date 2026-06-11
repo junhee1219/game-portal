@@ -1,0 +1,49 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#fff;}</style></head>
+<body>
+<canvas id="c" width="512" height="512"></canvas>
+<script>
+const cv=document.getElementById('c'), x=cv.getContext('2d');
+function rr(ctx,X,Y,W,H,R){R=Math.min(R,W/2,H/2);ctx.beginPath();ctx.moveTo(X+R,Y);ctx.arcTo(X+W,Y,X+W,Y+H,R);ctx.arcTo(X+W,Y+H,X,Y+H,R);ctx.arcTo(X,Y+H,X,Y,R);ctx.arcTo(X,Y,X+W,Y,R);ctx.closePath();}
+// 차분한 슬레이트 배경 (명도폭 좁게)
+const g=x.createLinearGradient(0,0,0,512);
+g.addColorStop(0,'#eef3f8'); g.addColorStop(1,'#d9e2ec');
+rr(x,0,0,512,512,112); x.fillStyle=g; x.fill();
+// 숫자 바위 (캔디 타일: 윗 림 + 하단 하드 섀도)
+function rock(cx,cy,s,c0,c1,label){
+  const lg=x.createLinearGradient(0,cy,0,cy+s);
+  lg.addColorStop(0,c0); lg.addColorStop(1,c1);
+  rr(x,cx,cy,s,s,s*0.2); x.fillStyle=lg; x.fill();
+  x.save(); rr(x,cx,cy,s,s,s*0.2); x.clip();
+  x.fillStyle='rgba(255,255,255,.4)'; x.fillRect(cx,cy,s,4);
+  x.fillStyle='rgba(30,50,70,.18)'; x.fillRect(cx,cy+s-7,s,7);
+  x.restore();
+  x.fillStyle='#fff'; x.textAlign='center'; x.textBaseline='middle';
+  x.font='800 '+Math.round(s*0.42)+'px "Pretendard Variable",-apple-system,sans-serif';
+  x.fillText(label,cx+s/2,cy+s/2+2);
+}
+const S=128, G=14;
+rock(256-S-G/2, 70,      S, '#9fc6e8','#5d92be','3');
+rock(256+G/2,   70,      S, '#9fd9b4','#5aa878','7');
+rock(256-S-G/2, 70+S+G,  S, '#f2d488','#c89c3d','12');
+// 보석 (마름모)
+x.save(); x.translate(256+G/2+S/2, 70+S+G+S/2); x.rotate(Math.PI/4);
+rr(x,-44,-44,88,88,20); x.fillStyle='#bfe0ee'; x.fill();
+rr(x,-27,-27,54,54,13); x.fillStyle='#7cbdd8'; x.fill();
+x.restore();
+// 조준선 (점선) + 구슬
+x.setLineDash([8,18]); x.strokeStyle='rgba(61,143,184,.7)'; x.lineWidth=9; x.lineCap='round';
+x.beginPath(); x.moveTo(256,440); x.lineTo(170,330); x.stroke();
+x.setLineDash([]);
+function marble(mx,my,r){
+  const mg=x.createLinearGradient(0,my-r,0,my+r);
+  mg.addColorStop(0,'#f2bb62'); mg.addColorStop(1,'#dd923a');
+  x.beginPath(); x.arc(mx,my,r,0,7); x.fillStyle=mg; x.fill();
+  x.beginPath(); x.arc(mx-r*0.3,my-r*0.35,r*0.28,0,7); x.fillStyle='rgba(255,255,255,.6)'; x.fill();
+  // 바닥 하드 섀도
+  x.fillStyle='rgba(43,52,64,.18)';
+  x.beginPath(); x.ellipse(mx,my+r+8,r*0.85,8,0,0,7); x.fill();
+}
+marble(256,430,42);
+window.__png=()=>cv.toDataURL('image/png');
+</script>
+</body></html>

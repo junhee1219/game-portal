@@ -167,6 +167,19 @@
       ]
     },
     {
+      "id": "marble",
+      "shell_mode": "panel",
+      "title": "구슬 광산",
+      "tagline": "튕기는 구슬로 내려오는 바위를 부숴요. 조준은 느긋하게, 한 발은 짜릿하게!",
+      "unit": "라운드",
+      "score_key": "marbleBest",
+      "score_metric": "best",
+      "state_keys": [
+        { "key": "marbleBest", "merge": "max" },
+        { "key": "marbleMuted", "merge": "lww" }
+      ]
+    },
+    {
       "id": "gateway",
       "shell_mode": "fullscreen",
       "title": "라면집 사장님",
