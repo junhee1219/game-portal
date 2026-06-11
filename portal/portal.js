@@ -19,6 +19,7 @@
   // 점수 config는 서버가 주입한 data-* 속성에서 동기 읽기 (fetch 금지 — setItem 후킹 race 방지)
   var scoreKey = ds.scoreKey || null;
   var scoreMetric = ds.scoreMetric || 'best';
+  var launcherPos = ds.launcherPos || 'tl';  // 게임 내 런처 위치(tl/tr/bl/br) — 게임별 빈 코너
 
   function send(payload, useBeacon) {
     payload.visitor_id = vid;
@@ -62,15 +63,19 @@
       // (가입 직후 직전 점수는 로그인 감지 시 localStorage 최고점을 1회 claim POST해서 귀속)
       var authed = false; try { authed = localStorage.getItem('gp_auth') === '1'; } catch (e) {}
       if (!authed) return;
+      var clean = Math.floor(Number(score) || 0);
       fetch('/api/score', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          visitor_id: vid, game: game,
-          score: Math.floor(Number(score) || 0), meta: meta || null
-        }),
+        body: JSON.stringify({ visitor_id: vid, game: game, score: clean, meta: meta || null }),
         keepalive: true
-      }).catch(function () {});
+      })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          // 신기록(auto)일 때만 '결과창 공유' 제안 — claim/pull POST엔 안 띄운다.
+          if (d && d.share_url && meta && meta.auto) gpOfferShare(clean, location.origin + d.share_url);
+        })
+        .catch(function () {});
     },
     // 후원+의견 모달 열기 (게임/포털 어디서든 호출. 링크는 /api/support = 서버 .env)
     openSupport: function () { gpOpenSupport(false); },
@@ -214,9 +219,11 @@
     var st = document.createElement('style');
     st.id = 'gp-launcher-style';
     st.textContent =
-      '#gp-launcher{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);' +
-      'left:calc(env(safe-area-inset-left,0px) + 8px);z-index:9000;display:flex;gap:6px;' +
-      'opacity:.55;transition:opacity .2s ease;}' +
+      '#gp-launcher{position:fixed;z-index:9000;display:flex;gap:6px;opacity:.55;transition:opacity .2s ease;}' +
+      '#gp-launcher.gp-pos-tl{top:calc(env(safe-area-inset-top,0px) + 8px);left:calc(env(safe-area-inset-left,0px) + 8px);}' +
+      '#gp-launcher.gp-pos-tr{top:calc(env(safe-area-inset-top,0px) + 8px);right:calc(env(safe-area-inset-right,0px) + 8px);}' +
+      '#gp-launcher.gp-pos-bl{bottom:calc(env(safe-area-inset-bottom,0px) + 8px);left:calc(env(safe-area-inset-left,0px) + 8px);}' +
+      '#gp-launcher.gp-pos-br{bottom:calc(env(safe-area-inset-bottom,0px) + 8px);right:calc(env(safe-area-inset-right,0px) + 8px);}' +
       '#gp-launcher:hover,#gp-launcher:active{opacity:1;}' +
       '.gp-lb{width:38px;height:38px;padding:0;border-radius:11px;border:1px solid rgba(255,255,255,.22);' +
       'background:rgba(20,20,26,.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);' +
@@ -240,7 +247,22 @@
       'z-index:10000;max-width:80vw;padding:11px 18px;border-radius:12px;background:rgba(20,20,26,.92);color:#f2f2f0;' +
       'font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;font-size:13px;' +
       'font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.4);opacity:0;transition:opacity .25s ease,transform .25s ease;pointer-events:none;}' +
-      '.gp-toast.show{opacity:1;transform:translate(-50%,0);}';
+      '.gp-toast.show{opacity:1;transform:translate(-50%,0);}' +
+      '.gp-share-offer{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);' +
+      'transform:translate(-50%,16px);z-index:10000;display:flex;align-items:center;gap:12px;' +
+      'padding:12px 12px 12px 18px;border-radius:16px;background:rgba(20,20,26,.94);color:#f2f2f0;' +
+      'font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;' +
+      'box-shadow:0 8px 24px rgba(0,0,0,.45);opacity:0;transition:opacity .25s ease,transform .25s ease;max-width:90vw;}' +
+      '.gp-share-offer.show{opacity:1;transform:translate(-50%,0);}' +
+      '.gp-share-offer .gp-so-txt{font-size:13px;font-weight:700;line-height:1.3;}' +
+      '.gp-share-offer .gp-so-txt b{color:#ffb13d;}' +
+      '.gp-share-offer .gp-so-btn{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;border:none;' +
+      'background:#ffb13d;color:#14110a;font:inherit;font-size:13px;font-weight:800;padding:9px 14px;' +
+      'border-radius:11px;cursor:pointer;}' +
+      '.gp-share-offer .gp-so-btn svg{width:16px;height:16px;}' +
+      '.gp-share-offer .gp-so-btn:active{transform:scale(.95);}' +
+      '.gp-share-offer .gp-so-x{flex:0 0 auto;border:none;background:none;color:#8e8e98;font-size:20px;' +
+      'line-height:1;cursor:pointer;padding:0 4px;}';
     document.head.appendChild(st);
   }
 
@@ -275,41 +297,55 @@
     ov.querySelector('.gp-cf-go').addEventListener('click', function () { location.href = '/'; });
   }
 
-  function gpShareRecord() {
-    var best = 0;
-    try { if (scoreKey) best = numOf(localStorage.getItem(scoreKey)); } catch (e) {}
-    if (!scoreKey || best <= 0) {
-      gpToast('아직 기록이 없어요. 한 판 하고 다시 눌러주세요!');
+  // 공유 실행 — navigator.share → 클립보드 → 직접 이동 폴백 (게임 도중이 아니라 신기록 시점에 호출)
+  function gpDoShare(url) {
+    if (navigator.share) { navigator.share({ url: url }).catch(function () {}); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(function () { gpToast('공유 링크를 복사했어요!'); })
+        .catch(function () { location.href = url; });
       return;
     }
-    var authed = false; try { authed = localStorage.getItem('gp_auth') === '1'; } catch (e) {}
-    if (!authed) { gpOpenSupport(false); return; }  // 비회원은 저장 안 돼 링크 못 만듦 → 가입 동선
-    fetch('/api/score', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ visitor_id: vid, game: game, score: best, meta: { from: 'game-share' } })
-    }).then(function (r) { return r.json(); }).then(function (d) {
-      if (!d || !d.share_url) { gpToast('공유 링크를 만들지 못했어요.'); return; }
-      var url = location.origin + d.share_url;
-      if (navigator.share) { navigator.share({ url: url }).catch(function () {}); return; }
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(url).then(function () { gpToast('공유 링크를 복사했어요!'); })
-          .catch(function () { location.href = url; });
-        return;
-      }
-      location.href = url;
-    }).catch(function () { gpToast('네트워크 오류예요.'); });
+    location.href = url;
   }
 
+  // 신기록 달성 시 결과창 느낌의 공유 제안 — "나 몇 점이다" 자랑. 비차단 토스트, 자동 사라짐.
+  var gpShareOfferTimer = null;
+  function gpOfferShare(score, url) {
+    gpEnsureLauncherStyle();
+    var old = document.getElementById('gp-share-offer');
+    if (old && old.parentNode) old.parentNode.removeChild(old);
+    var unit = '점';
+    if (scoreMetric === 'level') unit = '레벨';
+    else if (scoreMetric === 'best' && game === 'stack') unit = '층';
+    var box = document.createElement('div');
+    box.id = 'gp-share-offer';
+    box.className = 'gp-share-offer';
+    box.innerHTML =
+      '<span class="gp-so-txt">신기록 <b>' + score.toLocaleString() + unit + '</b>!<br>친구에게 자랑할까요?</span>' +
+      '<button class="gp-so-btn" type="button">' + GP_ICON_SHARE + '공유</button>' +
+      '<button class="gp-so-x" type="button" aria-label="닫기">&times;</button>';
+    document.body.appendChild(box);
+    setTimeout(function () { box.classList.add('show'); }, 10);
+    function close() {
+      if (gpShareOfferTimer) { clearTimeout(gpShareOfferTimer); gpShareOfferTimer = null; }
+      box.classList.remove('show');
+      setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, 300);
+    }
+    box.querySelector('.gp-so-btn').addEventListener('click', function () { gpDoShare(url); close(); });
+    box.querySelector('.gp-so-x').addEventListener('click', close);
+    gpShareOfferTimer = setTimeout(close, 7000);
+  }
+
+  // 게임 페이지에 '메인으로' 런처 주입 (공유는 신기록 시점으로 이동 — 여기엔 홈만).
   if (game !== 'portal' && document.body && !document.getElementById('gp-launcher')) {
     gpEnsureLauncherStyle();
     var gpLauncher = document.createElement('div');
     gpLauncher.id = 'gp-launcher';
+    gpLauncher.className = 'gp-pos-' + (/^(tl|tr|bl|br)$/.test(launcherPos) ? launcherPos : 'tl');
     gpLauncher.innerHTML =
-      '<button class="gp-lb" type="button" data-act="home" aria-label="메인으로">' + GP_ICON_HOME + '</button>' +
-      '<button class="gp-lb" type="button" data-act="share" aria-label="기록 공유">' + GP_ICON_SHARE + '</button>';
+      '<button class="gp-lb" type="button" data-act="home" aria-label="메인으로">' + GP_ICON_HOME + '</button>';
     document.body.appendChild(gpLauncher);
     gpLauncher.querySelector('[data-act="home"]').addEventListener('click', gpConfirmHome);
-    gpLauncher.querySelector('[data-act="share"]').addEventListener('click', gpShareRecord);
   }
 
   // ===== 상태 동기화 manifest (서버 주입, 로그인 시에만 동작) =====

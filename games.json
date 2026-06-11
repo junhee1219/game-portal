@@ -13,7 +13,8 @@
         { "key": "vaseStars", "merge": "union" },
         { "key": "vaseBest", "merge": "union_min" },
         { "key": "vaseMuted", "merge": "lww" }
-      ]
+      ],
+      "launcher_pos": "bl"
     },
     {
       "id": "gateway",
@@ -61,7 +62,8 @@
       "state_keys": [
         { "key": "mergeBest", "merge": "max" },
         { "key": "mergeMuted", "merge": "lww" }
-      ]
+      ],
+      "launcher_pos": "bl"
     },
     {
       "id": "block",
@@ -85,7 +87,8 @@
       "state_keys": [
         { "key": "stackBest", "merge": "max" },
         { "key": "stackMuted", "merge": "lww" }
-      ]
+      ],
+      "launcher_pos": "bl"
     },
     {
       "id": "tiles",

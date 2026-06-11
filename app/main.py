@@ -68,6 +68,9 @@ def _inject_snippet(game: str) -> str:
         # 상태 sync manifest (키별 merge 방식 + init_cache) — JSON을 속성에 동기 전달
         state_json = json.dumps(g["state_keys"], ensure_ascii=False, separators=(",", ":"))
         attrs += f' data-state-keys="{html.escape(state_json, quote=True)}"'
+    # 게임 내 런처(메인 버튼) 위치 — 게임마다 빈 코너가 달라 게임별 선언. 기본 tl(상단좌).
+    if g and g.get("launcher_pos"):
+        attrs += f' data-launcher-pos="{html.escape(g["launcher_pos"])}"'
     return f'<script src="/portal.js" {attrs}></script>'
 
 # 게임이 갖고 있던 sw.js를 대체하는 무력화 SW —
