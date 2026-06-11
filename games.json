@@ -138,6 +138,21 @@
       ]
     },
     {
+      "id": "crate",
+      "shell_mode": "panel",
+      "title": "창고 정리",
+      "tagline": "상자를 밀어 빛나는 자리에 쏙. 시간제한 없이 생각하고, 막히면 되돌리기!",
+      "unit": "레벨",
+      "score_key": "crateBest",
+      "score_metric": "level",
+      "state_keys": [
+        { "key": "crateBest", "merge": "max" },
+        { "key": "crateLevel", "merge": "max" },
+        { "key": "crateStars", "merge": "union" },
+        { "key": "crateMuted", "merge": "lww" }
+      ]
+    },
+    {
       "id": "gateway",
       "shell_mode": "fullscreen",
       "title": "라면집 사장님",
