@@ -183,6 +183,7 @@
     function sShift(){ tone(140,0,.1,'sine',.09); }
     function sOver(){ tone(170,0,.3,'sawtooth',.09); tone(115,.14,.4,'sawtooth',.09); tone(85,.3,.5,'sawtooth',.07); }
     function sClearRow(){ tone(523,0,.1,'triangle',.1); tone(784,.06,.12,'sine',.09); }
+    function sEvolve(){ [392,523,659,784].forEach(function(f,i){tone(f,i*.07,.12,'triangle',.13);}); }
     function sRecord(){ [784,988,1319].forEach(function(f,i){tone(f,i*.09,.13,'sine',.13);}); }
 
     // ===== 보드 기하 =====
@@ -207,21 +208,30 @@
     var aimOn=false, aimX=0, aimY=0;
     var shiftT=0;                               // 0→1 내려오기 애니메이션
     var particles=[], pops=[], shards=[], rings=[], floats=[];
-    var shakeT=0, shakeAmp=0, combo=0;
+    var shakeT=0, shakeAmp=0, combo=0, seedNo=1, evoMsg=null;
     var timeScale=1, fast=false;
 
-    var ROCK_COLORS=[
-      ['#9fc6e8','#7fb0d9','#5d92be'],
-      ['#9fd9b4','#7cc497','#5aa878'],
-      ['#f2d488','#e6bd5c','#c89c3d'],
-      ['#f2b187','#e6945c','#c8753d'],
-      ['#ee9b94','#e07a72','#bf5b53'],
-      ['#b9a6e0','#9c83cf','#7d64ae']
+    // 광물 티어 — 체력이 높을수록 귀한 광물 (숫자를 가려도 서열이 보이게)
+    var ORES=[
+      {name:'돌',     min:1,  base:['#c3ccd1','#9aa7af'], deco:'speck',  spark:'#8d9aa3'},
+      {name:'석탄',   min:3,  base:['#7a7580','#56515e'], deco:'coal',   spark:'#3e3a48'},
+      {name:'구리',   min:6,  base:['#e8a86a','#c47e44'], deco:'nugget', spark:'#d8924f'},
+      {name:'은',     min:11, base:['#e9eef4','#bfccd9'], deco:'streak', spark:'#cdd9e4'},
+      {name:'금',     min:18, base:['#f4c95e','#dba428'], deco:'glint',  spark:'#f2c75e'},
+      {name:'다이아', min:30, base:['#c4ecf6','#8fd2e4'], deco:'facet',  spark:'#9fdcec'}
     ];
-    function rockColor(hp){
-      var t=Math.min(5,Math.floor(Math.log2(Math.max(1,hp))));
-      return ROCK_COLORS[t];
-    }
+    function oreFor(hp){ for(var i=ORES.length-1;i>=0;i--)if(hp>=ORES[i].min)return ORES[i]; return ORES[0]; }
+    // 도구(구슬)도 라운드에 따라 진화 — 진행이 눈에 보이게
+    var BALLS=[
+      {name:'나무 구슬',  min:1,  c0:'#cf9f68', c1:'#a4763f', trail:'#c89b66'},
+      {name:'돌 구슬',    min:5,  c0:'#c3ccd1', c1:'#8d9aa3', trail:'#aeb9c0'},
+      {name:'구리 구슬',  min:10, c0:'#eeb077', c1:'#c47e44', trail:'#e0a06a'},
+      {name:'은 구슬',    min:15, c0:'#eef2f6', c1:'#bfccd9', trail:'#d9e2ea'},
+      {name:'금 구슬',    min:20, c0:'#f6cf6a', c1:'#dba428', trail:'#f2c75e'},
+      {name:'다이아 구슬',min:30, c0:'#d2f1f9', c1:'#8fd2e4', trail:'#aee3f0'}
+    ];
+    function ballTier(){ for(var i=BALLS.length-1;i>=0;i--)if(round>=BALLS[i].min)return BALLS[i]; return BALLS[0]; }
+    function sr(seed,n){ var x=Math.sin(seed*127.1+n*311.7)*43758.5453; return x-Math.floor(x); } // 결정적 의사난수(렌더 깜빡임 방지)
 
     // ===== 저장/복원 (라운드 시작 시점만 — 이 기기 전용) =====
     function save(){
@@ -236,7 +246,7 @@
       try{d=JSON.parse(localStorage.getItem(KEY.save)||'null');}catch(e){}
       if(!d||!d.g||typeof d.r!=='number'||d.r<1)return false;
       round=d.r; ballCount=Math.max(1,d.b|0); lx=Math.min(.97,Math.max(.03,d.x||.5));
-      rocks=d.g.map(function(a){return {c:a[0],row:a[1],hp:a[2],gem:!!a[3]};})
+      rocks=d.g.map(function(a){return {c:a[0],row:a[1],hp:a[2],gem:!!a[3],seed:seedNo++};})
         .filter(function(k){return k.c>=0&&k.c<COLS&&k.row>=0&&k.row<=LIMIT&&k.hp>=0;});
       return true;
     }
@@ -249,7 +259,7 @@
       var nRocks=2+Math.floor(Math.random()*3); // 2~4개
       for(var r2=0;r2<nRocks;r2++){
         var hp=round; if(Math.random()<0.12)hp=round*2;
-        rocks.push({c:cols[r2],row:0,hp:hp,gem:false});
+        rocks.push({c:cols[r2],row:0,hp:hp,gem:false,seed:seedNo++});
       }
       if(Math.random()<0.88) rocks.push({c:cols[nRocks],row:0,hp:0,gem:true});
     }
@@ -284,7 +294,14 @@
       ffBtn.classList.remove('show');
       if(landedX!==null)lx=Math.min(.97,Math.max(.03,landedX/W));
       ballCount+=pendingGems;
+      var prevTier=ballTier();
       round++;
+      var newTier=ballTier();
+      if(newTier!==prevTier){ // 구슬 진화 — 1회성 축하 연출
+        evoMsg=newTier.name+'로 진화! 더 귀한 광물이 나와요';
+        floats.push({x:W/2,y:floorY-cell*1.6,txt:newTier.name+' 진화!',t:0,color:newTier.c1,big:true});
+        sEvolve();
+      }
       if(round>best){best=round;set(KEY.best,best);}
       sShift();
       state='shift'; shiftT=0;
@@ -302,7 +319,9 @@
       }
       state='aim';
       var danger=rocks.some(function(k){return !k.gem&&k.row===LIMIT-1;});
-      note.textContent=danger?'바위가 한계선 바로 위! 이번 발사가 중요해요':'드래그로 조준 — 놓으면 발사!';
+      if(danger)note.textContent='바위가 한계선 바로 위! 이번 발사가 중요해요';
+      else if(evoMsg){note.textContent=evoMsg;evoMsg=null;}
+      else note.textContent='드래그로 조준 — 놓으면 발사!';
       save();
     }
     function pendingGemsCollect(k){ ballCount++; sGem(); updateHud(); }
@@ -375,14 +394,14 @@
             // 반사축 결정
             if(Math.abs(dx)>Math.abs(dy)){ b.vx=dx>0?Math.abs(b.vx):-Math.abs(b.vx); b.x=cx+(dx>0?r:-r); }
             else{ b.vy=dy>0?Math.abs(b.vy):-Math.abs(b.vy); b.y=cy+(dy>0?r:-r); }
-            var cc=rockColor(k.hp);
+            var ore=oreFor(k.hp);
             k.hp--; sHit();
             pops.push({c:k.c,row:k.row,t:0});
             if(k.hp<=0){
               var kx=k.c*cell+cell/2, ky=k.row*cell+cell/2;
               combo++;
-              spark(kx,ky,cc[1],8);
-              shatter(kx,ky,cc[1]);
+              spark(kx,ky,ore.spark,8);
+              shatter(kx,ky,ore.base[1]);
               shake(2+Math.min(combo,5));
               if(combo>=4&&combo%2===0)
                 floats.push({x:kx,y:ky,txt:'×'+combo,t:0,color:'#3d8fb8',big:combo>=8});
@@ -500,18 +519,19 @@
           return;
         }
         var rc=rect(k,off);
-        var col=rockColor(k.hp);
+        var ore=oreFor(k.hp);
         var pop=pops.find(function(p){return p.c===k.c&&p.row===k.row;});
         var shrink=pop?Math.sin(pop.t*Math.PI)*cell*0.03:0;
         var g=ctx2.createLinearGradient(0,rc.y,0,rc.y+rc.h);
-        g.addColorStop(0,col[0]); g.addColorStop(1,col[1]);
+        g.addColorStop(0,ore.base[0]); g.addColorStop(1,ore.base[1]);
         rr(rc.x+shrink,rc.y+shrink,rc.w-shrink*2,rc.h-shrink*2,cell*0.2);
         ctx2.fillStyle=g; ctx2.fill();
-        // 크리스프 윗 림 + 하단 하드 섀도
+        // 크리스프 윗 림 + 광물 데코 + 하단 하드 섀도
         rr(rc.x+shrink,rc.y+shrink,rc.w-shrink*2,rc.h-shrink*2,cell*0.2);
         ctx2.strokeStyle='rgba(255,255,255,.4)'; ctx2.lineWidth=1.5;
         ctx2.save(); ctx2.clip();
         ctx2.beginPath(); ctx2.moveTo(rc.x,rc.y+1); ctx2.lineTo(rc.x+rc.w,rc.y+1); ctx2.stroke();
+        drawOreDeco(rc,ore,k.seed||1);
         ctx2.fillStyle='rgba(30,50,70,.18)';
         ctx2.fillRect(rc.x,rc.y+rc.h-3,rc.w,3);
         ctx2.restore();
@@ -521,9 +541,14 @@
           ctx2.fillStyle='rgba(255,255,255,'+(0.4*(1-pop.t)).toFixed(2)+')';
           ctx2.fill();
         }
-        ctx2.fillStyle='#fff';
+        // 숫자는 보조 정보 — 스티커 스타일(외곽선)로 어떤 광물 위에서도 읽히게
         ctx2.font='800 '+Math.round(cell*0.34)+'px "Pretendard Variable",-apple-system,sans-serif';
         ctx2.textAlign='center'; ctx2.textBaseline='middle';
+        ctx2.lineJoin='round';
+        ctx2.lineWidth=Math.max(2.5,cell*0.07);
+        ctx2.strokeStyle='rgba(35,45,55,.55)';
+        ctx2.strokeText(String(k.hp),rc.x+rc.w/2,rc.y+rc.h/2+1);
+        ctx2.fillStyle='#fff';
         ctx2.fillText(String(k.hp),rc.x+rc.w/2,rc.y+rc.h/2+1);
       });
 
@@ -562,10 +587,11 @@
       // 구슬 트레일(잔상)
       balls.forEach(function(b){
         if(!b.active)return;
+        var tc=ballTier().trail;
         for(var i=0;i<b.trail.length;i++){
           var tt=(i+1)/b.trail.length;
           ctx2.globalAlpha=tt*0.28;
-          ctx2.fillStyle='#e8a13c';
+          ctx2.fillStyle=tc;
           ctx2.beginPath(); ctx2.arc(b.trail[i].x,b.trail[i].y,cell*0.16*(0.35+0.55*tt),0,7); ctx2.fill();
         }
       });
@@ -599,10 +625,60 @@
       ctx2.restore();
     }
     function drawMarble(x,y,r){
+      var t=ballTier();
       var g=ctx2.createLinearGradient(0,y-r,0,y+r);
-      g.addColorStop(0,'#f2bb62'); g.addColorStop(1,'#dd923a');
+      g.addColorStop(0,t.c0); g.addColorStop(1,t.c1);
       ctx2.beginPath(); ctx2.arc(x,y,r,0,7); ctx2.fillStyle=g; ctx2.fill();
       ctx2.beginPath(); ctx2.arc(x-r*0.3,y-r*0.35,r*0.28,0,7); ctx2.fillStyle='rgba(255,255,255,.55)'; ctx2.fill();
+    }
+    // 광물 티어별 질감 — 숫자를 가려도 서열이 보이게
+    function drawOreDeco(rc,ore,seed){
+      var x0=rc.x,y0=rc.y,w=rc.w,h=rc.h,i;
+      if(ore.deco==='speck'){
+        ctx2.fillStyle='rgba(70,85,95,.30)';
+        for(i=0;i<4;i++){
+          ctx2.beginPath();
+          ctx2.arc(x0+w*(0.15+sr(seed,i)*0.7),y0+h*(0.15+sr(seed,i+9)*0.7),w*0.05,0,7);
+          ctx2.fill();
+        }
+      }else if(ore.deco==='coal'){
+        ctx2.fillStyle='rgba(20,18,28,.45)';
+        for(i=0;i<3;i++){
+          var cx3=x0+w*(0.22+sr(seed,i)*0.56), cy3=y0+h*(0.22+sr(seed,i+7)*0.56), s3=w*0.14;
+          ctx2.save(); ctx2.translate(cx3,cy3); ctx2.rotate(sr(seed,i+3)*3);
+          ctx2.fillRect(-s3/2,-s3/2,s3,s3); ctx2.restore();
+        }
+      }else if(ore.deco==='nugget'){
+        ctx2.fillStyle='rgba(255,216,164,.85)';
+        for(i=0;i<3;i++){
+          ctx2.beginPath();
+          ctx2.arc(x0+w*(0.18+sr(seed,i)*0.64),y0+h*(0.18+sr(seed,i+5)*0.64),w*(0.05+sr(seed,i+11)*0.04),0,7);
+          ctx2.fill();
+        }
+      }else if(ore.deco==='streak'){
+        ctx2.strokeStyle='rgba(255,255,255,.6)'; ctx2.lineWidth=w*0.05; ctx2.lineCap='round';
+        for(i=0;i<2;i++){
+          var sx2=x0+w*(0.15+sr(seed,i)*0.3), sy2=y0+h*(0.62+sr(seed,i+4)*0.22);
+          ctx2.beginPath(); ctx2.moveTo(sx2,sy2); ctx2.lineTo(sx2+w*0.32,sy2-h*0.32); ctx2.stroke();
+        }
+      }else if(ore.deco==='glint'){
+        ctx2.fillStyle='rgba(255,255,255,.85)';
+        for(i=0;i<2;i++){
+          var gx2=x0+w*(0.2+sr(seed,i)*0.6), gy2=y0+h*(0.2+sr(seed,i+6)*0.6), gs=w*0.1;
+          ctx2.beginPath();
+          ctx2.moveTo(gx2,gy2-gs); ctx2.quadraticCurveTo(gx2,gy2,gx2+gs,gy2);
+          ctx2.quadraticCurveTo(gx2,gy2,gx2,gy2+gs); ctx2.quadraticCurveTo(gx2,gy2,gx2-gs,gy2);
+          ctx2.quadraticCurveTo(gx2,gy2,gx2,gy2-gs); ctx2.fill();
+        }
+      }else if(ore.deco==='facet'){
+        ctx2.strokeStyle='rgba(255,255,255,.5)'; ctx2.lineWidth=1.5;
+        ctx2.beginPath();
+        ctx2.moveTo(x0,y0+h); ctx2.lineTo(x0+w*0.5,y0+h*0.42); ctx2.lineTo(x0+w,y0+h);
+        ctx2.moveTo(x0,y0); ctx2.lineTo(x0+w*0.5,y0+h*0.42); ctx2.lineTo(x0+w,y0);
+        ctx2.stroke();
+        ctx2.fillStyle='rgba(255,255,255,.30)';
+        ctx2.beginPath(); ctx2.moveTo(x0+w*0.5,y0+h*0.42); ctx2.lineTo(x0+w*0.78,y0); ctx2.lineTo(x0+w*0.34,y0); ctx2.closePath(); ctx2.fill();
+      }
     }
     function easeOut(t){ return 1-Math.pow(1-Math.min(1,t),2.4); }
     function easeBack(t){ t=Math.min(1,t); var c1=1.35,c3=c1+1; return 1+c3*Math.pow(t-1,3)+c1*Math.pow(t-1,2); } // 살짝 튕기며 안착
