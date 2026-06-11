@@ -116,6 +116,10 @@
     ]).then(function (res) {
       var data = res[0], me = res[1];
       if (me && me.ok) { MY.loggedIn = true; MY.scores = me.scores || {}; }
+      // 로그인 방식 무관 '직전(비회원) 점수 귀속'. 카카오 로그인은 게임으로 안 돌아와서
+      // portal.js의 claim이 안 도는데, 누구나 거치는 /rank에서 한 번에 귀속한다.
+      // 세션당 1회, 로컬 최고점이 서버 기록보다 높을 때만 POST(불필요한 행 방지).
+      if (MY.loggedIn) claimLocalBests(data.games || []);
       var container = document.getElementById('boards');
       container.innerHTML = '';
       if (!MY.loggedIn) {
@@ -144,6 +148,33 @@
       document.getElementById('boards').innerHTML =
         '<p class="empty" style="color:var(--dim)">기록을 불러오지 못했습니다.</p>';
     });
+
+    // 로그인 시 이 기기 localStorage의 게임별 최고점을 회원 기록으로 귀속(1회/세션).
+    // 비회원 플레이는 /api/score 저장을 안 하므로, 가입/로그인 후 여기서 올려야 기록실에 뜬다.
+    function claimLocalBests(gamesList) {
+      var done = false;
+      try { done = !!sessionStorage.getItem('gp_rank_claimed'); } catch (e) {}
+      if (done) return;
+      try { sessionStorage.setItem('gp_rank_claimed', '1'); } catch (e) {}
+      var vid = 'anon';
+      try { vid = localStorage.getItem('gp_vid') || 'anon'; } catch (e) {}
+      var posts = [];
+      gamesList.forEach(function (g) {
+        if (!g.score_key) return;
+        var local = 0;
+        try { local = parseInt(localStorage.getItem(g.score_key) || '0', 10) || 0; } catch (e) {}
+        var server = parseInt(MY.scores[g.id] || 0, 10) || 0;
+        if (local > server) {
+          posts.push(fetch('/api/score', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ visitor_id: vid, game: g.id, score: local, meta: { from: 'rank-claim' } })
+          }).then(function (r) { return r.json(); }).catch(function () { return null; }));
+        }
+      });
+      if (!posts.length) return;
+      // 귀속된 게 있으면 서버 기록을 다시 반영하려 1회 새로고침 (세션 플래그가 재진입 가드).
+      Promise.all(posts).then(function () { location.reload(); });
+    }
 
     // 닉네임으로 친구 찾기/신청
     function renderFriendFinder(container) {

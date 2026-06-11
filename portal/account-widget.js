@@ -45,6 +45,11 @@
     .then(function (r) { return r.json(); })
     .then(function (d) {
       if (d.user) {
+        // 로그인 힌트(gp_auth) 동기화 — portal.js의 점수 캡처/상태 sync 게이트.
+        // 카카오 로그인(특히 기존 유저는 /rank로만 돌아옴)은 이 플래그를 안 켜서
+        // 쿠키 세션이 멀쩡한데도 캡처가 통째로 죽던 버그를 여기서 막는다.
+        // /auth/me가 user를 확인 = 진짜 로그인 → 모든 포털 페이지에서 플래그를 진실과 맞춘다.
+        try { localStorage.setItem('gp_auth', '1'); } catch (e) {}
         // 카카오 신규 가입 후 닉네임 미설정 상태로 다른 페이지에 들어온 경우 온보딩으로 유도
         if (d.user.nickname_set === false && location.pathname !== '/onboard') {
           location.href = '/onboard';
@@ -97,6 +102,8 @@
         box.appendChild(pub);
         box.appendChild(btn);
       } else {
+        // 세션 없음(만료/로그아웃) → stale 힌트 제거. portal.js가 익명으로 안전 분기.
+        try { localStorage.removeItem('gp_auth'); } catch (e) {}
         var a = document.createElement('a');
         a.href = '/account';
         a.textContent = '로그인 / 가입';
