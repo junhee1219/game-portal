@@ -321,6 +321,21 @@
       ]
     },
     {
+      "id": "dig",
+      "shell_mode": "panel",
+      "title": "유물 발굴",
+      "tagline": "숫자는 묻힌 보물의 지도! 행과 열을 읽어 콕콕 파면 흙 속에서 유물이 드러나요.",
+      "unit": "레벨",
+      "score_key": "digBest",
+      "score_metric": "level",
+      "state_keys": [
+        { "key": "digBest", "merge": "max" },
+        { "key": "digLevel", "merge": "max" },
+        { "key": "digStars", "merge": "union" },
+        { "key": "digMuted", "merge": "lww" }
+      ]
+    },
+    {
       "id": "brew",
       "shell_mode": "panel",
       "title": "꼬마 연금술사",

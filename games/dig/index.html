@@ -1,0 +1,759 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#f0e6d2">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="유물 발굴">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="유물 발굴 — 숫자를 읽고 파내는 보물 퍼즐">
+  <meta property="og:description" content="숫자는 묻힌 보물의 지도. 행과 열을 읽어 콕콕 파면 흙 속에서 유물이 드러나요. 석기시대부터 황금시대까지!">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>유물 발굴</title>
+  <style>
+    @font-face{font-family:"Pretendard Variable";font-weight:45 920;font-style:normal;font-display:swap;src:url("/fonts/PretendardVariable.woff2") format("woff2-variations");}
+    :root{
+      --bg-a:#f8f0df;
+      --bg-b:#f0e6d2;
+      --bg-c:#e4d6b9;
+      --ink:#3c3226;
+      --ink-soft:#8a7a5f;
+      --dirt-a:#c9a168;
+      --dirt-b:#b1854b;
+      --dirt-edge:#8f6a38;
+      --found-a:#f6ecd2;
+      --found-b:#e8d8ae;
+      --accent:#b97f2a;
+      --accent-deep:#8f5f17;
+      --good:#3f9b6e;
+      --warn:#cf5440;
+      --fs-1:clamp(32px,10vw,44px);
+      --fs-2:16px;
+      --fs-3:13px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    html,body{height:100%;background:var(--bg-b);}
+    body{
+      font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
+      background-color:var(--bg-b);
+      background-image:radial-gradient(130% 100% at 50% 0%,var(--bg-a) 0%,var(--bg-b) 56%,var(--bg-c) 100%);
+      color:var(--ink);
+      user-select:none;-webkit-user-select:none;touch-action:manipulation;
+    }
+    button{font:inherit;}
+    .topbar{display:flex;align-items:center;gap:8px;width:100%;max-width:500px;flex:0 0 auto;z-index:2;}
+    .pill{
+      display:flex;align-items:center;gap:6px;white-space:nowrap;
+      border:1px solid rgba(122,96,38,.18);background:rgba(255,255,255,.66);
+      border-radius:999px;padding:7px 12px;box-shadow:0 2px 0 rgba(122,96,38,.10);
+      color:var(--ink-soft);font-size:var(--fs-3);font-weight:700;
+    }
+    .pill b{color:var(--ink);font-size:var(--fs-2);}
+    .pill .ki{width:15px;height:15px;color:#b08a35;}
+    .pill .ki.off{color:#cfc2a3;}
+    .sp{margin-left:auto;}
+    .icon-btn{
+      width:42px;height:42px;border:1px solid rgba(122,96,38,.18);border-radius:13px;
+      background:linear-gradient(180deg,#fff,#f4ecd8);color:#74633f;
+      display:flex;align-items:center;justify-content:center;box-shadow:0 3px 0 rgba(122,96,38,.16);
+      cursor:pointer;transition:transform .1s ease,box-shadow .1s ease;
+    }
+    .icon-btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(122,96,38,.16);}
+    .ki{width:23px;height:23px;fill:currentColor;display:block;}
+
+    #stage{flex:1 1 auto;width:100%;max-width:500px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-height:0;}
+    #era{
+      display:flex;align-items:center;gap:7px;color:var(--ink-soft);
+      font-size:var(--fs-3);font-weight:800;letter-spacing:.04em;
+    }
+    #era .ki{width:15px;height:15px;color:#b08a35;}
+    #era .dot{width:4px;height:4px;border-radius:50%;background:#cdbd99;}
+
+    #board-wrap{position:relative;}
+    #board{
+      display:grid;gap:2px;
+      background:rgba(143,106,56,.14);
+      border:1px solid rgba(122,96,38,.22);
+      border-radius:14px;padding:8px;
+      box-shadow:0 6px 0 rgba(122,96,38,.18);
+    }
+    #board.shake{animation:shake .35s ease;}
+    @keyframes shake{
+      0%,100%{transform:translate(0,0);}
+      20%{transform:translate(-4px,1px);}
+      40%{transform:translate(4px,-1px);}
+      60%{transform:translate(-3px,0);}
+      80%{transform:translate(3px,1px);}
+    }
+    .corner{display:flex;align-items:flex-end;justify-content:flex-end;color:#c5b48d;padding:0 6px 4px 0;}
+    .corner .ki{width:calc(var(--c,36px)*.6);height:calc(var(--c,36px)*.6);}
+    .cclue{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:1px;padding-bottom:3px;}
+    .rclue{display:flex;align-items:center;justify-content:flex-end;gap:6px;padding-right:6px;padding-left:3px;}
+    .cclue b,.rclue b{font-weight:800;color:#7c6c4c;line-height:1.05;font-size:var(--clue-fs,12px);}
+    .cclue.done b,.rclue.done b{color:#cabf9f;}
+
+    .cell{
+      width:var(--c,36px);height:var(--c,36px);border:none;border-radius:6px;cursor:pointer;position:relative;
+      background:
+        radial-gradient(circle at 26% 38%,rgba(94,66,28,.20) 0 7%,transparent 8%),
+        radial-gradient(circle at 70% 64%,rgba(94,66,28,.16) 0 6%,transparent 7%),
+        radial-gradient(circle at 52% 18%,rgba(255,236,200,.30) 0 6%,transparent 7%),
+        linear-gradient(180deg,rgba(255,244,214,.34),rgba(255,244,214,0) 26%),
+        linear-gradient(180deg,var(--dirt-a),var(--dirt-b));
+      box-shadow:inset 0 -2px 0 rgba(94,66,28,.28);
+      transition:filter .1s ease;
+    }
+    .cell:active{filter:brightness(.93);}
+    .cell.dug{
+      cursor:default;
+      background:
+        linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0) 32%),
+        linear-gradient(180deg,var(--found-a),var(--found-b));
+      box-shadow:inset 0 0 0 1px rgba(143,106,56,.30),inset 0 -2px 0 rgba(143,106,56,.18);
+      animation:pop .22s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes pop{0%{transform:scale(.55);}70%{transform:scale(1.12);}100%{transform:scale(1);}}
+    .cell.xm::after,.cell.axm::after{
+      content:"";position:absolute;left:50%;top:50%;width:22%;height:22%;border-radius:50%;
+      transform:translate(-50%,-50%);background:rgba(60,50,38,.42);
+    }
+    .cell.axm::after{background:rgba(60,50,38,.22);}
+    .cell.axm{animation:settle .25s ease;}
+    @keyframes settle{0%{filter:brightness(1.18);}100%{filter:none;}}
+    .cell.crx{
+      cursor:default;
+      background:
+        linear-gradient(135deg,transparent 44%,rgba(50,36,18,.45) 46%,rgba(50,36,18,.45) 49%,transparent 51%),
+        linear-gradient(38deg,transparent 58%,rgba(50,36,18,.38) 60%,rgba(50,36,18,.38) 62%,transparent 64%),
+        radial-gradient(circle at 50% 52%,rgba(58,40,18,.34) 0 34%,transparent 42%),
+        linear-gradient(180deg,#a37c45,#8d6736);
+      box-shadow:inset 0 2px 4px rgba(50,36,18,.35);
+      animation:crackin .3s ease;
+    }
+    @keyframes crackin{0%{filter:brightness(1.4) saturate(1.4);}30%{filter:brightness(.8);}100%{filter:none;}}
+    .cell.rv{
+      background:var(--rvc,#e3b341)!important;
+      box-shadow:inset 0 2px 0 rgba(255,255,255,.38),inset 0 -2px 0 rgba(0,0,0,.16);
+      transition:background .25s ease,box-shadow .25s ease,filter .25s ease;
+      animation:rvpop .35s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes rvpop{0%{transform:scale(.7);filter:brightness(1.8);}100%{transform:scale(1);filter:none;}}
+    .cell.fade{
+      background:linear-gradient(180deg,#eee2c4,#e4d5af);
+      box-shadow:none;transition:background .5s ease,box-shadow .5s ease;
+    }
+
+    /* 파편 + 플로팅 텍스트 fx */
+    #fx{position:absolute;inset:0;pointer-events:none;overflow:visible;z-index:5;}
+    .pt{position:absolute;width:7px;height:7px;border-radius:2px;background:#9a7440;will-change:transform,opacity;}
+    .ft{
+      position:absolute;transform:translate(-50%,-50%);font-weight:900;color:var(--accent);
+      font-size:15px;text-shadow:0 1px 0 #fff;animation:ftup .8s ease forwards;white-space:nowrap;
+    }
+    @keyframes ftup{0%{opacity:0;margin-top:6px;}18%{opacity:1;}100%{opacity:0;margin-top:-26px;}}
+
+    /* 클리어 샤인 스윕 + 이름 플레이트 */
+    #shine{
+      position:absolute;inset:0;border-radius:14px;pointer-events:none;opacity:0;z-index:6;
+      background:linear-gradient(115deg,transparent 32%,rgba(255,250,225,.85) 50%,transparent 68%);
+      background-size:260% 100%;background-position:120% 0;
+    }
+    #shine.go{animation:sweep 1s ease .45s forwards;}
+    @keyframes sweep{0%{opacity:1;background-position:120% 0;}100%{opacity:0;background-position:-130% 0;}}
+    #plate{
+      position:absolute;left:50%;top:82%;transform:translate(-50%,-50%) scale(.6);opacity:0;z-index:7;
+      pointer-events:none;text-align:center;
+      background:rgba(255,253,246,.95);border:1px solid rgba(122,96,38,.25);border-radius:18px;
+      padding:14px 22px;box-shadow:0 10px 30px rgba(70,50,16,.25),0 3px 0 rgba(122,96,38,.18);
+    }
+    #plate.show{animation:plate .5s cubic-bezier(.34,1.56,.64,1) forwards;}
+    @keyframes plate{0%{opacity:0;transform:translate(-50%,-50%) scale(.6);}100%{opacity:1;transform:translate(-50%,-50%) scale(1);}}
+    #plate .pe{font-size:11px;font-weight:800;color:var(--accent);letter-spacing:.14em;}
+    #plate .pn{font-size:22px;font-weight:900;margin-top:2px;}
+    #plate .ps{font-size:12px;font-weight:700;color:var(--ink-soft);margin-top:3px;}
+
+    #dock{display:flex;align-items:center;gap:12px;}
+    .seg{
+      display:flex;border:1px solid rgba(122,96,38,.18);border-radius:16px;overflow:hidden;
+      background:linear-gradient(180deg,#fff,#f4ecd8);box-shadow:0 4px 0 rgba(122,96,38,.16);
+    }
+    .seg button{
+      display:flex;align-items:center;gap:7px;border:none;background:none;cursor:pointer;
+      padding:13px 22px;font-size:var(--fs-2);font-weight:850;color:var(--ink-soft);
+      transition:background .15s ease,color .15s ease;
+    }
+    .seg button .ki{width:20px;height:20px;}
+    .seg button.on{background:var(--accent);color:#fff;}
+    #note{min-height:19px;color:var(--ink-soft);font-size:var(--fs-3);font-weight:700;text-align:center;padding:0 12px;}
+
+    #over{
+      position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:24px;
+      background:rgba(52,40,18,.46);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
+      opacity:0;pointer-events:none;transition:opacity .25s ease;
+    }
+    #over.show{opacity:1;pointer-events:auto;}
+    .card{
+      width:min(330px,88vw);border-radius:24px;background:#fff;color:var(--ink);padding:26px 22px 20px;text-align:center;
+      box-shadow:0 24px 60px rgba(45,32,8,.34);transform:translateY(12px);transition:transform .25s ease;
+    }
+    #over.show .card{transform:none;}
+    .card .badge{
+      width:64px;height:64px;border-radius:50%;margin:0 auto 12px;
+      display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(180deg,#f2d488,#deae46);color:#6e4d0c;
+      box-shadow:0 4px 0 rgba(122,96,38,.25);
+    }
+    .card .badge .ki{width:36px;height:36px;}
+    .card h2{font-size:24px;font-weight:900;}
+    .card .sub{margin-top:6px;color:var(--ink-soft);font-size:14px;line-height:1.45;}
+    .stars{display:flex;justify-content:center;gap:6px;margin-top:12px;}
+    .stars .ki{width:30px;height:30px;color:#e3b341;}
+    .stars .ki.off{color:#e4dcc8;}
+    .result{font-size:14px;color:var(--ink-soft);margin:12px 0 16px;}
+    .result b{color:var(--ink);}
+    .card .primary{
+      width:100%;height:50px;border:none;border-radius:16px;background:var(--accent);color:#fff;font-weight:900;font-size:var(--fs-2);
+      box-shadow:0 4px 0 var(--accent-deep),0 10px 20px rgba(185,127,42,.22);cursor:pointer;
+      transition:transform .1s ease,box-shadow .1s ease;
+    }
+    .card .primary:active{transform:translateY(3px);box-shadow:0 1px 0 var(--accent-deep);}
+    .mini{display:flex;justify-content:center;gap:16px;margin-top:15px;}
+    .mini a,.mini button{border:none;background:none;color:var(--ink-soft);font-size:13px;font-weight:800;text-decoration:none;cursor:pointer;}
+    .credit{flex:0 0 auto;font-size:10px;color:var(--ink-soft);opacity:.55;padding-top:2px;}
+  </style>
+</head>
+<body>
+  <svg style="display:none" aria-hidden="true">
+    <symbol id="p-speaker-high" viewBox="0 0 256 256"><path d="M160,32.25V223.69a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.57-51A4,4,0,0,1,80,176.16V79.84a4,4,0,0,1,1.55-3.15l65.57-51a8,8,0,0,1,10,.16A8.27,8.27,0,0,1,160,32.25ZM60,80H32A16,16,0,0,0,16,96v64a16,16,0,0,0,16,16H60a4,4,0,0,0,4-4V84A4,4,0,0,0,60,80Zm126.77,20.84a8,8,0,0,0-.72,11.3,24,24,0,0,1,0,31.72,8,8,0,1,0,12,10.58,40,40,0,0,0,0-52.88A8,8,0,0,0,186.74,100.84Zm40.89-26.17a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66Z"/></symbol>
+    <symbol id="p-speaker-slash" viewBox="0 0 256 256"><path d="M213.92,210.62a8,8,0,1,1-11.84,10.76L160,175.09v48.6a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.55-51A4,4,0,0,1,80,176.18V87.09L42.08,45.38A8,8,0,1,1,53.92,34.62Zm-27.21-55.46a8,8,0,0,0,11.29-.7,40,40,0,0,0,0-52.88,8,8,0,1,0-12,10.57,24,24,0,0,1,0,31.72A8,8,0,0,0,186.71,155.16Zm40.92-80.49a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66ZM153,119.87a4,4,0,0,0,7-2.7V32.25a8.27,8.27,0,0,0-2.88-6.4,8,8,0,0,0-10-.16L103.83,59.33a4,4,0,0,0-.5,5.85Z"/></symbol>
+    <symbol id="p-arrow-clockwise" viewBox="0 0 256 256"><path d="M240,56v48a8,8,0,0,1-8,8H184a8,8,0,0,1-5.66-13.66L197.77,78.9A88,88,0,1,0,216,128a8,8,0,0,1,16,0A104,104,0,1,1,186.9,42.23L226.34,2.34A8,8,0,0,1,240,8Z"/></symbol>
+    <symbol id="p-x" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></symbol>
+    <symbol id="p-star" viewBox="0 0 256 256"><path d="M234.29,114.85l-45,38.83L203,211.75a16.4,16.4,0,0,1-24.5,17.82L128,198.49,77.47,229.57A16.4,16.4,0,0,1,53,211.75l13.76-58.07-45-38.83A16.46,16.46,0,0,1,31.08,86l59-4.76,22.76-55.08a16.36,16.36,0,0,1,30.27,0l22.75,55.08,59,4.76a16.46,16.46,0,0,1,9.37,28.86Z"/></symbol>
+    <!-- game-icons.net (CC BY 3.0): delapouite/war-pick, delapouite/amphora -->
+    <symbol id="g-pick" viewBox="0 0 512 512"><path d="M136.48 27.746c-2.108.024-4.174.152-6.242.272 42.927 23.035 87.233 59.434 121.902 96.57 8.66 9.276 12.358 18.765 16.371 27.44 2.486 5.37 5.173 10.658 9.297 16.37l30.65-26.373c-3.067-5.031-5.213-10.567-6.044-16.386-.919-6.432.09-13.283 3.039-19.48-32.92-24.035-68.653-47.25-102.75-62.026-22.779-9.871-44.547-15.843-64.1-16.371-.714-.02-1.42-.024-2.123-.016zm226.463 99.256c-2.825 0-5.562.505-8.092 1.293l28.91 28.91c.788-2.53 1.293-5.266 1.293-8.092 0-6.485-2.314-12.726-5.85-16.262-3.535-3.535-9.776-5.85-16.261-5.85zm-23.088 11.754l-21.89 18.836c9.951-2.533 20.985.059 28.712 7.787 7.728 7.728 10.32 18.761 7.788 28.713l18.835-21.89zm-14.39 35.78c-3.053 0-6.104 1.189-8.485 3.57-4.762 4.761-4.762 12.208 0 16.97 4.762 4.762 12.21 4.762 16.97 0 4.763-4.762 4.763-12.209 0-16.97-2.38-2.381-5.433-3.57-8.485-3.57zm-27.582.335l-9.846 8.47-5.352 46.03 46.03-5.352 8.468-9.841c-10.923 4.588-24.09 2.467-32.931-6.373-8.842-8.842-10.959-22.01-6.37-32.934zm72.148 28.727l-26.373 30.65c5.712 4.124 11 6.812 16.371 9.297 8.674 4.013 18.163 7.711 27.44 16.37 37.136 34.67 73.534 78.977 96.57 121.903 1.254-21.638-4.803-46.36-16.115-72.465-14.776-34.097-37.992-69.829-62.026-102.75-6.198 2.95-13.049 3.958-19.48 3.04-5.82-.832-11.355-2.978-16.387-6.045zm-103.375 7.79l-28.398 26.588L274.08 273.8l26.588-28.399-38.489 4.477zm-41.545 38.897l-11.686 10.941 37.405 37.405 10.941-11.686zm-24.832 23.252l-90.564 84.797 44.007 44.008 84.797-90.565zM96.566 370.643l-21.91 20.515 46.242 46.242 20.516-21.91zm-28.09 39.79l-5.656 16.971 21.832 21.832 16.97-5.656zm-18.789 29.295l-18.49 9.686a106.156 106.156 0 0 0-2.746 13.676c-.608 4.548-.852 9.29-.469 12.92.383 3.63 1.496 5.735 1.912 6.152.417.417 2.523 1.53 6.153 1.912 3.63.383 8.372.139 12.92-.469a106.155 106.155 0 0 0 13.675-2.746l9.686-18.49z"/></symbol>
+    <symbol id="g-amphora" viewBox="0 0 512 512"><path d="M255.406 19.063c-8.072 0-26.468-.038-45 3-18.532 3.037-36.397 9.68-43.844 19.406-3.24 4.23-3.078 16.023.5 21.81.648 1.048 7.32 5.613 13.875 8.095 6.556 2.482 12.47 3.844 12.47 3.844l7 1.593V84c0 4.93-1.786 8.804-3.188 11.625-1.404 2.82-2.523 4.888-3.19 7.094-1.33 4.41-1.94 10.49 5.44 25.25l3.31 6.624-7.5 6.406c-21.85 22.665-40.35 52.514-51.468 82.156-11.538 30.768-14.83 61.13-7.875 82 7.336 22.01 22.506 41.24 36.563 59.313 14.057 18.07 27.906 35.032 27.906 55.53 0 11-6.656 18.375-10.656 22.375-4 4-5.344 4.625-5.344 9.625 0 2 5.67 13.724 18.22 22.688 12.548 8.963 30.78 16.312 52.78 16.312s40.2-7.35 52.75-16.313c12.55-8.963 18.25-20.685 18.25-22.687 0-5-1.375-5.625-5.375-9.625S310.407 431 310.407 420c0-20.5 13.818-37.458 27.875-55.53 14.058-18.074 29.26-37.31 36.595-59.314 6.956-20.87 3.632-51.232-7.906-82-11.54-30.768-30.998-61.84-53.94-84.78l-4.592-4.595 2.906-5.81c7.463-14.928 6.772-19.403 5.53-23.126-1.24-3.724-6.468-9.843-6.468-20.844v-7.188l7-1.593s5.913-1.363 12.47-3.845c6.555-2.482 13.23-7.05 13.874-8.094 3.58-5.792 3.74-17.58.5-21.81-7.448-9.73-25.343-16.37-43.875-19.407-18.532-3.038-36.9-3-44.97-3zM137.75 79.656c-4.783.01-9.487 1.363-14.063 4.344-37.933 24.713-10.808 98.99 1.626 137.406.538-1.525 1.084-3.038 1.656-4.562 3.7-9.87 8.115-19.706 13.155-29.313-11.593-28.954-31.216-71.365-6.906-87.53 11.226-7.468 30.314 6.053 43.56 17.75-1.538-6.72-1.636-12.428-.75-17.188-13.093-12.165-25.986-20.933-38.28-20.906zm234.156 0c-12.115-.027-24.82 8.484-37.72 20.375 1.29 4.42 1.5 9.824.158 16.407 13.16-11.366 31.278-23.63 42.094-16.437 23.97 15.94 5.205 57.397-6.438 86.313 5.31 9.996 9.953 20.24 13.813 30.53.364.973.71 1.935 1.062 2.907 12.65-38.855 38.493-111.385 1.094-135.75-4.576-2.98-9.28-4.333-14.064-4.344z"/></symbol>
+  </svg>
+
+  <div class="topbar">
+    <div class="pill">레벨 <b id="level">1</b></div>
+    <div class="pill">최고 <b id="best">0</b></div>
+    <div class="pill" id="star-pill" title="실수 없이 파면 별 셋">
+      <svg class="ki"><use href="#p-star"/></svg><svg class="ki"><use href="#p-star"/></svg><svg class="ki"><use href="#p-star"/></svg>
+    </div>
+    <div class="sp"></div>
+    <button class="icon-btn" id="reset" aria-label="이 발굴지 처음부터"><svg class="ki"><use href="#p-arrow-clockwise"/></svg></button>
+    <button class="icon-btn" id="mute" aria-label="소리 켜기/끄기"><svg class="ki" id="mute-ic"><use href="#p-speaker-high"/></svg></button>
+  </div>
+
+  <div id="stage">
+    <div id="era"><svg class="ki"><use href="#g-amphora"/></svg><span id="era-name">석기시대</span><span class="dot"></span><span id="era-prog"></span></div>
+    <div id="board-wrap">
+      <div id="board"></div>
+      <div id="fx"></div>
+      <div id="shine"></div>
+      <div id="plate"><div class="pe" id="plate-era">석기시대</div><div class="pn" id="plate-name">화살촉</div><div class="ps">발굴 성공!</div></div>
+    </div>
+    <div id="dock">
+      <div class="seg" role="group" aria-label="입력 모드">
+        <button id="m-dig" class="on"><svg class="ki"><use href="#g-pick"/></svg>파기</button>
+        <button id="m-mark"><svg class="ki"><use href="#p-x"/></svg>표시</button>
+      </div>
+    </div>
+    <div id="note">숫자만큼 이어진 칸에 유물이 묻혀 있어요 — 콕콕 파보세요!</div>
+  </div>
+
+  <div class="credit">Icons: game-icons.net (CC BY 3.0) · Phosphor</div>
+
+  <div id="over">
+    <div class="card">
+      <div class="badge"><svg class="ki"><use href="#g-amphora"/></svg></div>
+      <h2 id="over-title">발굴 성공!</h2>
+      <p class="sub" id="over-sub"></p>
+      <div class="stars" id="over-stars"></div>
+      <p class="result" id="over-result"></p>
+      <button class="primary" id="over-btn">다음 발굴지</button>
+      <div class="mini">
+        <a href="/rank">기록실</a>
+        <button id="support">후원 · 의견</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    var KEY={best:'digBest',level:'digLevel',stars:'digStars',muted:'digMuted',save:'digSave'};
+    var ERAS=['석기시대','청동기시대','철기시대','황금시대','신비시대'];
+
+    // 발굴 도감 — g: .=빈 흙, 영문=유물 픽셀(팔레트 색). 전 레벨 라인 솔버블 검증 완료.
+    var LEVELS=[
+      {n:'빗살무늬 토기',e:0,c:{A:'#c1764a',B:'#8a4f2d'},g:['.AAA.','.ABA.','AABAA','AABAA','.AAA.']},
+      {n:'화살촉',e:0,c:{A:'#8d8678',B:'#7a5b3a'},g:['..A..','.AAA.','AAAAA','..B..','..B..']},
+      {n:'뼈 화석',e:0,c:{A:'#e8ddc6'},g:['AA.AA','AAAAA','..A..','AAAAA','AA.AA']},
+      {n:'조개 화석',e:0,c:{A:'#d8b78f',B:'#b08d62'},g:['..A..','.ABA.','ABABA','A.B.A','.A.A.']},
+      {n:'돌도끼',e:0,c:{A:'#8d8678',B:'#9a6b40'},g:['.AAA.','.AAA.','..B..','..B..','..B..']},
+      {n:'모닥불',e:0,c:{A:'#e07a3f',B:'#7a5b3a'},g:['..A..','.AAA.','.AAA.','AAAAA','BB.BB']},
+      {n:'곰 발자국',e:0,c:{A:'#7a6a55'},g:['A.A.A','.AAA.','AAAAA','AAAAA','.AAA.']},
+      {n:'고인돌',e:0,c:{A:'#8d8678',B:'#6f6759'},g:['AAAAA','AAAAA','.B.B.','.B.B.','.B.B.']},
+      {n:'청동검',e:1,c:{A:'#9aa28c',B:'#b08d57'},g:['...A...','...A...','...A...','...A...','.BBBBB.','...B...','..BBB..']},
+      {n:'청동거울',e:1,c:{A:'#c8a464',B:'#8c6f3e'},g:['..AAA..','.AAAAA.','.AABAA.','.AAAAA.','..AAA..','...B...','..BBB..']},
+      {n:'청동방울',e:1,c:{A:'#b08d57',B:'#8c6f3e'},g:['...A...','..AAA..','..AAA..','.AAAAA.','.AAAAA.','AAAAAAA','...B...']},
+      {n:'청동창',e:1,c:{A:'#9aa28c',B:'#7a5b3a'},g:['...A...','..AAA..','..AAA..','...A...','...B...','...B...','...B...']},
+      {n:'민무늬 항아리',e:1,c:{A:'#b5754a',B:'#8a4f2d'},g:['..AAA..','..ABA..','.AAAAA.','AABABAA','AAABAAA','.AAAAA.','..AAA..']},
+      {n:'둥근 방패',e:1,c:{A:'#b08d57',B:'#6f8f7a'},g:['AAAAAAA','AABABAA','.AAAAA.','.ABABA.','..AAA..','..AAA..','...A...']},
+      {n:'청동투구',e:1,c:{A:'#b08d57',B:'#3f3a30'},g:['...A...','..AAA..','.AAAAA.','.AAAAA.','AAAAAAA','AA.A.AA','AA...AA']},
+      {n:'태양 장식',e:1,c:{A:'#d4a843',B:'#b08030'},g:['A..A..A','..AAA..','.ABBBA.','AABBBAA','.ABBBA.','..AAA..','A..A..A']},
+      {n:'편자',e:2,c:{A:'#7d848c'},g:['..AAAA..','.AAAAAA.','AAA..AAA','AA....AA','AA....AA','AA....AA','AA....AA','.A....A.']},
+      {n:'쇠 열쇠',e:2,c:{A:'#8d949c',B:'#6c7178'},g:['..AAAA..','.AA..AA.','.AA..AA.','..AAAA..','...BB...','...BB...','...BBBB.','...BB...']},
+      {n:'가마솥',e:2,c:{A:'#4f555c',B:'#3a3f45'},g:['.A....A.','AAAAAAAA','.BBBBBB.','BBBBBBBB','BBBBBBBB','.BBBBBB.','..BBBB..','..B..B..']},
+      {n:'마차 바퀴',e:2,c:{A:'#9a6b40',B:'#6c7178'},g:['..AAAA..','.A.BB.A.','A..BB..A','ABBBBBBA','ABBBBBBA','A..BB..A','.A.BB.A.','..AAAA..']},
+      {n:'철검',e:2,c:{A:'#aab2ba',B:'#7a5b3a'},g:['...AA...','...AA...','...AA...','...AA...','...AA...','.BBBBBB.','...BB...','..BBBB..']},
+      {n:'모루',e:2,c:{A:'#5c636a',B:'#4a5057'},g:['AAAAAAAA','.AAAAAA.','..BBBB..','..BBBB..','..BBBB..','.BBBBBB.','BBBBBBBB','BBBBBBBB']},
+      {n:'갑옷',e:2,c:{A:'#7d848c',B:'#5c636a'},g:['AAA..AAA','AAAAAAAA','AABAABAA','.AAAAAA.','.ABAABA.','..AAAA..','..AAAA..','...AA...']},
+      {n:'철 투구',e:2,c:{A:'#7d848c',B:'#2e3338'},g:['...AA...','..AAAA..','.AAAAAA.','AAAAAAAA','AAAAAAAA','AA.AA.AA','AA.AA.AA','AA....AA']},
+      {n:'금관',e:3,c:{A:'#e3b341',B:'#d24d57'},g:['....AA....','A...AA...A','A...AA...A','AA..AA..AA','AA.AAAA.AA','AAAAAAAAAA','AAAAAAAAAA','ABAABAABAA','AAAAAAAAAA','AAAAAAAAAA']},
+      {n:'황금 성배',e:3,c:{A:'#e3b341',B:'#b3872a'},g:['.AAAAAAAA.','.AABBBBAA.','..AAAAAA..','...AAAA...','....AA....','....AA....','....AA....','...AAAA...','..AAAAAA..','.AAAAAAAA.']},
+      {n:'황금 가면',e:3,c:{A:'#e3b341',B:'#2e3338'},g:['..AAAAAA..','.AAAAAAAA.','AAAAAAAAAA','AA..AA..AA','AAAAAAAAAA','AAAAAAAAAA','AAAA..AAAA','.AAAAAAAA.','.AAAAAAAA.','..AAAAAA..']},
+      {n:'보석 목걸이',e:3,c:{A:'#e3b341',B:'#3f8f6f'},g:['..AAAAAA..','.AA....AA.','AA......AA','AA......AA','.AA....AA.','..AAAAAA..','....BB....','...BBBB...','...BBBB...','....BB....']},
+      {n:'왕홀',e:3,c:{A:'#e3b341',B:'#8a5fc9'},g:['...BBBB...','..BBBBBB..','..BBBBBB..','...BBBB...','....AA....','....AA....','....AA....','....AA....','....AA....','...AAAA...']},
+      {n:'나비 브로치',e:3,c:{A:'#e3b341',B:'#d24d57'},g:['AA......AA','AAA....AAA','.AAAAAAAA.','..ABAABA..','...AAAA...','...AAAA...','..ABAABA..','.AAAAAAAA.','AAA....AAA','AA......AA']},
+      {n:'왕의 반지',e:3,c:{A:'#e3b341',B:'#4f8fd0'},g:['....BB....','...BBBB...','..BBBBBB..','...BBBB...','..AAAAAA..','.AA....AA.','AA......AA','AA......AA','.AA....AA.','..AAAAAA..']},
+      {n:'황금 신전',e:3,c:{A:'#e3b341',B:'#b3872a'},g:['....AA....','..AAAAAA..','AAAAAAAAAA','AAAAAAAAAA','BB..BB..BB','BB..BB..BB','BB..BB..BB','BB..BB..BB','AAAAAAAAAA','AAAAAAAAAA']}
+    ];
+    // 무한 모드(33+) 미확인 유물 팔레트
+    var MYST=[['#8a5fc9','#6e48a8'],['#3f8f6f','#2d7a53'],['#4f8fd0','#3a72ad'],['#d24d57','#b03a44'],['#e3b341','#b3872a']];
+
+    function gi(k){try{return parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){return 0;}}
+    function set(k,v){try{localStorage.setItem(k,String(v));}catch(e){}}
+    function del(k){try{localStorage.removeItem(k);}catch(e){}}
+    function gobj(k){try{var d=JSON.parse(localStorage.getItem(k)||'null');return d&&typeof d==='object'?d:{};}catch(e){return{};}}
+
+    var best=gi(KEY.best), level=Math.max(1,gi(KEY.level)||1);
+    var muted=false; try{muted=localStorage.getItem(KEY.muted)==='1';}catch(e){}
+
+    var board=document.getElementById('board'), fx=document.getElementById('fx');
+    var note=document.getElementById('note'), over=document.getElementById('over');
+    var levelEl=document.getElementById('level'), bestEl=document.getElementById('best');
+
+    // ===== 사운드 =====
+    var ac=null;
+    function ctx(){ if(!ac){ try{ac=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} } return ac; }
+    function tone(f,t,d,type,vol){ if(muted)return; var c=ctx(); if(!c)return; var o=c.createOscillator(),g=c.createGain(); o.type=type||'sine'; o.frequency.value=f; o.connect(g); g.connect(c.destination); var x=c.currentTime+(t||0); g.gain.setValueAtTime(.0001,x); g.gain.exponentialRampToValueAtTime(vol||.14,x+.01); g.gain.exponentialRampToValueAtTime(.0001,x+(d||.12)); o.start(x); o.stop(x+(d||.12)+.03); }
+    function sDig(st){tone(300+Math.min(st,10)*36,0,.07,'triangle',.12);tone(150,0,.05,'sine',.08);}
+    function sMark(){tone(330,0,.05,'sine',.09);}
+    function sUnmark(){tone(260,0,.05,'sine',.08);}
+    function sLine(){tone(620,0,.08,'triangle',.11);tone(830,.06,.1,'triangle',.1);}
+    function sCrack(){tone(140,0,.22,'sawtooth',.11);tone(95,.08,.3,'sawtooth',.09);}
+    function sClear(){[523,659,784,1047].forEach(function(f,i){tone(f,i*.09,.16,'triangle',.16);});}
+    function sRecord(){[784,988,1319,1568].forEach(function(f,i){tone(f,.5+i*.09,.14,'sine',.14);});}
+
+    // ===== 라인 솔버 (무한 모드 생성 검증용 — 추측 없이 풀리는 판만 출제) =====
+    function clueOf(line){var out=[],run=0;for(var i=0;i<line.length;i++){if(line[i])run++;else if(run){out.push(run);run=0;}}if(run)out.push(run);return out.length?out:[0];}
+    function solveLine(clue,cells){
+      var n=cells.length;
+      if(clue.length===1&&clue[0]===0){
+        for(var i=0;i<n;i++)if(cells[i]===1)return null;
+        return cells.map(function(){return 0;});
+      }
+      var canF=new Array(n),canE=new Array(n),any=false,i;
+      for(i=0;i<n;i++){canF[i]=false;canE[i]=false;}
+      function place(ci,pos,acc){
+        if(ci===clue.length){
+          for(var i=pos;i<n;i++){if(cells[i]===1)return;acc[i]=0;}
+          any=true;
+          for(i=0;i<n;i++){if(acc[i]===1)canF[i]=true;else canE[i]=true;}
+          for(i=pos;i<n;i++)acc[i]=-9;
+          return;
+        }
+        var len=clue[ci],rest=0,k;
+        for(k=ci+1;k<clue.length;k++)rest+=clue[k]+1;
+        for(var s=pos;s+len+rest<=n;s++){
+          var ok=true;
+          for(i=pos;i<s;i++)if(cells[i]===1){ok=false;break;}
+          if(!ok)break;
+          for(i=s;i<s+len;i++)if(cells[i]===0)ok=false;
+          if(s+len<n&&cells[s+len]===1)ok=false;
+          if(ok){
+            var save=acc.slice();
+            for(i=pos;i<s;i++)acc[i]=0;
+            for(i=s;i<s+len;i++)acc[i]=1;
+            if(s+len<n)acc[s+len]=0;
+            place(ci+1,s+len+1,acc);
+            for(i=0;i<n;i++)acc[i]=save[i];
+          }
+        }
+      }
+      place(0,0,cells.map(function(){return -9;}));
+      if(!any)return null;
+      var out=cells.slice();
+      for(i=0;i<n;i++){
+        if(out[i]!==-1)continue;
+        if(canF[i]&&!canE[i])out[i]=1;
+        else if(!canF[i]&&canE[i])out[i]=0;
+      }
+      return out;
+    }
+    function lineSolvable(grid){
+      var H=grid.length,W=grid[0].length,r,c;
+      var rows=grid.map(clueOf),cols=[];
+      for(c=0;c<W;c++){var col=[];for(r=0;r<H;r++)col.push(grid[r][c]);cols.push(clueOf(col));}
+      var st=[];for(r=0;r<H;r++){st.push([]);for(c=0;c<W;c++)st[r].push(-1);}
+      for(var pass=0;pass<H+W;pass++){
+        var changed=false;
+        for(r=0;r<H;r++){
+          var res=solveLine(rows[r],st[r]);
+          if(!res)return false;
+          for(c=0;c<W;c++)if(res[c]!==st[r][c]){st[r][c]=res[c];changed=true;}
+        }
+        for(c=0;c<W;c++){
+          var cur=[];for(r=0;r<H;r++)cur.push(st[r][c]);
+          var rs=solveLine(cols[c],cur);
+          if(!rs)return false;
+          for(r=0;r<H;r++)if(rs[r]!==st[r][c]){st[r][c]=rs[r];changed=true;}
+        }
+        if(!changed)break;
+      }
+      for(r=0;r<H;r++)for(c=0;c<W;c++)if(st[r][c]!==grid[r][c])return false;
+      return true;
+    }
+    function genMyst(lv){
+      var W=10,H=10,tries=0;
+      while(tries<400){
+        tries++;
+        var g=[],r,c;
+        for(r=0;r<H;r++){g.push([]);for(c=0;c<W;c++)g[r].push(Math.random()<.58?1:0);}
+        if(lineSolvable(g)){
+          var pal=MYST[(lv-1)%MYST.length];
+          // 색 분포: 대각 줄무늬로 두 색 섞기
+          var rows=g.map(function(row,ri){return row.map(function(v,ci){return v?(((ri+ci)%4<2)?'A':'B'):'.';}).join('');});
+          return {n:'미확인 유물',e:4,c:{A:pal[0],B:pal[1]},g:rows};
+        }
+      }
+      // 안전망: 마지막 캠페인 레벨 재사용 (사실상 도달 불가)
+      return LEVELS[LEVELS.length-1];
+    }
+    function levelData(lv){
+      if(lv<=LEVELS.length)return LEVELS[lv-1];
+      return genMyst(lv);
+    }
+
+    // ===== 상태 =====
+    var cur=null, W=5, H=5, sol=[], cellEls=[], state=[], mistakes=0, ended=false, mode='dig', digStreak=0;
+    var rowClues=[], colClues=[], rowEls=[], colEls=[], rowDone=[], colDone=[];
+
+    function eraProgress(lv,e){
+      if(e>=4)return '미확인 유물 #'+(lv-LEVELS.length);
+      var startIdx=0;
+      for(var i=0;i<LEVELS.length;i++){if(LEVELS[i].e===e){startIdx=i;break;}}
+      var count=LEVELS.filter(function(l){return l.e===e;}).length;
+      return '유물 '+Math.min(lv-startIdx,count)+'/'+count;
+    }
+
+    function build(restore){
+      cur=null; ended=false; mistakes=0; digStreak=0;
+      over.classList.remove('show');
+      document.getElementById('plate').classList.remove('show');
+      document.getElementById('shine').classList.remove('go');
+
+      var saved=restore?loadSaveMeta():null;
+      cur=saved&&saved.g?{n:saved.nm,e:saved.e,c:saved.c,g:saved.g}:levelData(level);
+      H=cur.g.length; W=cur.g[0].length;
+      sol=cur.g.map(function(r){return r.split('').map(function(ch){return ch==='.'?0:1;});});
+      rowClues=sol.map(clueOf);
+      colClues=[];
+      for(var c=0;c<W;c++){var col=[];for(var r=0;r<H;r++)col.push(sol[r][c]);colClues.push(clueOf(col));}
+      state=[];for(r=0;r<H;r++){state.push([]);for(c=0;c<W;c++)state[r].push(0);} // 0흙 1발굴 2표시 3자동표시 4균열
+      rowDone=rowClues.map(function(){return false;});
+      colDone=colClues.map(function(){return false;});
+
+      // DOM
+      board.innerHTML='';
+      cellEls=[];rowEls=[];colEls=[];
+      var corner=document.createElement('div');corner.className='corner';
+      corner.innerHTML='<svg class="ki"><use href="#g-pick"/></svg>';
+      board.appendChild(corner);
+      for(c=0;c<W;c++){
+        var cc=document.createElement('div');cc.className='cclue';
+        cc.innerHTML=colClues[c].map(function(n){return '<b>'+n+'</b>';}).join('');
+        board.appendChild(cc);colEls.push(cc);
+      }
+      for(r=0;r<H;r++){
+        var rc=document.createElement('div');rc.className='rclue';
+        rc.innerHTML=rowClues[r].map(function(n){return '<b>'+n+'</b>';}).join('');
+        board.appendChild(rc);rowEls.push(rc);
+        cellEls.push([]);
+        for(c=0;c<W;c++){
+          var el=document.createElement('button');
+          el.className='cell';
+          el.setAttribute('aria-label','발굴 칸');
+          bindCell(el,r,c);
+          board.appendChild(el);
+          cellEls[r].push(el);
+        }
+      }
+      layout();
+
+      if(saved){
+        mistakes=saved.mk||0;
+        for(r=0;r<H;r++)for(c=0;c<W;c++){
+          var v=saved.st[r][c];
+          if(v===1){state[r][c]=1;cellEls[r][c].classList.add('dug');}
+          else if(v===2){state[r][c]=2;cellEls[r][c].classList.add('xm');}
+          else if(v===3){state[r][c]=3;cellEls[r][c].classList.add('axm');}
+          else if(v===4){state[r][c]=4;cellEls[r][c].classList.add('crx');}
+        }
+        for(r=0;r<H;r++)refreshLine('r',r,true);
+        for(c=0;c<W;c++)refreshLine('c',c,true);
+        note.textContent='하던 발굴을 이어서 — 숫자는 이어진 유물 칸의 길이예요';
+      }else{
+        del(KEY.save);
+        note.textContent=level===1?'숫자만큼 이어진 칸에 유물이 묻혀 있어요 — 5는 한 줄 전부!':'숫자를 읽고 유물이 묻힌 칸만 콕콕!';
+      }
+      document.getElementById('era-name').textContent=ERAS[cur.e];
+      document.getElementById('era-prog').textContent=eraProgress(level,cur.e);
+      updateHud();
+    }
+
+    function layout(){
+      var maxW=Math.min(window.innerWidth*0.94,460);
+      var cellPx=Math.floor(Math.min(46,(maxW-16)/(W+2.4)));
+      board.style.setProperty('--c',cellPx+'px');
+      board.style.setProperty('--clue-fs',Math.max(10,Math.round(cellPx*0.36))+'px');
+      board.style.gridTemplateColumns='auto repeat('+W+',var(--c))';
+      board.style.gridTemplateRows='auto repeat('+H+',var(--c))';
+    }
+
+    function updateHud(){
+      levelEl.textContent=String(level);
+      bestEl.textContent=String(best);
+      var starIcs=document.getElementById('star-pill').querySelectorAll('.ki');
+      var s=starsNow();
+      for(var i=0;i<3;i++)starIcs[i].classList.toggle('off',i>=s);
+      document.getElementById('mute-ic').innerHTML='<use href="'+(muted?'#p-speaker-slash':'#p-speaker-high')+'"/>';
+    }
+    function starsNow(){return Math.max(1,3-mistakes);}
+
+    // ===== 저장/복원 (이 기기에서 하던 판 이어하기 — 동기화 대상 아님) =====
+    function save(){
+      if(ended){del(KEY.save);return;}
+      var dirty=false;
+      for(var r=0;r<H&&!dirty;r++)for(var c=0;c<W;c++)if(state[r][c]){dirty=true;break;}
+      if(!dirty){del(KEY.save);return;}
+      try{localStorage.setItem(KEY.save,JSON.stringify({lv:level,mk:mistakes,st:state,g:level>LEVELS.length?cur.g:null,nm:cur.n,e:cur.e,c:cur.c}));}catch(e){}
+    }
+    function loadSaveMeta(){
+      var d=null;
+      try{d=JSON.parse(localStorage.getItem(KEY.save)||'null');}catch(e){}
+      if(!d||d.lv!==level||!d.st)return null;
+      var g=d.g||(level<=LEVELS.length?LEVELS[level-1].g:null);
+      if(!g||d.st.length!==g.length||d.st[0].length!==g[0].length)return null;
+      return {st:d.st,mk:d.mk,g:d.g,nm:d.nm||'미확인 유물',e:typeof d.e==='number'?d.e:4,c:d.c||{A:'#8a5fc9',B:'#6e48a8'}};
+    }
+
+    // ===== fx =====
+    function burst(r,c,n,color){
+      var el=cellEls[r][c];
+      var bx=el.offsetLeft+el.offsetWidth/2, by=el.offsetTop+el.offsetHeight/2;
+      for(var i=0;i<n;i++){
+        var p=document.createElement('div');p.className='pt';
+        if(color)p.style.background=color;
+        p.style.left=bx+'px';p.style.top=by+'px';
+        var a=Math.random()*Math.PI*2, d=14+Math.random()*26;
+        var dx=Math.cos(a)*d, dy=Math.sin(a)*d-10;
+        p.style.transition='transform .5s cubic-bezier(.2,.6,.4,1),opacity .5s ease';
+        fx.appendChild(p);
+        (function(p,dx,dy){
+          requestAnimationFrame(function(){requestAnimationFrame(function(){
+            p.style.transform='translate('+dx+'px,'+(dy+26)+'px) rotate('+(Math.random()*180-90)+'deg)';
+            p.style.opacity='0';
+          });});
+          setTimeout(function(){p.remove();},560);
+        })(p,dx,dy);
+      }
+    }
+    function floatText(r,c,txt){
+      var el=cellEls[r][c];
+      var t=document.createElement('div');t.className='ft';t.textContent=txt;
+      t.style.left=(el.offsetLeft+el.offsetWidth/2)+'px';
+      t.style.top=el.offsetTop+'px';
+      fx.appendChild(t);
+      setTimeout(function(){t.remove();},820);
+    }
+
+    // ===== 라인 완성 =====
+    function lineFilledAll(kind,idx){
+      var i,need=0,got=0;
+      if(kind==='r'){for(i=0;i<W;i++){if(sol[idx][i]){need++;if(state[idx][i]===1)got++;}}}
+      else{for(i=0;i<H;i++){if(sol[i][idx]){need++;if(state[i][idx]===1)got++;}}}
+      return need===got;
+    }
+    function refreshLine(kind,idx,silent){
+      var doneArr=kind==='r'?rowDone:colDone;
+      if(doneArr[idx])return;
+      if(!lineFilledAll(kind,idx))return;
+      doneArr[idx]=true;
+      (kind==='r'?rowEls:colEls)[idx].classList.add('done');
+      // 남은 흙 자동 표시 (물결 cascade)
+      var seq=[],i;
+      if(kind==='r'){for(i=0;i<W;i++)if(!sol[idx][i]&&state[idx][i]===0)seq.push([idx,i]);}
+      else{for(i=0;i<H;i++)if(!sol[i][idx]&&state[i][idx]===0)seq.push([i,idx]);}
+      seq.forEach(function(rc,k){
+        state[rc[0]][rc[1]]=3;
+        if(silent){cellEls[rc[0]][rc[1]].classList.add('axm');}
+        else setTimeout(function(){cellEls[rc[0]][rc[1]].classList.add('axm');},k*45);
+      });
+      if(!silent&&seq.length)sLine();
+    }
+
+    // ===== 입력 =====
+    function dig(r,c){
+      if(ended||state[r][c]!==0)return;
+      if(sol[r][c]){
+        state[r][c]=1;
+        cellEls[r][c].classList.add('dug');
+        digStreak++;
+        burst(r,c,6);
+        sDig(digStreak);
+        if(navigator.vibrate)navigator.vibrate(12);
+        refreshLine('r',r,false);
+        refreshLine('c',c,false);
+        save();
+        checkWin(r,c);
+      }else{
+        state[r][c]=4;
+        digStreak=0;
+        cellEls[r][c].classList.add('crx');
+        burst(r,c,9,'#6e5226');
+        board.classList.remove('shake');
+        void board.offsetWidth;
+        board.classList.add('shake');
+        sCrack();
+        if(navigator.vibrate)navigator.vibrate([50,30,60]);
+        mistakes++;
+        floatText(r,c,'빈 흙!');
+        note.textContent=mistakes===1?'거긴 빈 흙이었어요 — 숫자를 다시 읽어봐요 (별 하나가 깎였어요)':'빈 흙! 확실한 칸부터 파면 안전해요';
+        updateHud();
+        save();
+      }
+    }
+    function toggleMark(r,c){
+      if(ended)return;
+      var v=state[r][c];
+      if(v===1||v===3||v===4)return;
+      if(v===2){state[r][c]=0;cellEls[r][c].classList.remove('xm');sUnmark();}
+      else{state[r][c]=2;cellEls[r][c].classList.add('xm');sMark();}
+      if(navigator.vibrate)navigator.vibrate(10);
+      save();
+    }
+    function bindCell(el,r,c){
+      var lpTimer=null,lpFired=false,px=0,py=0;
+      el.addEventListener('pointerdown',function(e){
+        if(ended)return;
+        lpFired=false;px=e.clientX;py=e.clientY;
+        if(state[r][c]===1||state[r][c]===4)return;
+        lpTimer=setTimeout(function(){
+          lpFired=true;
+          if(mode==='dig')toggleMark(r,c);else dig(r,c);
+        },380);
+      });
+      el.addEventListener('pointermove',function(e){
+        if(lpTimer&&(Math.abs(e.clientX-px)>10||Math.abs(e.clientY-py)>10)){clearTimeout(lpTimer);lpTimer=null;}
+      });
+      ['pointerup','pointercancel','pointerleave'].forEach(function(ev){
+        el.addEventListener(ev,function(){if(lpTimer){clearTimeout(lpTimer);lpTimer=null;}});
+      });
+      el.addEventListener('click',function(){
+        if(ended||lpFired)return;
+        if(state[r][c]===2&&mode==='dig'){note.textContent='표시된 칸이에요 — 표시 모드에서 한 번 더 누르면 지워져요';return;}
+        if(mode==='dig')dig(r,c);else toggleMark(r,c);
+      });
+      el.addEventListener('contextmenu',function(e){e.preventDefault();if(!lpFired)toggleMark(r,c);});
+    }
+
+    // ===== 클리어 =====
+    function checkWin(lastR,lastC){
+      for(var r=0;r<H;r++)for(var c=0;c<W;c++)if(sol[r][c]&&state[r][c]!==1)return;
+      ended=true; del(KEY.save);
+      var stars=starsNow();
+      var oldBest=best;
+      best=Math.max(best,level);
+      var starsObj=gobj(KEY.stars);
+      if(!starsObj[level]||stars>starsObj[level]){starsObj[level]=stars;try{localStorage.setItem(KEY.stars,JSON.stringify(starsObj));}catch(e){}}
+      set(KEY.level,level+1);
+      if(best>oldBest)set(KEY.best,best); // 신기록 — portal.js가 캡처
+      var record=best>oldBest;
+
+      // 발굴 연출: 마지막 칸에서 퍼지는 색 물결
+      sClear();
+      if(record)sRecord();
+      for(r=0;r<H;r++)for(c=0;c<W;c++){
+        var el=cellEls[r][c];
+        var d=Math.abs(r-lastR)+Math.abs(c-lastC);
+        (function(el,r,c,d){
+          setTimeout(function(){
+            if(sol[r][c]){
+              var ch=cur.g[r][c];
+              el.style.setProperty('--rvc',cur.c[ch]||'#e3b341');
+              el.classList.add('rv');
+            }else{
+              el.classList.remove('xm','axm','crx');
+              el.classList.add('fade');
+            }
+          },120+d*40);
+        })(el,r,c,d);
+      }
+      document.getElementById('shine').classList.add('go');
+      var plate=document.getElementById('plate');
+      document.getElementById('plate-era').textContent=ERAS[cur.e];
+      document.getElementById('plate-name').textContent=cur.n;
+      setTimeout(function(){plate.classList.add('show');},650);
+      note.textContent='';
+      updateHud();
+      setTimeout(function(){showOver(stars,record);},1900);
+    }
+
+    function showOver(stars,record){
+      document.getElementById('over-title').textContent=record?'신기록!':'발굴 성공!';
+      var eraN=ERAS[cur.e];
+      document.getElementById('over-sub').textContent=record
+        ?(eraN+'의 「'+cur.n+'」 — '+level+'번째 발굴지까지 정복!')
+        :(eraN+'의 「'+cur.n+'」'+(stars===3?'를 흠집 하나 없이 발굴했어요!':'를 발굴했어요.'));
+      var sEl=document.getElementById('over-stars');
+      sEl.innerHTML='';
+      for(var i=0;i<3;i++)sEl.innerHTML+='<svg class="ki'+(i<stars?'':' off')+'"><use href="#p-star"/></svg>';
+      document.getElementById('over-result').innerHTML='레벨 <b>'+level+'</b> 클리어 · 최고 <b>'+best+'</b>';
+      level=level+1;
+      over.classList.add('show');
+      updateHud();
+    }
+
+    // ===== UI 바인딩 =====
+    function setMode(m){
+      mode=m;
+      document.getElementById('m-dig').classList.toggle('on',m==='dig');
+      document.getElementById('m-mark').classList.toggle('on',m==='mark');
+      note.textContent=m==='mark'?'표시 모드 — 빈 흙이 확실한 칸에 점을 찍어요 (꾹 눌러도 표시!)':'파기 모드 — 유물이 묻힌 칸을 파요';
+    }
+    document.getElementById('m-dig').addEventListener('click',function(){setMode('dig');});
+    document.getElementById('m-mark').addEventListener('click',function(){setMode('mark');});
+    window.addEventListener('keydown',function(e){if(e.key==='x'||e.key==='X')setMode(mode==='dig'?'mark':'dig');});
+
+    document.getElementById('reset').addEventListener('click',function(){del(KEY.save);build(false);});
+    document.getElementById('mute').addEventListener('click',function(){muted=!muted;set(KEY.muted,muted?'1':'0');updateHud();if(!muted)sMark();});
+    document.getElementById('over-btn').addEventListener('click',function(){build(false);});
+    document.getElementById('support').addEventListener('click',function(){if(window.GamePortal&&GamePortal.openSupport)GamePortal.openSupport();});
+    window.addEventListener('pagehide',save);
+    window.addEventListener('resize',layout);
+
+    build(true);
+  })();
+  </script>
+  <script>
+    if('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('./sw.js');
+  </script>
+</body>
+</html>
