@@ -288,6 +288,20 @@
       ]
     },
     {
+      "id": "flip",
+      "shell_mode": "panel",
+      "title": "냥멍 땅따먹기",
+      "tagline": "사이에 끼우면 내 돌로 휙! 강아지 봇을 이기고 연승을 쌓아요.",
+      "unit": "연승",
+      "score_key": "flipBest",
+      "score_metric": "best",
+      "state_keys": [
+        { "key": "flipBest", "merge": "max" },
+        { "key": "flipStreak", "merge": "lww" },
+        { "key": "flipMuted", "merge": "lww" }
+      ]
+    },
+    {
       "id": "gateway",
       "shell_mode": "fullscreen",
       "title": "라면집 사장님",
