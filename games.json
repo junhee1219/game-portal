@@ -153,6 +153,20 @@
       ]
     },
     {
+      "id": "hive",
+      "shell_mode": "panel",
+      "title": "꿀 따기",
+      "tagline": "숫자는 이웃 칸에 잠든 벌의 수! 추리로 벌을 깨우지 않고 꿀을 모두 따세요.",
+      "unit": "레벨",
+      "score_key": "hiveBest",
+      "score_metric": "level",
+      "state_keys": [
+        { "key": "hiveBest", "merge": "max" },
+        { "key": "hiveLevel", "merge": "max" },
+        { "key": "hiveMuted", "merge": "lww" }
+      ]
+    },
+    {
       "id": "gateway",
       "shell_mode": "fullscreen",
       "title": "라면집 사장님",

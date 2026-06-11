@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#f3ecd9">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="꿀 따기">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="꿀 따기 — 벌을 깨우지 않는 벌집 추리 퍼즐">
+  <meta property="og:description" content="숫자는 이웃 여섯 칸에 잠든 벌의 수. 시간제한 없이 추리해서 벌을 피해 꿀을 모두 따세요.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>꿀 따기</title>
+  <style>
+    @font-face{font-family:"Pretendard Variable";font-weight:45 920;font-style:normal;font-display:swap;src:url("/fonts/PretendardVariable.woff2") format("woff2-variations");}
+    :root{
+      --bg-a:#faf5e7;
+      --bg-b:#f3ecd9;
+      --bg-c:#e9dfc6;
+      --ink:#3a3128;
+      --ink-soft:#8a7c64;
+      --line:#d3c5a4;
+      --comb:#eab23f;
+      --comb-2:#dd9f2c;
+      --comb-edge:#b97f17;
+      --open:#fdf9ed;
+      --open-2:#f4ecd8;
+      --accent:#c98a18;
+      --accent-deep:#9c690d;
+      --good:#3f9b6e;
+      --good-deep:#2d7a53;
+      --warn:#d4543f;
+      --fs-1:clamp(32px,10vw,44px);
+      --fs-2:16px;
+      --fs-3:13px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    html,body{height:100%;background:var(--bg-b);}
+    body{
+      font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
+      background-color:var(--bg-b);
+      background-image:radial-gradient(130% 100% at 50% 0%,var(--bg-a) 0%,var(--bg-b) 56%,var(--bg-c) 100%);
+      color:var(--ink);
+      user-select:none;-webkit-user-select:none;touch-action:manipulation;
+    }
+    button{font:inherit;}
+    .topbar{display:flex;align-items:center;gap:8px;width:100%;max-width:500px;flex:0 0 auto;z-index:2;}
+    .pill{
+      display:flex;align-items:center;gap:6px;white-space:nowrap;
+      border:1px solid rgba(122,96,38,.18);background:rgba(255,255,255,.66);
+      border-radius:999px;padding:7px 12px;box-shadow:0 2px 0 rgba(122,96,38,.10);
+      color:var(--ink-soft);font-size:var(--fs-3);font-weight:700;
+    }
+    .pill b{color:var(--ink);font-size:var(--fs-2);}
+    .pill .ki{width:15px;height:15px;color:#a3782a;}
+    .sp{margin-left:auto;}
+    .icon-btn{
+      width:42px;height:42px;border:1px solid rgba(122,96,38,.18);border-radius:13px;
+      background:linear-gradient(180deg,#fff,#f4edda);color:#74633f;
+      display:flex;align-items:center;justify-content:center;box-shadow:0 3px 0 rgba(122,96,38,.16);
+      cursor:pointer;transition:transform .1s ease,box-shadow .1s ease;
+    }
+    .icon-btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(122,96,38,.16);}
+    .ki{width:23px;height:23px;fill:currentColor;display:block;}
+
+    #stage{flex:1 1 auto;width:100%;max-width:500px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;min-height:0;}
+    #board-wrap{position:relative;}
+
+    .hex{
+      position:absolute;transform:translate(-50%,-50%);border:none;padding:0;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);
+      background:
+        linear-gradient(180deg,rgba(255,255,255,.40),rgba(255,255,255,0) 30%),
+        linear-gradient(0deg,rgba(122,80,12,.28),rgba(122,80,12,0) 18%),
+        linear-gradient(180deg,var(--comb),var(--comb-2));
+      transition:filter .12s ease;
+      color:#7a5210;
+    }
+    .hex:active{filter:brightness(.94);}
+    .hex.rev{
+      cursor:default;
+      background:
+        linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0) 35%),
+        linear-gradient(180deg,var(--open),var(--open-2));
+      animation:open .18s ease;
+    }
+    @keyframes open{0%{filter:brightness(1.25);}100%{filter:none;}}
+    .hex .num{font-weight:900;font-size:1em;line-height:1;pointer-events:none;}
+    .n1{color:#4f8fd0;} .n2{color:#3f9b6e;} .n3{color:#d4763a;}
+    .n4{color:#8a5fc9;} .n5{color:#c94f4f;} .n6{color:#8a6d3b;}
+    .hex svg{width:1.5em;height:1.5em;fill:currentColor;pointer-events:none;}
+    .hex.flg svg{animation:plant .18s ease;}
+    @keyframes plant{0%{transform:scale(.4);}70%{transform:scale(1.18);}100%{transform:scale(1);}}
+    .hex.caught{
+      background:
+        linear-gradient(180deg,rgba(255,255,255,.35),rgba(255,255,255,0) 30%),
+        linear-gradient(180deg,#7cc49a,#58a878);
+      color:#1f5c3e;
+    }
+    .hex.bee-show{
+      background:linear-gradient(180deg,#564a39,#463c2e);
+      color:#f3d27a;
+    }
+    .hex.hit{
+      background:linear-gradient(180deg,#e0705c,#cf5440);
+      color:#fff;
+      animation:sting .4s ease;
+    }
+    @keyframes sting{0%,100%{transform:translate(-50%,-50%);}20%{transform:translate(calc(-50% - 4px),-50%);}40%{transform:translate(calc(-50% + 4px),-50%);}60%{transform:translate(calc(-50% - 3px),-50%);}80%{transform:translate(calc(-50% + 3px),-50%);}}
+    .hex.wrong{
+      background:linear-gradient(180deg,#e8b9ae,#dca093);
+      color:#9c3a28;
+    }
+
+    #dock{display:flex;align-items:center;gap:12px;}
+    .seg{
+      display:flex;border:1px solid rgba(122,96,38,.18);border-radius:16px;overflow:hidden;
+      background:linear-gradient(180deg,#fff,#f4edda);box-shadow:0 4px 0 rgba(122,96,38,.16);
+    }
+    .seg button{
+      display:flex;align-items:center;gap:7px;border:none;background:none;cursor:pointer;
+      padding:13px 20px;font-size:var(--fs-2);font-weight:850;color:var(--ink-soft);
+      transition:background .15s ease,color .15s ease;
+    }
+    .seg button .ki{width:20px;height:20px;}
+    .seg button.on{background:var(--accent);color:#fff;}
+    .shield-pill{
+      display:flex;align-items:center;gap:6px;border:1px solid rgba(122,96,38,.18);
+      background:rgba(255,255,255,.66);border-radius:16px;padding:12px 14px;
+      box-shadow:0 4px 0 rgba(122,96,38,.12);
+      color:var(--good);font-weight:850;font-size:var(--fs-3);
+    }
+    .shield-pill .ki{width:20px;height:20px;}
+    .shield-pill.empty{color:#bcae90;}
+
+    #note{min-height:19px;color:var(--ink-soft);font-size:var(--fs-3);font-weight:700;text-align:center;padding:0 12px;}
+
+    #over{
+      position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:24px;
+      background:rgba(48,38,20,.46);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
+      opacity:0;pointer-events:none;transition:opacity .25s ease;
+    }
+    #over.show{opacity:1;pointer-events:auto;}
+    .card{
+      width:min(330px,88vw);border-radius:24px;background:#fff;color:var(--ink);padding:26px 22px 20px;text-align:center;
+      box-shadow:0 24px 60px rgba(40,30,10,.34);transform:translateY(12px);transition:transform .25s ease;
+    }
+    #over.show .card{transform:none;}
+    .card .badge{
+      width:64px;height:64px;border-radius:50%;margin:0 auto 12px;
+      display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(180deg,#f6d27c,#eab23f);color:#6e4d0c;
+      box-shadow:0 4px 0 rgba(122,96,38,.25);
+    }
+    .card .badge.bad{background:linear-gradient(180deg,#e0705c,#cf5440);color:#fff;box-shadow:0 4px 0 rgba(150,50,30,.3);}
+    .card .badge .ki{width:36px;height:36px;}
+    .card h2{font-size:24px;font-weight:900;}
+    .card .sub{margin-top:6px;color:var(--ink-soft);font-size:14px;line-height:1.45;}
+    .result{font-size:14px;color:var(--ink-soft);margin:14px 0 16px;}
+    .result b{color:var(--ink);}
+    .card .primary{
+      width:100%;height:50px;border:none;border-radius:16px;background:var(--accent);color:#fff;font-weight:900;font-size:var(--fs-2);
+      box-shadow:0 4px 0 var(--accent-deep),0 10px 20px rgba(201,138,24,.22);cursor:pointer;
+      transition:transform .1s ease,box-shadow .1s ease;
+    }
+    .card .primary:active{transform:translateY(3px);box-shadow:0 1px 0 var(--accent-deep);}
+    .mini{display:flex;justify-content:center;gap:16px;margin-top:15px;}
+    .mini a,.mini button{border:none;background:none;color:var(--ink-soft);font-size:13px;font-weight:800;text-decoration:none;cursor:pointer;}
+    .credit{flex:0 0 auto;font-size:10px;color:var(--ink-soft);opacity:.55;padding-top:2px;}
+  </style>
+</head>
+<body>
+  <svg style="display:none" aria-hidden="true">
+    <symbol id="p-speaker-high" viewBox="0 0 256 256"><path d="M160,32.25V223.69a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.57-51A4,4,0,0,1,80,176.16V79.84a4,4,0,0,1,1.55-3.15l65.57-51a8,8,0,0,1,10,.16A8.27,8.27,0,0,1,160,32.25ZM60,80H32A16,16,0,0,0,16,96v64a16,16,0,0,0,16,16H60a4,4,0,0,0,4-4V84A4,4,0,0,0,60,80Zm126.77,20.84a8,8,0,0,0-.72,11.3,24,24,0,0,1,0,31.72,8,8,0,1,0,12,10.58,40,40,0,0,0,0-52.88A8,8,0,0,0,186.74,100.84Zm40.89-26.17a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66Z"/></symbol>
+    <symbol id="p-speaker-slash" viewBox="0 0 256 256"><path d="M213.92,210.62a8,8,0,1,1-11.84,10.76L160,175.09v48.6a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.55-51A4,4,0,0,1,80,176.18V87.09L42.08,45.38A8,8,0,1,1,53.92,34.62Zm-27.21-55.46a8,8,0,0,0,11.29-.7,40,40,0,0,0,0-52.88,8,8,0,1,0-12,10.57,24,24,0,0,1,0,31.72A8,8,0,0,0,186.71,155.16Zm40.92-80.49a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66ZM153,119.87a4,4,0,0,0,7-2.7V32.25a8.27,8.27,0,0,0-2.88-6.4,8,8,0,0,0-10-.16L103.83,59.33a4,4,0,0,0-.5,5.85Z"/></symbol>
+    <symbol id="p-arrow-clockwise" viewBox="0 0 256 256"><path d="M240,56v48a8,8,0,0,1-8,8H184a8,8,0,0,1-5.66-13.66L197.77,78.9A88,88,0,1,0,216,128a8,8,0,0,1,16,0A104,104,0,1,1,186.9,42.23L226.34,2.34A8,8,0,0,1,240,8Z"/></symbol>
+    <symbol id="p-flag" viewBox="0 0 256 256"><path d="M239.22,59.44l-45.63,95.82a3.54,3.54,0,0,1-.16.34l-34.21,71.84a8,8,0,1,1-14.44-6.88L173.62,160H40a8,8,0,0,1-5.66-13.66L76.69,104,34.34,61.66A8,8,0,0,1,40,48H232a8,8,0,0,1,7.22,11.44Z"/></symbol>
+    <symbol id="p-shield" viewBox="0 0 256 256"><path d="M208,40H48A16,16,0,0,0,32,56v56c0,52.72,25.52,84.67,46.93,102.19,23.06,18.86,46,25.26,47,25.53a8,8,0,0,0,4.2,0c1-.27,23.91-6.67,47-25.53C198.48,196.67,224,164.72,224,112V56A16,16,0,0,0,208,40Zm-34.32,69.66-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32Z"/></symbol>
+    <symbol id="p-hand-tap" viewBox="0 0 256 256"><path d="M64,64a48,48,0,0,1,96,0,8,8,0,0,1-16,0,32,32,0,0,0-64,0,8,8,0,0,1-16,0Zm143.23,56c-8.61.4-15.23,7.82-15.23,16.43v7.28a8.17,8.17,0,0,1-7.47,8.25,8,8,0,0,1-8.53-8V120.45c0-8.61-6.62-16-15.23-16.43A16,16,0,0,0,144,120v15.73a8.17,8.17,0,0,1-7.47,8.25,8,8,0,0,1-8.53-8V64.45c0-8.61-6.62-16-15.23-16.43A16,16,0,0,0,96,64V183.74a8.19,8.19,0,0,1-6.72,8.16l-.12,0a6.09,6.09,0,0,1-6-3.09l-21-36.44c-4.3-7.46-13.74-10.57-21.4-6.62A16,16,0,0,0,34.15,168L65.1,228.05A8,8,0,0,0,72,232H208a8,8,0,0,0,7.16-4.42c.36-.72,8.84-15.06,8.84-40.65V136A16,16,0,0,0,207.23,120Z"/></symbol>
+    <symbol id="g-bee" viewBox="0 0 512 512"><path d="M273.625 17.438l3.313 19.406L258.53 40l-3.717-21.594c-11.894 1.303-21.9 3.848-30.188 7.344L238.5 43.375l-14.688 11.563-15.343-19.5c-9.837 8.29-15.64 18.988-17.657 32.156l24.375-1.344 1.03 18.656-12.812.72c36.685 31.72 70.686 71.3 102.125 122.718 3.52-.453 7.054-.697 10.564-.72 2.396-.014 4.774.055 7.156.25 3.744.31 7.462.914 11.125 1.782 10.252-71.962-6.85-130.822-38.5-191.062-7.863-.71-15.335-1.137-22.25-1.157zM78.905 27.813C72.95 32.37 67.494 36.937 62.5 41.5l18.47 17.875-13 13.406-18.657-18.03c-9.15 10.155-16.053 20.23-20.907 30.125l20.125 4.72-4.28 18.218-22.438-5.282c-.528 2.05-.986 4.073-1.343 6.095-2.264 12.796-1.332 25.318 2.593 37.47l22.968-11.19 8.157 16.814-23.53 11.436c4.11 7.18 9.307 14.198 15.562 21.063 3.188 3.5 6.67 6.913 10.405 10.28l15.125-16.28 13.688 12.75-14.25 15.31c10.718 7.82 22.952 15.15 36.562 21.814l10.47-20.125 16.56 8.624-10 19.22c9.974 4.158 20.545 7.945 31.657 11.405l6.657-19.407 17.687 6.062-6.343 18.5c10.976 2.874 22.408 5.395 34.25 7.53l3.157-19.03 18.437 3.063-3.155 18.937c22.212 3.138 45.688 4.95 70.188 5.188l-.188 18.687c-20.204-.195-39.78-1.404-58.594-3.5-1.978 7.395-3.443 15.514-4.25 24.438-99.17-72.015-189.613 29.593-213.843 140 96.828 62.17 166.47 12.61 216.094-69.844l17.532 40.125 17.125-7.5-23.156-52.97c4.207-7.892 8.265-16.012 12.157-24.28 7.755 11.174 16.53 18.968 25.688 23.655l1.03 32.97.126 4.25 3.314 2.686 38.406 31.314 11.813-14.5-35.094-28.625-.72-22.75c11.463.746 22.9-2.88 33.125-10.345l.72 26.906.186 6.19 5.783 2.25 62.28 24.092 6.75-17.437-56.468-21.813-1.094-39.625c2.924-4.387 5.622-9.2 8-14.468 14.34 60.238 86.187 63.25 103.126 7.936 11.726-38.29-19.33-72.846-52.562-72l-10.156-47.25c29.243 7.773 54.154 23.793 73.906 55.906l15.906-9.78c-25.456-41.388-61.373-60.69-100.375-67.595l-13.688-2.406 2.938 13.564 13.25 61.812c-.644.294-1.298.58-1.938.906l-.062.032c-2.39.595-4.74 1.456-7 2.656-4.883 2.592-8.73 6.348-11.625 10.78-9.013-28.358-34.47-46.61-61.406-49.31 3.698 6.412 7.374 12.98 11 19.75l-16.47 8.81C243.755 130.22 169.122 70.843 78.907 27.813zM402.282 276.75c.325-.002.638.013.97.03 2.656.148 5.576.97 8.75 2.564 6.348 3.188 13.04 9.53 17.656 18.22 4.617 8.686 6.13 17.77 5.22 24.81-.912 7.04-3.827 11.552-7.97 13.75-4.142 2.2-9.527 2.096-15.875-1.093-6.347-3.187-13.038-9.53-17.655-18.217-4.617-8.688-6.13-17.773-5.22-24.813.912-7.04 3.827-11.55 7.97-13.75 1.812-.962 3.89-1.485 6.156-1.5z"/></symbol>
+  </svg>
+
+  <div class="topbar">
+    <div class="pill">레벨 <b id="level">1</b></div>
+    <div class="pill">최고 <b id="best">0</b></div>
+    <div class="pill"><svg class="ki"><use href="#g-bee"/></svg> <b id="bees">0</b></div>
+    <div class="sp"></div>
+    <button class="icon-btn" id="reset" aria-label="이 레벨 새 벌집으로 다시"><svg class="ki"><use href="#p-arrow-clockwise"/></svg></button>
+    <button class="icon-btn" id="mute" aria-label="소리 켜기/끄기"><svg class="ki" id="mute-ic"><use href="#p-speaker-high"/></svg></button>
+  </div>
+
+  <div id="stage">
+    <div id="board-wrap" aria-label="벌집 퍼즐판"></div>
+    <div id="dock">
+      <div class="seg" role="group" aria-label="입력 모드">
+        <button id="m-dig" class="on"><svg class="ki"><use href="#p-hand-tap"/></svg>따기</button>
+        <button id="m-flag"><svg class="ki"><use href="#p-flag"/></svg>깃발</button>
+      </div>
+      <div class="shield-pill" id="shield-pill" title="보호복 — 레벨당 한 번 벌침을 막아줘요">
+        <svg class="ki"><use href="#p-shield"/></svg><span id="shield-n">×1</span>
+      </div>
+    </div>
+    <div id="note">아무 칸이나 톡! 첫 칸은 항상 안전해요</div>
+  </div>
+
+  <div class="credit">Icons: game-icons.net (CC BY 3.0) · Phosphor</div>
+
+  <div id="over">
+    <div class="card">
+      <div class="badge" id="badge"><svg class="ki"><use href="#g-bee"/></svg></div>
+      <h2 id="over-title">벌집 클리어!</h2>
+      <p class="sub" id="over-sub"></p>
+      <p class="result" id="over-result"></p>
+      <button class="primary" id="over-btn">다음 벌집</button>
+      <div class="mini">
+        <a href="/rank">기록실</a>
+        <button id="support">후원 · 의견</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    var KEY={best:'hiveBest',level:'hiveLevel',muted:'hiveMuted',save:'hiveSave'};
+    var SQ3=Math.sqrt(3);
+    var DIRS=[[1,0],[-1,0],[0,1],[0,-1],[1,-1],[-1,1]];
+
+    function gi(k){try{return parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){return 0;}}
+    function set(k,v){try{localStorage.setItem(k,String(v));}catch(e){}}
+    function del(k){try{localStorage.removeItem(k);}catch(e){}}
+
+    var best=gi(KEY.best), level=Math.max(1,gi(KEY.level)||1);
+    var muted=false; try{muted=localStorage.getItem(KEY.muted)==='1';}catch(e){}
+
+    var wrap=document.getElementById('board-wrap');
+    var note=document.getElementById('note'), over=document.getElementById('over');
+    var levelEl=document.getElementById('level'), bestEl=document.getElementById('best'), beesEl=document.getElementById('bees');
+
+    // 레벨 사양 — 벌집 반경 R(칸수 3R(R+1)+1)과 벌 수. 끝없이 이어지되 밀도는 상한.
+    function spec(n){
+      if(n<=2)return {R:2,W:n+2};            // 19칸 — 3,4마리
+      if(n<=5)return {R:3,W:n+2};            // 37칸 — 5,6,7마리
+      return {R:4,W:Math.min(13,n+3)};       // 61칸 — 9..13마리, 이후 13 고정
+    }
+
+    var R=2, W=2, cells=[], idxMap={}, started=false, ended=false, shield=1, mode='dig';
+
+    // ===== 사운드 =====
+    var ac=null;
+    function ctx(){ if(!ac){ try{ac=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} } return ac; }
+    function tone(f,t,d,type,vol){ if(muted)return; var c=ctx(); if(!c)return; var o=c.createOscillator(),g=c.createGain(); o.type=type||'sine'; o.frequency.value=f; o.connect(g); g.connect(c.destination); var x=c.currentTime+(t||0); g.gain.setValueAtTime(.0001,x); g.gain.exponentialRampToValueAtTime(vol||.14,x+.01); g.gain.exponentialRampToValueAtTime(.0001,x+(d||.12)); o.start(x); o.stop(x+(d||.12)+.03); }
+    function sPop(d){tone(430+Math.min(d||0,8)*55,(d||0)*.04,.07,'triangle',.10);}
+    function sFlag(){tone(330,0,.06,'sine',.10);tone(440,.04,.06,'sine',.08);}
+    function sUnflag(){tone(440,0,.05,'sine',.08);tone(330,.04,.06,'sine',.07);}
+    function sShield(){tone(520,0,.1,'triangle',.13);tone(780,.07,.12,'sine',.11);tone(650,.16,.1,'sine',.08);}
+    function sFail(){tone(160,0,.3,'sawtooth',.10);tone(110,.12,.4,'sawtooth',.10);tone(80,.28,.5,'sawtooth',.08);}
+    function sClear(){[523,659,784,1047].forEach(function(f,i){tone(f,i*.08,.15,'triangle',.16);});}
+    function sRecord(){[784,988,1319].forEach(function(f,i){tone(f,.44+i*.08,.13,'sine',.14);});}
+
+    // ===== 보드 =====
+    function key(q,r){return q+','+r;}
+    function neighbors(i){
+      var c=cells[i],out=[];
+      for(var d=0;d<6;d++){
+        var j=idxMap[key(c.q+DIRS[d][0],c.r+DIRS[d][1])];
+        if(j!==undefined)out.push(j);
+      }
+      return out;
+    }
+
+    function build(restore){
+      var s=spec(level); R=s.R; W=s.W;
+      cells=[]; idxMap={}; started=false; ended=false; shield=1;
+      over.classList.remove('show');
+      for(var r=-R;r<=R;r++){
+        var qmin=Math.max(-R,-r-R), qmax=Math.min(R,-r+R);
+        for(var q=qmin;q<=qmax;q++){
+          idxMap[key(q,r)]=cells.length;
+          cells.push({q:q,r:r,wasp:false,rev:false,flg:false,caught:false,n:0,el:null});
+        }
+      }
+      // 레이아웃
+      var bw=SQ3*(2*R+1), bh=3*R+2;
+      var px=Math.min(window.innerWidth*0.92,(2*R+1)*54,420);
+      wrap.style.width=px+'px';
+      wrap.style.aspectRatio=bw+' / '+bh;
+      var cellPx=px*SQ3/bw;
+      wrap.style.fontSize=Math.round(cellPx*0.42)+'px';
+      wrap.innerHTML='';
+      cells.forEach(function(c,i){
+        var el=document.createElement('button');
+        el.className='hex';
+        el.style.width=(SQ3/bw*97)+'%';
+        el.style.height=(2/bh*97)+'%';
+        el.style.left=((SQ3*(c.q+c.r/2)+SQ3*(R+0.5))/bw*100)+'%';
+        el.style.top=((1.5*c.r+1.5*R+1)/bh*100)+'%';
+        el.setAttribute('aria-label','벌집 칸');
+        bindCell(el,i);
+        wrap.appendChild(el);
+        c.el=el;
+      });
+      if(restore&&loadSave()){
+        note.textContent='하던 벌집을 이어서 — 숫자는 이웃 6칸의 벌 수';
+      }else{
+        del(KEY.save);
+        note.textContent='아무 칸이나 톡! 첫 칸은 항상 안전해요';
+      }
+      updateHud();
+    }
+
+    function placeBees(safe){
+      // 첫 탭은 항상 안전. 큰 보드에서만 이웃까지 비워 시원한 첫 오픈을 보장
+      // (작은 보드에서 이웃까지 비우면 0칸 연쇄로 한 번에 다 열려버린다)
+      var ex={}; ex[safe]=1;
+      if(R>2)neighbors(safe).forEach(function(j){ex[j]=1;});
+      var pool=[];
+      for(var i=0;i<cells.length;i++)if(!ex[i])pool.push(i);
+      for(var k=pool.length-1;k>0;k--){var j=Math.floor(Math.random()*(k+1));var t=pool[k];pool[k]=pool[j];pool[j]=t;}
+      for(var w=0;w<W;w++)cells[pool[w]].wasp=true;
+      computeNums();
+      started=true;
+    }
+    function computeNums(){
+      cells.forEach(function(c,i){
+        if(c.wasp)return;
+        var n=0; neighbors(i).forEach(function(j){if(cells[j].wasp)n++;});
+        c.n=n;
+      });
+    }
+
+    // ===== 저장/복원 (이 기기에서 하던 판 이어하기 — 동기화 대상 아님) =====
+    function save(){
+      if(!started||ended){del(KEY.save);return;}
+      var wa=[],rv=[],fl=[],ca=[];
+      cells.forEach(function(c,i){ if(c.wasp)wa.push(i); if(c.rev)rv.push(i); if(c.flg)fl.push(i); if(c.caught)ca.push(i); });
+      try{localStorage.setItem(KEY.save,JSON.stringify({lv:level,sh:shield,wa:wa,rv:rv,fl:fl,ca:ca}));}catch(e){}
+    }
+    function loadSave(){
+      var d=null;
+      try{d=JSON.parse(localStorage.getItem(KEY.save)||'null');}catch(e){}
+      if(!d||d.lv!==level||!d.wa||d.wa.length!==W)return false;
+      var max=cells.length;
+      if(d.wa.some(function(i){return i<0||i>=max;}))return false;
+      d.wa.forEach(function(i){cells[i].wasp=true;});
+      computeNums();
+      shield=typeof d.sh==='number'?d.sh:1;
+      (d.ca||[]).forEach(function(i){cells[i].caught=true;});
+      (d.fl||[]).forEach(function(i){cells[i].flg=true;});
+      (d.rv||[]).forEach(function(i){cells[i].rev=true;});
+      started=true;
+      cells.forEach(function(c,i){
+        if(c.rev)paintRev(i);
+        else if(c.caught)paintCaught(i);
+        else if(c.flg)paintFlag(i,true);
+      });
+      return true;
+    }
+
+    // ===== 셀 그리기 =====
+    function paintRev(i){
+      var c=cells[i];
+      c.el.classList.add('rev');
+      c.el.innerHTML=c.n>0?'<span class="num n'+c.n+'">'+c.n+'</span>':'';
+    }
+    function paintFlag(i,on){
+      var c=cells[i];
+      c.el.classList.toggle('flg',on);
+      c.el.innerHTML=on?'<svg><use href="#p-flag"/></svg>':'';
+    }
+    function paintCaught(i){
+      var c=cells[i];
+      c.el.classList.add('caught');
+      c.el.innerHTML='<svg><use href="#g-bee"/></svg>';
+    }
+
+    // ===== 진행 =====
+    function flagsCount(){var n=0;cells.forEach(function(c){if(c.flg||c.caught)n++;});return n;}
+    function updateHud(){
+      levelEl.textContent=String(level);
+      bestEl.textContent=String(best);
+      beesEl.textContent=String(Math.max(0,W-flagsCount()));
+      document.getElementById('shield-n').textContent='×'+shield;
+      document.getElementById('shield-pill').classList.toggle('empty',shield<1);
+      document.getElementById('mute-ic').innerHTML='<use href="'+(muted?'#p-speaker-slash':'#p-speaker-high')+'"/>';
+    }
+
+    function reveal(i,viaChord){
+      var c=cells[i];
+      if(ended||c.rev||c.flg||c.caught)return true;
+      if(!started)placeBees(i);
+      c=cells[i];
+      if(c.wasp){
+        if(shield>0){
+          shield--; c.caught=true;
+          paintCaught(i); sShield();
+          if(navigator.vibrate)navigator.vibrate(30);
+          note.textContent='보호복이 벌침을 막았어요! 이번 레벨에선 이제 못 막아요';
+          updateHud(); save(); checkWin();
+          return true;
+        }
+        fail(i);
+        return false;
+      }
+      // 빈 칸이면 물결처럼 퍼지며 열림
+      var q=[[i,0]], seen={}; seen[i]=1;
+      var batch=[];
+      while(q.length){
+        var cur=q.shift(), ci=cur[0], d=cur[1], cc=cells[ci];
+        if(cc.rev||cc.flg||cc.caught||cc.wasp)continue;
+        cc.rev=true; batch.push([ci,d]);
+        if(cc.n===0){
+          neighbors(ci).forEach(function(j){ if(!seen[j]){seen[j]=1;q.push([j,d+1]);} });
+        }
+      }
+      var maxD=0;
+      batch.forEach(function(b){
+        maxD=Math.max(maxD,b[1]);
+        setTimeout(function(){paintRev(b[0]);},b[1]*45);
+      });
+      if(!viaChord)sPop(0);
+      for(var d=1;d<=Math.min(maxD,8);d++)sPop(d);
+      if(batch.length>3&&!viaChord)note.textContent='숫자는 이웃 6칸에 숨은 벌의 수예요';
+      updateHud(); save(); checkWin();
+      return true;
+    }
+
+    function toggleFlag(i){
+      var c=cells[i];
+      if(ended||c.rev||c.caught)return;
+      if(!started){note.textContent='먼저 아무 칸이나 열어보세요 — 첫 칸은 안전!';return;}
+      c.flg=!c.flg;
+      paintFlag(i,c.flg);
+      if(c.flg)sFlag();else sUnflag();
+      if(navigator.vibrate)navigator.vibrate(15);
+      updateHud(); save();
+    }
+
+    function chord(i){
+      var c=cells[i];
+      if(ended||!c.rev||c.n===0)return;
+      var ns=neighbors(i), fl=0;
+      ns.forEach(function(j){if(cells[j].flg||cells[j].caught)fl++;});
+      if(fl!==c.n)return;
+      sPop(0);
+      for(var k=0;k<ns.length;k++){
+        var j=ns[k], cj=cells[j];
+        if(cj.rev||cj.flg||cj.caught)continue;
+        if(!reveal(j,true))return; // 벌에 쏘이면 중단
+      }
+    }
+
+    function checkWin(){
+      if(ended)return;
+      var revN=0, total=cells.length;
+      cells.forEach(function(c){if(c.rev)revN++;});
+      if(revN<total-W)return;
+      ended=true; del(KEY.save);
+      cells.forEach(function(c,i){ if(c.wasp&&!c.caught&&!c.flg){c.flg=true;paintFlag(i,true);} });
+      updateHud();
+      sClear();
+      var oldBest=best;
+      best=Math.max(best,level);
+      set(KEY.best,best);
+      set(KEY.level,level+1);
+      var record=best>oldBest;
+      if(record)sRecord();
+      setTimeout(function(){showOver(true,record);},650);
+    }
+
+    function fail(hitI){
+      ended=true; del(KEY.save);
+      sFail();
+      if(navigator.vibrate)navigator.vibrate([60,40,80]);
+      cells.forEach(function(c,i){
+        if(c.wasp&&!c.caught){
+          c.el.classList.remove('flg');
+          c.el.classList.add(i===hitI?'hit':'bee-show');
+          c.el.innerHTML='<svg><use href="#g-bee"/></svg>';
+        }else if(c.flg&&!c.wasp){
+          c.el.classList.add('wrong');
+        }
+      });
+      note.textContent='잠든 벌을 깨우고 말았어요…';
+      setTimeout(function(){showOver(false,false);},950);
+    }
+
+    function showOver(win,record){
+      var badge=document.getElementById('badge');
+      badge.classList.toggle('bad',!win);
+      document.getElementById('over-title').textContent=win?(record?'신기록!':'벌집 클리어!'):'앗, 벌에 쏘였어요';
+      document.getElementById('over-sub').textContent=win
+        ?(record?(level+'번째 벌집까지 꿀을 모두 땄어요.'):'벌을 한 마리도 깨우지 않고 꿀을 다 모았어요.')
+        :'숫자를 다시 읽어보면 벌이 보일 거예요. 같은 레벨, 새 벌집으로 다시!';
+      document.getElementById('over-result').innerHTML=win
+        ?('레벨 <b>'+level+'</b> 클리어 · 최고 <b>'+best+'</b>')
+        :('레벨 <b>'+level+'</b> 도전 중 · 최고 <b>'+best+'</b>');
+      document.getElementById('over-btn').textContent=win?'다음 벌집':'다시 도전';
+      if(win)level=level+1;
+      over.classList.add('show');
+      updateHud();
+    }
+
+    // ===== 입력 =====
+    function bindCell(el,i){
+      var lpTimer=null, lpFired=false, px=0, py=0;
+      el.addEventListener('pointerdown',function(e){
+        if(ended)return;
+        lpFired=false; px=e.clientX; py=e.clientY;
+        var c=cells[i];
+        if(c.rev||c.caught)return;
+        lpTimer=setTimeout(function(){ lpFired=true; toggleFlag(i); },380);
+      });
+      el.addEventListener('pointermove',function(e){
+        if(lpTimer&&(Math.abs(e.clientX-px)>10||Math.abs(e.clientY-py)>10)){clearTimeout(lpTimer);lpTimer=null;}
+      });
+      ['pointerup','pointercancel','pointerleave'].forEach(function(ev){
+        el.addEventListener(ev,function(){ if(lpTimer){clearTimeout(lpTimer);lpTimer=null;} });
+      });
+      el.addEventListener('click',function(){
+        if(ended||lpFired)return;
+        var c=cells[i];
+        if(c.rev){chord(i);return;}
+        if(mode==='flag')toggleFlag(i);
+        else reveal(i,false);
+      });
+      el.addEventListener('contextmenu',function(e){ e.preventDefault(); if(!lpFired)toggleFlag(i); });
+    }
+
+    function setMode(m){
+      mode=m;
+      document.getElementById('m-dig').classList.toggle('on',m==='dig');
+      document.getElementById('m-flag').classList.toggle('on',m==='flag');
+      note.textContent=m==='flag'?'깃발 모드 — 벌이 의심되는 칸을 표시해요 (꾹 눌러도 깃발!)':'따기 모드 — 안전한 칸을 열어 꿀을 모아요';
+    }
+    document.getElementById('m-dig').addEventListener('click',function(){setMode('dig');});
+    document.getElementById('m-flag').addEventListener('click',function(){setMode('flag');});
+    window.addEventListener('keydown',function(e){ if(e.key==='f'||e.key==='F')setMode(mode==='dig'?'flag':'dig'); });
+
+    document.getElementById('reset').addEventListener('click',function(){ del(KEY.save); build(false); });
+    document.getElementById('mute').addEventListener('click',function(){ muted=!muted; set(KEY.muted,muted?'1':'0'); updateHud(); if(!muted)sFlag(); });
+    document.getElementById('over-btn').addEventListener('click',function(){ build(false); });
+    document.getElementById('support').addEventListener('click',function(){ if(window.GamePortal&&GamePortal.openSupport)GamePortal.openSupport(); });
+    window.addEventListener('pagehide',save);
+    window.addEventListener('resize',function(){
+      // 칸 크기만 다시 계산 (상태 유지)
+      var bw=SQ3*(2*R+1);
+      var px=Math.min(window.innerWidth*0.92,(2*R+1)*54,420);
+      wrap.style.width=px+'px';
+      wrap.style.fontSize=Math.round(px*SQ3/bw*0.42)+'px';
+    });
+
+    build(true);
+  })();
+  </script>
+  <script>
+    if('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('./sw.js');
+  </script>
+</body>
+</html>

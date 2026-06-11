@@ -1,0 +1,15 @@
+{
+  "name": "꿀 따기 — 벌을 깨우지 않는 벌집 추리 퍼즐",
+  "short_name": "꿀 따기",
+  "description": "숫자는 이웃 여섯 칸에 잠든 벌의 수. 시간제한 없이 추리해서 벌을 피해 꿀을 모두 따세요.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f3ecd9",
+  "theme_color": "#f3ecd9",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
