@@ -202,6 +202,116 @@
     gpFetchSupport().then(function (links) { cb(!!(links.toss || links.kakaobank)); });
   };
 
+  // ===== 게임 내 포털 런처 (메인으로 + 공유) — 게임 페이지에만 주입 =====
+  // 게임 원본엔 메인 복귀/공유 동선이 없다(원본 무수정). 포털이 일괄 주입해
+  // 모든 게임에 '메인으로(이탈 확인)'와 '기록 공유'를 자동 제공한다.
+  // 아이콘은 이모지 금지 — Phosphor fill 글리프를 인라인(viewBox 0 0 256 256).
+  var GP_ICON_HOME = '<svg viewBox="0 0 256 256" aria-hidden="true"><path fill="currentColor" d="M218.83,103.77l-80-75.48a1.14,1.14,0,0,1-.11-.11,16,16,0,0,0-21.53,0l-.11.11L37.17,103.77A16,16,0,0,0,32,115.55V208a16,16,0,0,0,16,16H96a16,16,0,0,0,16-16V160h32v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V115.55A16,16,0,0,0,218.83,103.77Z"/></svg>';
+  var GP_ICON_SHARE = '<svg viewBox="0 0 256 256" aria-hidden="true"><path fill="currentColor" d="M176,160a39.89,39.89,0,0,0-28.62,12.09l-46.1-29.63a39.8,39.8,0,0,0,0-28.92l46.1-29.63a40,40,0,1,0-8.66-13.45l-46.1,29.63a40,40,0,1,0,0,55.82l46.1,29.63A40,40,0,1,0,176,160Z"/></svg>';
+
+  function gpEnsureLauncherStyle() {
+    if (document.getElementById('gp-launcher-style')) return;
+    var st = document.createElement('style');
+    st.id = 'gp-launcher-style';
+    st.textContent =
+      '#gp-launcher{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);' +
+      'left:calc(env(safe-area-inset-left,0px) + 8px);z-index:9000;display:flex;gap:6px;' +
+      'opacity:.55;transition:opacity .2s ease;}' +
+      '#gp-launcher:hover,#gp-launcher:active{opacity:1;}' +
+      '.gp-lb{width:38px;height:38px;padding:0;border-radius:11px;border:1px solid rgba(255,255,255,.22);' +
+      'background:rgba(20,20,26,.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);' +
+      'color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;' +
+      'box-shadow:0 2px 8px rgba(0,0,0,.25);}' +
+      '.gp-lb:active{transform:scale(.93);}' +
+      '.gp-lb svg{width:20px;height:20px;display:block;}' +
+      '.gp-cf-ov{position:fixed;inset:0;z-index:9998;display:flex;align-items:center;justify-content:center;' +
+      'background:rgba(0,0,0,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);padding:24px;' +
+      'font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;}' +
+      '.gp-cf-card{background:#18181f;color:#f2f2f0;border:1px solid #26262f;border-radius:20px;' +
+      'padding:24px 22px;max-width:300px;width:100%;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.4);}' +
+      '.gp-cf-h{font-size:18px;font-weight:800;}' +
+      '.gp-cf-desc{font-size:13px;color:#8e8e98;line-height:1.5;margin:8px 0 20px;}' +
+      '.gp-cf-go{display:block;width:100%;box-sizing:border-box;padding:14px;border-radius:13px;border:none;' +
+      'background:#ffb13d;color:#14110a;font:inherit;font-size:15px;font-weight:800;cursor:pointer;}' +
+      '.gp-cf-stay{display:block;width:100%;box-sizing:border-box;padding:13px;border-radius:13px;margin-top:8px;' +
+      'border:1px solid #26262f;background:transparent;color:#8e8e98;font:inherit;font-size:15px;font-weight:700;cursor:pointer;}' +
+      '.gp-cf-go:active,.gp-cf-stay:active{transform:scale(.98);}' +
+      '.gp-toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 28px);transform:translate(-50%,12px);' +
+      'z-index:10000;max-width:80vw;padding:11px 18px;border-radius:12px;background:rgba(20,20,26,.92);color:#f2f2f0;' +
+      'font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;font-size:13px;' +
+      'font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.4);opacity:0;transition:opacity .25s ease,transform .25s ease;pointer-events:none;}' +
+      '.gp-toast.show{opacity:1;transform:translate(-50%,0);}';
+    document.head.appendChild(st);
+  }
+
+  function gpToast(msg) {
+    gpEnsureLauncherStyle();
+    var t = document.createElement('div');
+    t.className = 'gp-toast';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function () { t.classList.add('show'); }, 10);
+    setTimeout(function () {
+      t.classList.remove('show');
+      setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 300);
+    }, 2600);
+  }
+
+  function gpConfirmHome() {
+    if (document.getElementById('gp-confirm-ov')) return;
+    gpEnsureLauncherStyle();
+    var ov = document.createElement('div');
+    ov.id = 'gp-confirm-ov';
+    ov.className = 'gp-cf-ov';
+    ov.innerHTML = '<div class="gp-cf-card">' +
+      '<div class="gp-cf-h">메인 화면으로 나갈까요?</div>' +
+      '<p class="gp-cf-desc">지금 게임의 진행 상황은 저장되지 않을 수 있어요.</p>' +
+      '<button class="gp-cf-go" type="button">나가기</button>' +
+      '<button class="gp-cf-stay" type="button">계속하기</button></div>';
+    document.body.appendChild(ov);
+    function close() { if (ov.parentNode) ov.parentNode.removeChild(ov); }
+    ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
+    ov.querySelector('.gp-cf-stay').addEventListener('click', close);
+    ov.querySelector('.gp-cf-go').addEventListener('click', function () { location.href = '/'; });
+  }
+
+  function gpShareRecord() {
+    var best = 0;
+    try { if (scoreKey) best = numOf(localStorage.getItem(scoreKey)); } catch (e) {}
+    if (!scoreKey || best <= 0) {
+      gpToast('아직 기록이 없어요. 한 판 하고 다시 눌러주세요!');
+      return;
+    }
+    var authed = false; try { authed = localStorage.getItem('gp_auth') === '1'; } catch (e) {}
+    if (!authed) { gpOpenSupport(false); return; }  // 비회원은 저장 안 돼 링크 못 만듦 → 가입 동선
+    fetch('/api/score', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visitor_id: vid, game: game, score: best, meta: { from: 'game-share' } })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d || !d.share_url) { gpToast('공유 링크를 만들지 못했어요.'); return; }
+      var url = location.origin + d.share_url;
+      if (navigator.share) { navigator.share({ url: url }).catch(function () {}); return; }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(function () { gpToast('공유 링크를 복사했어요!'); })
+          .catch(function () { location.href = url; });
+        return;
+      }
+      location.href = url;
+    }).catch(function () { gpToast('네트워크 오류예요.'); });
+  }
+
+  if (game !== 'portal' && document.body && !document.getElementById('gp-launcher')) {
+    gpEnsureLauncherStyle();
+    var gpLauncher = document.createElement('div');
+    gpLauncher.id = 'gp-launcher';
+    gpLauncher.innerHTML =
+      '<button class="gp-lb" type="button" data-act="home" aria-label="메인으로">' + GP_ICON_HOME + '</button>' +
+      '<button class="gp-lb" type="button" data-act="share" aria-label="기록 공유">' + GP_ICON_SHARE + '</button>';
+    document.body.appendChild(gpLauncher);
+    gpLauncher.querySelector('[data-act="home"]').addEventListener('click', gpConfirmHome);
+    gpLauncher.querySelector('[data-act="share"]').addEventListener('click', gpShareRecord);
+  }
+
   // ===== 상태 동기화 manifest (서버 주입, 로그인 시에만 동작) =====
   var stateKeys = [];
   try { stateKeys = ds.stateKeys ? JSON.parse(ds.stateKeys) : []; } catch (e) {}
