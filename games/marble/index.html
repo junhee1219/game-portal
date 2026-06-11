@@ -281,7 +281,7 @@
     function fire(dir){
       state='fly'; aimOn=false; combo=0;
       toLaunch=ballCount; landedX=null; pendingGems=0;
-      var sp=W*0.0021; // px per ms
+      var sp=W*0.0015; // px per ms — 눈으로 궤적을 따라갈 수 있는 속도 (빠른 진행은 ⚡빨리감기로)
       var d=Math.sqrt(dir.x*dir.x+dir.y*dir.y)||1;
       fireDir={x:dir.x/d*sp,y:dir.y/d*sp};
       launchTimer=0;
