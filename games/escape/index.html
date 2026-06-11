@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <title>차 빼주세요</title>
+  <meta name="apple-mobile-web-app-title" content="차 빼주세요">
+  <meta property="og:title" content="차 빼주세요 — 막힌 주차장에서 내 차 빼기">
+  <meta property="og:description" content="앞뒤로 밀어 길을 터주는 슬라이드 탈출 퍼즐. 몇 레벨까지?">
+  <meta property="og:type" content="website">
+  <link rel="stylesheet" href="/portal.css">
+  <link rel="icon" href="/escape/icon-192.png">
+  <style>
+    :root{
+      --bg-a:#eef1f7; --bg-b:#dfe4ef; --bg-c:#cfd6e6;
+      --ink:#2b2f3a; --ink-soft:#7b8194;
+      --board:#c7cedd; --cell:#d6dcea; --line:#bcc4d6;
+      --accent:#ff5a4d;          /* 내 차(빨강) */
+      --accent-deep:#e23b30;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+    button{font-family:inherit;cursor:pointer;}
+    html,body{height:100%;background:var(--bg-b);}  /* html 배경 = 하단 흰틈 방지 */
+    body{
+      font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
+      background-image:radial-gradient(130% 100% at 50% 0%, var(--bg-a) 0%, var(--bg-b) 55%, var(--bg-c) 100%);
+      color:var(--ink);
+      user-select:none;-webkit-user-select:none;touch-action:manipulation;
+      /* 레이아웃(높이·flex·safe-area·정렬)은 공통 game-shell.css가 소유 */
+    }
+
+    /* ── 상단 HUD (공통 헤더 아래) ── */
+    .topbar{display:flex;justify-content:flex-start;align-items:center;gap:8px;width:100%;max-width:480px;flex:0 0 auto;}
+    .pill{
+      display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);
+      border-radius:999px;padding:7px 14px;font-size:14px;font-weight:700;color:var(--ink-soft);
+      box-shadow:0 2px 0 rgba(120,130,160,.12);
+    }
+    .pill b{color:var(--ink);font-size:15px;}
+    .pill .par{color:var(--ink-soft);font-weight:600;font-size:13px;}
+    .sp{margin-left:auto;}
+    .topbar .hbtn{
+      width:42px;height:42px;border:1px solid var(--line);border-radius:13px;background:#fff;
+      display:flex;align-items:center;justify-content:center;color:#5b6275;text-decoration:none;padding:0;
+      box-shadow:0 2px 0 rgba(120,130,160,.14);transition:transform .08s;
+    }
+    .topbar .hbtn:active{transform:translateY(2px);box-shadow:none;}
+    .topbar .hbtn:disabled{opacity:.4;}
+    .ic{width:21px;height:21px;fill:currentColor;display:block;}
+
+    /* ── 보드 ── */
+    .stage{flex:1 1 auto;display:flex;align-items:center;justify-content:center;width:100%;min-height:0;}
+    .board{
+      position:relative;width:min(92vw, 60dvh);aspect-ratio:1;
+      background:var(--board);
+      border-radius:20px;
+      box-shadow:inset 0 2px 6px rgba(90,100,130,.25), 0 6px 0 #b3bccf;
+      padding:0;
+      /* 격자 — 6칸 */
+      background-image:
+        linear-gradient(var(--line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line) 1px, transparent 1px);
+      background-size:calc(100%/6) calc(100%/6);
+      background-position:-1px -1px;
+      touch-action:none;
+    }
+    .board::after{ /* 안쪽 셀 톤 */
+      content:'';position:absolute;inset:7px;border-radius:14px;
+      background:
+        repeating-linear-gradient(90deg, transparent 0 calc(100%/6), rgba(255,255,255,.04) 0 calc(100%/6));
+      pointer-events:none;
+    }
+    /* 출구 표시 — 오른쪽 가장자리, 탈출 행 */
+    .exit{
+      position:absolute;right:-13px;width:13px;
+      display:flex;align-items:center;justify-content:center;
+      color:var(--accent);
+    }
+    .exit svg{width:18px;height:18px;fill:currentColor;}
+    .exit::before{
+      content:'';position:absolute;right:6px;top:50%;transform:translateY(-50%);
+      width:14px;height:calc(100%/6 * 0.62);background:var(--board);border-radius:0 6px 6px 0;
+    }
+
+    /* 차 */
+    .car{
+      position:absolute;
+      padding:4px;
+      transition:transform .14s cubic-bezier(.2,.8,.25,1);
+      will-change:transform;cursor:grab;z-index:2;
+      touch-action:none;
+    }
+    .car.grab{transition:none;cursor:grabbing;z-index:5;}
+    .car .body{
+      width:100%;height:100%;border-radius:13px;position:relative;
+      box-shadow:inset 0 2px 0 rgba(255,255,255,.45), 0 3px 0 rgba(0,0,0,.16);
+    }
+    /* 차 색 (내 차 외) */
+    .car.c0 .body{background:#9aa6c4;} .car.c1 .body{background:#7fb8a6;}
+    .car.c2 .body{background:#caa6d6;} .car.c3 .body{background:#e6bd84;}
+    .car.c4 .body{background:#88a6d8;} .car.c5 .body{background:#d69aa0;}
+    .car.c6 .body{background:#a6c489;} .car.c7 .body{background:#c0a890;}
+    .car.target .body{background:linear-gradient(180deg,#ff6a5d,var(--accent));}
+    /* 창문 디테일 — 진행 방향 암시 */
+    .car .body::before{
+      content:'';position:absolute;border-radius:7px;background:rgba(255,255,255,.5);
+    }
+    .car.h .body::before{top:22%;bottom:22%;left:18%;right:42%;}
+    .car.v .body::before{left:22%;right:22%;top:18%;bottom:42%;}
+    .car.target .body::before{background:rgba(255,255,255,.7);}
+
+    /* ── 클리어 오버레이 ── */
+    .clear{
+      position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;
+      background:rgba(20,24,34,.5);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+      opacity:0;pointer-events:none;transition:opacity .25s;padding:24px;
+    }
+    .clear.show{opacity:1;pointer-events:auto;}
+    .clear .ecard{
+      background:#fff;color:var(--ink);border-radius:24px;padding:26px 22px 20px;max-width:320px;width:100%;
+      text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.35);transform:translateY(12px);transition:transform .25s;
+    }
+    .clear.show .ecard{transform:none;}
+    .clear h2{font-size:24px;font-weight:900;letter-spacing:-.02em;}
+    .clear .sub{font-size:14px;color:var(--ink-soft);margin-top:6px;}
+    .stars{display:flex;justify-content:center;gap:8px;margin:16px 0 4px;}
+    .stars svg{width:38px;height:38px;}
+    .star-on{fill:#ffb13d;} .star-off{fill:#e2e6ee;}
+    .clear .moves{font-size:14px;color:var(--ink-soft);margin-bottom:18px;}
+    .clear .moves b{color:var(--ink);}
+    .btn{display:block;width:100%;box-sizing:border-box;padding:15px;border-radius:14px;border:none;
+      font-size:16px;font-weight:800;}
+    .btn-primary{background:var(--accent);color:#fff;box-shadow:0 4px 0 var(--accent-deep);}
+    .btn-primary:active{transform:translateY(3px);box-shadow:none;}
+    .btn-ghost{background:#f0f2f7;color:var(--ink);margin-top:9px;}
+    .clear .mini{display:flex;gap:16px;justify-content:center;margin-top:16px;}
+    .clear .mini a,.clear .mini button{
+      background:none;border:none;color:var(--ink-soft);font-size:13px;font-weight:700;
+      text-decoration:none;padding:4px;
+    }
+    .credit{flex:0 0 auto;text-align:center;font-size:10px;color:var(--ink-soft);opacity:.55;padding-top:2px;}
+
+    /* 살짝 흔들기(못 미는 곳) */
+    @keyframes nudge{0%,100%{transform:translateX(0);}25%{transform:translateX(-4px);}75%{transform:translateX(4px);}}
+    .board.bad{animation:nudge .22s;}
+  </style>
+</head>
+<body>
+  <!-- 아이콘 심볼 (Phosphor 서브셋) -->
+  <svg style="display:none" aria-hidden="true">
+    <symbol id="p-speaker-high" viewBox="0 0 256 256"><path d="M160,32.25V223.69a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.57-51A4,4,0,0,1,80,176.16V79.84a4,4,0,0,1,1.55-3.15l65.57-51a8,8,0,0,1,10,.16A8.27,8.27,0,0,1,160,32.25ZM60,80H32A16,16,0,0,0,16,96v64a16,16,0,0,0,16,16H60a4,4,0,0,0,4-4V84A4,4,0,0,0,60,80Zm126.77,20.84a8,8,0,0,0-.72,11.3,24,24,0,0,1,0,31.72,8,8,0,1,0,12,10.58,40,40,0,0,0,0-52.88A8,8,0,0,0,186.74,100.84Zm40.89-26.17a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66Z"/></symbol>
+    <symbol id="p-speaker-slash" viewBox="0 0 256 256"><path d="M213.92,210.62a8,8,0,1,1-11.84,10.76L160,175.09v48.6a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.55-51A4,4,0,0,1,80,176.18V87.09L42.08,45.38A8,8,0,1,1,53.92,34.62Zm-27.21-55.46a8,8,0,0,0,11.29-.7,40,40,0,0,0,0-52.88,8,8,0,1,0-12,10.57,24,24,0,0,1,0,31.72A8,8,0,0,0,186.71,155.16Zm40.92-80.49a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66ZM153,119.87a4,4,0,0,0,7-2.7V32.25a8.27,8.27,0,0,0-2.88-6.4,8,8,0,0,0-10-.16L103.83,59.33a4,4,0,0,0-.5,5.85Z"/></symbol>
+    <symbol id="p-arrows-clockwise" viewBox="0 0 256 256"><path d="M224,48V96a8,8,0,0,1-8,8H168a8,8,0,0,1-5.66-13.66L180.65,72a79.48,79.48,0,0,0-54.72-22.09h-.45A79.52,79.52,0,0,0,69.59,72.71,8,8,0,0,1,58.41,61.27,96,96,0,0,1,192,60.7l18.36-18.36A8,8,0,0,1,224,48ZM186.41,183.29A80,80,0,0,1,75.35,184l18.31-18.31A8,8,0,0,0,88,152H40a8,8,0,0,0-8,8v48a8,8,0,0,0,13.66,5.66L64,195.3a95.42,95.42,0,0,0,66,26.76h.53a95.36,95.36,0,0,0,67.07-27.33,8,8,0,0,0-11.18-11.44Z"/></symbol>
+    <symbol id="p-arrow-counter-clockwise" viewBox="0 0 256 256"><path d="M224,128a96,96,0,0,1-94.71,96H128A95.38,95.38,0,0,1,62.1,197.8a8,8,0,0,1,11-11.63A80,80,0,1,0,71.43,71.39a3.07,3.07,0,0,1-.26.25L60.63,81.29l17,17A8,8,0,0,1,72,112H24a8,8,0,0,1-8-8V56A8,8,0,0,1,29.66,50.3L49.31,70,60.25,60A96,96,0,0,1,224,128Z"/></symbol>
+    <symbol id="p-arrow-right" viewBox="0 0 256 256"><path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"/></symbol>
+    <symbol id="p-star" viewBox="0 0 256 256"><path d="M234.5,114.38l-45.1,39.36,13.51,58.6a16,16,0,0,1-23.84,17.34l-51.11-31-51,31a16,16,0,0,1-23.84-17.34L80.6,153.74,35.5,114.38a16,16,0,0,1,9.11-28.06l59.46-5.15,23.21-55.36a15.95,15.95,0,0,1,29.44,0L180,81.17l59.44,5.15a16,16,0,0,1,9.11,28.06Z"/></symbol>
+  </svg>
+
+  <div class="topbar">
+    <div class="pill">레벨 <b id="lv">1</b></div>
+    <div class="pill">이동 <b id="mv">0</b><span class="par"> / <span id="par">–</span></span></div>
+    <div class="sp"></div>
+    <button class="hbtn" id="undo" aria-label="되돌리기"><svg class="ic"><use href="#p-arrow-counter-clockwise"/></svg></button>
+    <button class="hbtn" id="restart" aria-label="다시"><svg class="ic"><use href="#p-arrows-clockwise"/></svg></button>
+    <button class="hbtn" id="mute" aria-label="소리 켜기/끄기"><svg class="ic" id="mute-ic"><use href="#p-speaker-high"/></svg></button>
+  </div>
+
+  <div class="stage">
+    <div class="board" id="board">
+      <div class="exit" id="exit"><svg viewBox="0 0 256 256"><use href="#p-arrow-right"/></svg></div>
+    </div>
+  </div>
+
+  <div class="credit">Icons: Phosphor</div>
+
+  <div class="clear" id="clear">
+    <div class="ecard">
+      <h2>탈출!</h2>
+      <p class="sub" id="clear-sub">막힌 길을 뚫었어요</p>
+      <div class="stars" id="stars"></div>
+      <p class="moves">이동 <b id="clear-mv">0</b> · 최소 <b id="clear-par">0</b></p>
+      <button class="btn btn-primary" id="next">다음 레벨</button>
+      <button class="btn btn-ghost" id="replay">이 레벨 다시</button>
+      <div class="mini">
+        <a href="/rank">기록실</a>
+        <button id="support">후원 · 의견</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    var N = 6, EXIT_ROW = 2, TLEN = 2;   // 6x6, 탈출 행(0-기준), 내 차 길이
+    var KEY = { best:'escapeBest', level:'escapeLevel', stars:'escapeStars', muted:'escapeMuted' };
+
+    // ---- 저장 ----
+    function gi(k){ try{ return parseInt(localStorage.getItem(k)||'0',10)||0; }catch(e){ return 0; } }
+    function gj(k){ try{ return JSON.parse(localStorage.getItem(k)||'{}')||{}; }catch(e){ return {}; } }
+    var best = gi(KEY.best);
+    var levelIdx = Math.max(0, gi(KEY.level));
+    var starMap = gj(KEY.stars);
+    var muted = false; try{ muted = localStorage.getItem(KEY.muted)==='1'; }catch(e){}
+
+    // ---- 사운드 ----
+    var ac=null;
+    function actx(){ if(!ac){ try{ ac=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return ac; }
+    function tone(f,t0,dur,type,vol){
+      if(muted) return; var c=actx(); if(!c) return;
+      var o=c.createOscillator(), g=c.createGain(); o.type=type||'sine';
+      o.frequency.value=f; o.connect(g); g.connect(c.destination);
+      var t=c.currentTime+(t0||0); g.gain.setValueAtTime(0.0001,t);
+      g.gain.exponentialRampToValueAtTime(vol||0.18,t+0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+(dur||0.12));
+      o.start(t); o.stop(t+(dur||0.12)+0.02);
+    }
+    function sMove(){ tone(300,0,0.07,'triangle',0.12); }
+    function sBad(){ tone(120,0,0.12,'sawtooth',0.10); }
+    function sWin(){ [523,659,784,1047].forEach(function(f,i){ tone(f,i*0.09,0.14,'triangle',0.16); }); }
+    function sRecord(){ [784,1047,1319].forEach(function(f,i){ tone(f,0.45+i*0.08,0.16,'sine',0.16); }); }
+
+    // ---- 시드 PRNG (레벨 = 결정적, 크로스 디바이스 동일) ----
+    function mulberry32(a){ return function(){ a|=0;a=a+0x6D2B79F5|0; var t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+
+    // ---- BFS 솔버: 최소 이동수(par) 또는 null(못 풂) ----
+    function solve(cars){
+      var n=cars.length, vary=new Int8Array(n), fixed=new Int8Array(n), len=new Int8Array(n), horiz=new Uint8Array(n);
+      for(var i=0;i<n;i++){ var c=cars[i]; horiz[i]=c.dir==='h'?1:0; len[i]=c.len; if(horiz[i]){ vary[i]=c.c; fixed[i]=c.r; } else { vary[i]=c.r; fixed[i]=c.c; } }
+      function occOf(state){
+        var g=new Int8Array(N*N); g.fill(-1);
+        for(var i=0;i<n;i++){ var v=state[i],f=fixed[i],L=len[i]; if(horiz[i]){ for(var k=0;k<L;k++) g[f*N+(v+k)]=i; } else { for(var k=0;k<L;k++) g[(v+k)*N+f]=i; } }
+        return g;
+      }
+      var startKey=String.fromCharCode.apply(null, vary);
+      var goalV = N-TLEN; // 내 차 c==4 → 탈출
+      if(vary[0]===goalV) return 0;
+      var visited={}; visited[startKey]=0;
+      var queue=[vary.slice()]; var head=0, GUARD=300000, seen=0;
+      while(head<queue.length){
+        var state=queue[head++]; var d=visited[String.fromCharCode.apply(null,state)];
+        var g=occOf(state);
+        for(var i=0;i<n;i++){
+          var f=fixed[i],L=len[i],v=state[i];
+          // 음의 방향
+          var lo=v;
+          while(lo-1>=0){ var cell = horiz[i] ? f*N+(lo-1) : (lo-1)*N+f; if(g[cell]!==-1) break; lo--; }
+          // 양의 방향
+          var hi=v;
+          while(hi+L<=N-1){ var cell2 = horiz[i] ? f*N+(hi+L) : (hi+L)*N+f; if(g[cell2]!==-1) break; hi++; }
+          for(var nv=lo; nv<=hi; nv++){
+            if(nv===v) continue;
+            var ns=state.slice(); ns[i]=nv; var key=String.fromCharCode.apply(null,ns);
+            if(visited[key]!==undefined) continue;
+            visited[key]=d+1;
+            if(i===0 && nv===goalV) return d+1;
+            queue.push(ns);
+            if(++seen>GUARD) return null;
+          }
+        }
+      }
+      return null;
+    }
+
+    // ---- 레벨 생성: 풀이가능 + par가 난이도 목표 이상 ----
+    function genLevel(idx){
+      var rng = mulberry32((0x9E3779B1 ^ (idx*2654435761)) >>> 0);
+      var ri=function(m){ return Math.floor(rng()*m); };
+      var carsCount = Math.min(3 + Math.floor(idx/2), 9);
+      var parMin = Math.min(2 + Math.floor(idx*0.9), 18);
+      var bestBoard=null, bestPar=-1;
+      for(var attempt=0; attempt<200; attempt++){
+        var cars=[]; var occ=new Int8Array(N*N); occ.fill(-1);
+        function put(car){
+          var cells=[];
+          if(car.dir==='h'){ if(car.c<0||car.c+car.len>N) return false; for(var k=0;k<car.len;k++) cells.push(car.r*N+car.c+k); }
+          else { if(car.r<0||car.r+car.len>N) return false; for(var k=0;k<car.len;k++) cells.push((car.r+k)*N+car.c); }
+          for(var j=0;j<cells.length;j++) if(occ[cells[j]]!==-1) return false;
+          var id=cars.length; cars.push(car); for(var j=0;j<cells.length;j++) occ[cells[j]]=id; return true;
+        }
+        // 내 차 — 탈출 행 왼쪽
+        var tc = ri(3); // 0..2
+        put({r:EXIT_ROW,c:tc,len:TLEN,dir:'h',target:true});
+        // 나머지 차
+        var tries=0;
+        while(cars.length < carsCount+1 && tries<80){
+          tries++;
+          var len = rng()<0.72?2:3;
+          var dir = rng()<0.5?'h':'v';
+          var r,c;
+          if(dir==='h'){ r=ri(N); c=ri(N-len+1); } else { r=ri(N-len+1); c=ri(N); }
+          // 탈출 행에는 가로차만(세로차가 탈출행 막고 못 비키는 상황 방지 약화) — 약간의 제약
+          put({r:r,c:c,len:len,dir:dir});
+        }
+        if(cars.length<3) continue;
+        var par = solve(cars);
+        if(par===null || par<1) continue;
+        if(par>=parMin){ return {cars:cars,par:par}; }
+        if(par>bestPar){ bestPar=par; bestBoard=cars; }
+      }
+      if(bestBoard) return {cars:bestBoard, par:bestPar};
+      // 폴백(항상 풀림)
+      var fb=[{r:EXIT_ROW,c:0,len:2,dir:'h',target:true},{r:0,c:3,len:3,dir:'v'},{r:EXIT_ROW,c:3,len:2,dir:'v'}];
+      return {cars:fb, par:solve(fb)||2};
+    }
+
+    // ---- 상태 ----
+    var board=document.getElementById('board'), exitEl=document.getElementById('exit');
+    var elLv=document.getElementById('lv'), elMv=document.getElementById('mv'), elPar=document.getElementById('par');
+    var cars=[], par=0, moves=0, undoStack=[], carEls=[], solvedNow=false;
+
+    function cellPx(){ return board.getBoundingClientRect().width / N; }
+    function occGrid(){
+      var g=new Int8Array(N*N); g.fill(-1);
+      for(var i=0;i<cars.length;i++){ var c=cars[i]; for(var k=0;k<c.len;k++){ var idx=c.dir==='h'?c.r*N+c.c+k:(c.r+k)*N+c.c; g[idx]=i; } }
+      return g;
+    }
+    function place(el,c){
+      el.style.left=(c.c/N*100)+'%'; el.style.top=(c.r/N*100)+'%';
+      el.style.width=((c.dir==='h'?c.len:1)/N*100)+'%';
+      el.style.height=((c.dir==='v'?c.len:1)/N*100)+'%';
+      el.style.transform='translate(0,0)';
+    }
+    function render(){
+      board.querySelectorAll('.car').forEach(function(e){ e.remove(); }); carEls=[];
+      cars.forEach(function(c,i){
+        var el=document.createElement('div');
+        el.className='car '+(c.dir)+' '+(c.target?'target':('c'+((i)%8)));
+        el.innerHTML='<div class="body"></div>';
+        place(el,c);
+        bindDrag(el,i);
+        board.appendChild(el); carEls[i]=el;
+      });
+      exitEl.style.top=(EXIT_ROW/N*100)+'%';
+      exitEl.style.height=(1/N*100)+'%';
+    }
+    function freeRange(i){
+      var c=cars[i], g=occGrid(); var lo=c.dir==='h'?c.c:c.r, hi=lo;
+      var f=c.dir==='h'?c.r:c.c, L=c.len;
+      while(lo-1>=0){ var cell=c.dir==='h'?f*N+(lo-1):(lo-1)*N+f; if(g[cell]!==-1)break; lo--; }
+      while(hi+L<=N-1){ var cell=c.dir==='h'?f*N+(hi+L):(hi+L)*N+f; if(g[cell]!==-1)break; hi++; }
+      return [lo,hi];
+    }
+
+    function bindDrag(el,i){
+      var startPos, axis, range, cur, dragging=false, moved=false;
+      el.addEventListener('pointerdown',function(ev){
+        if(solvedNow) return;
+        actx();
+        dragging=true; moved=false; el.classList.add('grab');
+        el.setPointerCapture(ev.pointerId);
+        axis = cars[i].dir;
+        range = freeRange(i);
+        cur = axis==='h'?cars[i].c:cars[i].r;
+        startPos = axis==='h'?ev.clientX:ev.clientY;
+        ev.preventDefault();
+      });
+      el.addEventListener('pointermove',function(ev){
+        if(!dragging) return;
+        var px = cellPx();
+        var delta = (axis==='h'?ev.clientX:ev.clientY) - startPos;
+        var maxNeg=(range[0]-cur)*px, maxPos=(range[1]-cur)*px;
+        var d=Math.max(maxNeg, Math.min(maxPos, delta));
+        if(Math.abs(d)>2) moved=true;
+        el.style.transform = axis==='h'?('translateX('+d+'px)'):('translateY('+d+'px)');
+      });
+      function end(ev){
+        if(!dragging) return; dragging=false; el.classList.remove('grab');
+        var px=cellPx();
+        var delta=(axis==='h'?ev.clientX:ev.clientY)-startPos;
+        var maxNeg=(range[0]-cur)*px, maxPos=(range[1]-cur)*px;
+        var d=Math.max(maxNeg, Math.min(maxPos, delta));
+        var steps=Math.round(d/px);
+        var nv=cur+steps;
+        if(nv===cur){ el.style.transform='translate(0,0)'; if(moved){} return; }
+        // 이동 확정
+        undoStack.push(snapshot());
+        if(axis==='h') cars[i].c=nv; else cars[i].r=nv;
+        place(el,cars[i]);
+        moves++; elMv.textContent=moves; updateUndo();
+        sMove();
+        checkWin(i);
+      }
+      el.addEventListener('pointerup',end);
+      el.addEventListener('pointercancel',end);
+    }
+    function snapshot(){ return cars.map(function(c){ return c.dir==='h'?c.c:c.r; }); }
+    function applySnap(s){ s.forEach(function(v,i){ if(cars[i].dir==='h') cars[i].c=v; else cars[i].r=v; place(carEls[i],cars[i]); }); }
+
+    function checkWin(i){
+      if(i!==0) return;
+      if(cars[0].c === N-TLEN){
+        solvedNow=true;
+        // 차가 출구로 빠져나가는 연출
+        var el=carEls[0]; el.classList.add('grab');
+        el.style.transition='transform .45s cubic-bezier(.4,0,.2,1)';
+        el.style.transform='translateX('+(cellPx()*2.4)+'px)';
+        el.style.opacity='0';
+        sWin();
+        setTimeout(winScreen, 480);
+      }
+    }
+
+    function winScreen(){
+      var clearedLevels = levelIdx+1;
+      var s = moves<=par ? 3 : (moves<=Math.ceil(par*1.6) ? 2 : 1);
+      var prevStar = starMap[levelIdx]||0;
+      if(s>prevStar){ starMap[levelIdx]=s; try{ localStorage.setItem(KEY.stars, JSON.stringify(starMap)); }catch(e){} }
+      var isRecord=false;
+      if(clearedLevels>best){ best=clearedLevels; isRecord=true; try{ localStorage.setItem(KEY.best, String(best)); }catch(e){} }
+      // 결과 화면
+      document.getElementById('clear-mv').textContent=moves;
+      document.getElementById('clear-par').textContent=par;
+      var stars=document.getElementById('stars'); stars.innerHTML='';
+      for(var k=0;k<3;k++){ var sv=document.createElementNS('http://www.w3.org/2000/svg','svg'); sv.setAttribute('viewBox','0 0 256 256'); sv.setAttribute('class', k<s?'star-on':'star-off'); sv.innerHTML='<use href="#p-star"/>'; stars.appendChild(sv); }
+      document.getElementById('clear-sub').textContent = isRecord ? '신기록! 더 깊은 주차장으로' : (s===3?'완벽해요 — 최소 이동!':'막힌 길을 뚫었어요');
+      document.getElementById('clear').classList.add('show');
+      if(isRecord) sRecord();
+    }
+
+    function updateUndo(){ document.getElementById('undo').disabled = undoStack.length===0; }
+
+    function loadLevel(idx){
+      levelIdx=idx; try{ localStorage.setItem(KEY.level, String(idx)); }catch(e){}
+      var lv=genLevel(idx);
+      cars=lv.cars.map(function(c){ return {r:c.r,c:c.c,len:c.len,dir:c.dir,target:!!c.target}; });
+      par=lv.par; moves=0; undoStack=[]; solvedNow=false;
+      elLv.textContent=idx+1; elMv.textContent=0; elPar.textContent=par; updateUndo();
+      document.getElementById('clear').classList.remove('show');
+      render();
+    }
+
+    // ---- 버튼 ----
+    document.getElementById('undo').addEventListener('click',function(){
+      if(!undoStack.length||solvedNow) return; applySnap(undoStack.pop()); moves=Math.max(0,moves-1); elMv.textContent=moves; updateUndo(); sMove();
+    });
+    document.getElementById('restart').addEventListener('click',function(){ loadLevel(levelIdx); });
+    document.getElementById('next').addEventListener('click',function(){ loadLevel(levelIdx+1); });
+    document.getElementById('replay').addEventListener('click',function(){ loadLevel(levelIdx); });
+    document.getElementById('support').addEventListener('click',function(){ if(window.GamePortal&&GamePortal.openSupport) GamePortal.openSupport(); });
+    var muteIc=document.getElementById('mute-ic');
+    function paintMute(){ muteIc.innerHTML='<use href="#'+(muted?'p-speaker-slash':'p-speaker-high')+'"/>'; }
+    document.getElementById('mute').addEventListener('click',function(){ muted=!muted; try{ localStorage.setItem(KEY.muted, muted?'1':'0'); }catch(e){} paintMute(); if(!muted){ actx(); sMove(); } });
+    paintMute();
+
+    // 첫 진입: 저장된 레벨에서 이어서 (이탈 후 복귀 OK)
+    loadLevel(levelIdx);
+    // 리사이즈 시 차 위치 %라 자동 — 별도 처리 불필요
+  })();
+  </script>
+  <script src="/portal.js" data-game="escape"></script>
+</body>
+</html>

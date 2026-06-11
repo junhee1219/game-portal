@@ -43,6 +43,21 @@
       ]
     },
     {
+      "id": "escape",
+      "shell_mode": "panel",
+      "title": "차 빼주세요",
+      "tagline": "앞뒤로 밀어 길을 터주는 슬라이드 탈출 퍼즐. 막힌 주차장에서 내 차를 빼내요.",
+      "unit": "레벨",
+      "score_key": "escapeBest",
+      "score_metric": "level",
+      "state_keys": [
+        { "key": "escapeBest", "merge": "max" },
+        { "key": "escapeLevel", "merge": "max" },
+        { "key": "escapeStars", "merge": "union" },
+        { "key": "escapeMuted", "merge": "lww" }
+      ]
+    },
+    {
       "id": "tiles",
       "shell_mode": "panel",
       "title": "리듬 타일",
