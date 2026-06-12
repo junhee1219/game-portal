@@ -181,6 +181,33 @@
       ]
     },
     {
+      "id": "lamp",
+      "shell_mode": "panel",
+      "title": "빛 공방",
+      "tagline": "전등을 누르면 주변까지 바뀌어요. 시간제한 없이 모든 공방을 환하게 밝히는 스위치 퍼즐.",
+      "unit": "레벨",
+      "score_key": "lampBest",
+      "score_metric": "level",
+      "state_keys": [
+        {
+          "key": "lampBest",
+          "merge": "max"
+        },
+        {
+          "key": "lampLevel",
+          "merge": "max"
+        },
+        {
+          "key": "lampStars",
+          "merge": "union"
+        },
+        {
+          "key": "lampMuted",
+          "merge": "lww"
+        }
+      ]
+    },
+    {
       "id": "tiles",
       "shell_mode": "panel",
       "title": "리듬 타일",
