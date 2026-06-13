@@ -451,6 +451,8 @@
     const rec=document.getElementById('over-record');
     rec.classList.toggle('show', isRec);
     setTimeout(()=>overEl.classList.add('show'), 350);
+    // 신기록 공유 제안은 게임오버 때만(플레이 중 점수 갱신마다 뜨지 않게) — 이번 판 신기록 있으면 1회.
+    if (window.GamePortal && GamePortal.shareResult) GamePortal.shareResult();
     // 게임 끝나면 후원+의견 (포털 공용 모달 — 모든 게임 동일)
     if (window.GamePortal) setTimeout(function(){ GamePortal.openSupport(); }, 1100);
   }

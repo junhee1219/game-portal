@@ -431,6 +431,8 @@
     if (bestEl) bestEl.textContent = best.toLocaleString();
     overOv.classList.remove('hidden');
     if (level >= best) A.record(); else A.bad();
+    // 신기록 공유 제안은 게임오버 때만(플레이 중 도달 레벨 갱신마다 뜨지 않게) — 이번 판 신기록 있으면 1회.
+    if (window.GamePortal && GamePortal.shareResult) GamePortal.shareResult();
     // 게임오버 시 포털 공용 후원 모달 (시작 시엔 X)
     if (window.GamePortal) setTimeout(function () { GamePortal.openSupport(); }, 1000);
   }

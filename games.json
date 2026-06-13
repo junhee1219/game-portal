@@ -78,6 +78,7 @@
       "unit": "점",
       "score_key": "mergeBest",
       "score_metric": "score",
+      "defer_share": true,
       "state_keys": [
         {
           "key": "mergeBest",
@@ -143,6 +144,7 @@
       "unit": "점",
       "score_key": "twosBest",
       "score_metric": "score",
+      "defer_share": true,
       "state_keys": [
         {
           "key": "twosBest",
@@ -216,6 +218,7 @@
       "unit": "타일",
       "score_key": "tilesBest",
       "score_metric": "best",
+      "defer_share": true,
       "state_keys": [
         {
           "key": "tilesBest",
@@ -235,6 +238,7 @@
       "unit": "점",
       "score_key": "blockBest",
       "score_metric": "score",
+      "defer_share": true,
       "state_keys": [
         {
           "key": "blockBest",
@@ -254,6 +258,7 @@
       "unit": "레벨",
       "score_key": "pangBest",
       "score_metric": "level",
+      "defer_share": true,
       "state_keys": [
         {
           "key": "pangBest",
@@ -273,6 +278,7 @@
       "unit": "층",
       "score_key": "stackBest",
       "score_metric": "best",
+      "defer_share": true,
       "state_keys": [
         {
           "key": "stackBest",

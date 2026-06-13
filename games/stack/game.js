@@ -184,6 +184,8 @@
     document.getElementById('over-best').textContent = '최고 ' + best + '층';
     document.getElementById('over-record').classList.toggle('show', isRec);
     setTimeout(() => overEl.classList.add('show'), 420);
+    // 신기록 공유 제안은 게임오버 때만(플레이 중 점수 갱신마다 뜨지 않게) — 이번 판 신기록 있으면 1회.
+    if (window.GamePortal && GamePortal.shareResult) GamePortal.shareResult();
     if (window.GamePortal) setTimeout(() => { GamePortal.openSupport(); }, 1100);
   }
 
