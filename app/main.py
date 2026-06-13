@@ -64,6 +64,9 @@ def _inject_snippet(game: str) -> str:
     if g and g.get("score_key"):
         attrs += f' data-score-key="{html.escape(g["score_key"])}"'
         attrs += f' data-score-metric="{html.escape(g.get("score_metric", "best"))}"'
+    if g and g.get("defer_share"):
+        # 점수 키가 플레이 중 갱신되는 게임 — 공유 제안을 게임오버 시점으로 미룬다(portal.js).
+        attrs += ' data-defer-share="1"'
     if g and g.get("state_keys"):
         # 상태 sync manifest (키별 merge 방식 + init_cache) — JSON을 속성에 동기 전달
         state_json = json.dumps(g["state_keys"], ensure_ascii=False, separators=(",", ":"))

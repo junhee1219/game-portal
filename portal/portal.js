@@ -19,6 +19,11 @@
   // 점수 config는 서버가 주입한 data-* 속성에서 동기 읽기 (fetch 금지 — setItem 후킹 race 방지)
   var scoreKey = ds.scoreKey || null;
   var scoreMetric = ds.scoreMetric || 'best';
+  // 신기록 공유 제안을 *게임 종료 시점*으로 미룬다(점수 키가 플레이 중 계속 갱신되는 게임용 — 예: marble).
+  // 켜지면 자동 캡처 시엔 안 띄우고, 게임이 GamePortal.shareResult()를 부를 때(게임오버) 1회만 띄운다.
+  var deferShare = ds.deferShare === '1';
+  var gpPendingShare = null;     // {score, url} — 이번 판의 최고 신기록 (POST .then에서 채움)
+  var gpFlushRequested = false;  // 게임오버가 POST보다 먼저 와도 유실 안 되게 (async race 방지)
 
   function send(payload, useBeacon) {
     payload.visitor_id = vid;
@@ -72,9 +77,21 @@
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (d) {
           // 신기록(auto)일 때만 '결과창 공유' 제안 — claim/pull POST엔 안 띄운다.
-          if (d && d.share_url && meta && meta.auto) gpOfferShare(clean, location.origin + d.share_url);
+          if (!(d && d.share_url && meta && meta.auto)) return;
+          var su = location.origin + d.share_url;
+          if (!deferShare) { gpOfferShare(clean, su); return; }
+          // 지연 모드: 이번 판 최고 기록을 쌓아두고 게임오버 때 띄운다.
+          gpPendingShare = { score: clean, url: su };
+          if (gpFlushRequested) { gpFlushRequested = false; gpFlushPendingShare(); }
         })
         .catch(function () {});
+    },
+    // 게임오버 시 게임이 호출 — 이번 판에 신기록이 있었다면 공유 제안을 1회 띄운다.
+    // POST가 아직 안 돌아왔으면(플래그) 도착하는 즉시 띄운다 → 순서 무관 정확히 1회.
+    shareResult: function () {
+      if (!deferShare) return;
+      if (gpPendingShare) gpFlushPendingShare();
+      else gpFlushRequested = true;
     },
     // 후원+의견 모달 열기 (게임/포털 어디서든 호출. 링크는 /api/support = 서버 .env)
     openSupport: function () { gpOpenSupport(false); },
@@ -292,6 +309,13 @@
       return;
     }
     location.href = url;
+  }
+
+  // 지연 모드: 쌓아둔 이번 판 최고 신기록을 1회 띄우고 비운다(재호출해도 다시 안 뜸).
+  function gpFlushPendingShare() {
+    if (!gpPendingShare) return;
+    var p = gpPendingShare; gpPendingShare = null;
+    gpOfferShare(p.score, p.url);
   }
 
   // 신기록 달성 시 결과창 느낌의 공유 제안 — "나 몇 점이다" 자랑. 비차단 토스트, 자동 사라짐.

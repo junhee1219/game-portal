@@ -339,6 +339,8 @@
           :'바위가 한계선에 닿았어요. 다음엔 모서리 반사를 노려봐요!';
         document.getElementById('over-result').innerHTML='이번 광산 <b>'+round+'</b>라운드 · 최고 <b>'+best+'</b>라운드';
         over.classList.add('show');
+        // 포털 공유 제안은 게임오버 때만(플레이 중 신기록 갱신마다 뜨지 않게) — 이번 판 신기록 있으면 1회 표시.
+        try{if(window.GamePortal&&GamePortal.shareResult)GamePortal.shareResult();}catch(e){}
       },700);
     }
 

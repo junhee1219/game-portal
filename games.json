@@ -27,6 +27,7 @@
       "unit": "라운드",
       "score_key": "marbleBest",
       "score_metric": "best",
+      "defer_share": true,
       "state_keys": [
         {
           "key": "marbleBest",
