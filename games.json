@@ -370,21 +370,6 @@
       ]
     },
     {
-      "id": "brew",
-      "shell_mode": "panel",
-      "title": "꼬마 연금술사",
-      "tagline": "두 가지를 섞으면 새로운 것이 탄생! 물·불·흙·바람으로 용과 현자의 돌까지.",
-      "unit": "발견",
-      "score_key": "brewFound",
-      "score_metric": "best",
-      "state_keys": [
-        { "key": "brewFound", "merge": "max" },
-        { "key": "brewOwn", "merge": "union" },
-        { "key": "brewHintUsed", "merge": "lww" },
-        { "key": "brewMuted", "merge": "lww" }
-      ]
-    },
-    {
       "id": "gateway",
       "shell_mode": "fullscreen",
       "title": "라면집 사장님",
