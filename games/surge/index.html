@@ -1,0 +1,666 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#06121f">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="피라미 비상">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="피라미 비상 — 남을 차고 수면 위로!">
+  <meta property="og:description" content="밑에선 상어가, 옆에선 라이벌이. 다른 물고기를 차고 올라 더 높이 솟구쳐요. 제친 만큼 기록.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>피라미 비상</title>
+  <style>
+    @font-face{font-family:"Pretendard Variable";font-weight:45 920;font-style:normal;font-display:swap;src:url("/fonts/PretendardVariable.woff2") format("woff2-variations");}
+    :root{
+      --ink:#eaf4ff;
+      --ink-soft:#9fb6cc;
+      --accent:#ffb13d;
+      --accent-deep:#e0871a;
+      --card:#11233a;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    html,body{height:100%;background:#06121f;}
+    body{
+      font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
+      color:var(--ink);overflow:hidden;
+      user-select:none;-webkit-user-select:none;touch-action:manipulation;
+    }
+    button{font:inherit;}
+    #cv{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0;touch-action:none;}
+
+    /* 우상단 HUD (좌상단은 셸 홈 버튼 자리) */
+    #hud{
+      position:fixed;z-index:6;display:flex;align-items:center;gap:8px;
+      top:calc(8px + env(safe-area-inset-top));right:calc(10px + env(safe-area-inset-right));
+      pointer-events:none;
+    }
+    .pill{
+      display:flex;align-items:baseline;gap:5px;white-space:nowrap;
+      border:1px solid rgba(150,190,230,.22);background:rgba(8,22,38,.55);
+      backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+      border-radius:999px;padding:6px 13px;color:var(--ink-soft);font-size:12px;font-weight:700;
+    }
+    .pill b{color:#fff;font-size:18px;font-weight:900;font-variant-numeric:tabular-nums;}
+    .pill.depth b{color:var(--accent);}
+    .icon-btn{
+      pointer-events:auto;width:40px;height:40px;border:1px solid rgba(150,190,230,.22);border-radius:12px;
+      background:rgba(8,22,38,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+      color:#cfe1f2;display:flex;align-items:center;justify-content:center;cursor:pointer;
+      transition:transform .1s ease;
+    }
+    .icon-btn:active{transform:scale(.92);}
+    .ki{width:22px;height:22px;fill:currentColor;display:block;}
+
+    /* 시작 안내 (첫 탭 전) */
+    #hint{
+      position:fixed;left:50%;bottom:18%;transform:translateX(-50%);z-index:5;
+      text-align:center;pointer-events:none;transition:opacity .3s ease;
+      text-shadow:0 2px 10px rgba(0,0,0,.6);
+    }
+    #hint .big{font-size:21px;font-weight:900;color:#fff;letter-spacing:-.01em;}
+    #hint .sm{margin-top:7px;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;}
+    #hint .tap{
+      display:inline-flex;align-items:center;justify-content:center;margin-top:16px;
+      width:62px;height:62px;border-radius:50%;border:2px solid rgba(255,255,255,.5);
+      animation:tappulse 1.3s ease-in-out infinite;
+    }
+    #hint .tap .ki{width:30px;height:30px;color:#fff;}
+    @keyframes tappulse{0%,100%{transform:scale(1);opacity:.8;}50%{transform:scale(1.18);opacity:1;}}
+
+    /* 결과 카드 */
+    #over{
+      position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:24px;
+      background:rgba(4,12,22,.62);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
+      opacity:0;pointer-events:none;transition:opacity .3s ease;
+    }
+    #over.show{opacity:1;pointer-events:auto;}
+    .card{
+      width:min(340px,90vw);border-radius:26px;background:linear-gradient(180deg,#163052,var(--card));
+      border:1px solid rgba(150,190,230,.16);
+      padding:26px 22px 20px;text-align:center;
+      box-shadow:0 30px 70px rgba(0,0,0,.5);transform:translateY(14px) scale(.97);transition:transform .3s cubic-bezier(.2,1.1,.4,1);
+    }
+    #over.show .card{transform:none;}
+    .badge{
+      width:70px;height:70px;border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(180deg,#ffd27a,var(--accent));color:#5a3608;
+      box-shadow:0 6px 0 var(--accent-deep),0 12px 24px rgba(255,177,61,.3);
+    }
+    .badge .ki{width:42px;height:42px;}
+    .card h2{font-size:25px;font-weight:900;letter-spacing:-.02em;}
+    .card .sub{margin-top:6px;color:var(--ink-soft);font-size:14px;line-height:1.5;}
+    .bigscore{margin:16px 0 4px;font-size:54px;font-weight:900;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums;}
+    .bigscore small{font-size:22px;color:var(--ink-soft);font-weight:800;margin-left:3px;}
+    .rec{font-size:13px;font-weight:800;color:#7fe0a8;min-height:18px;margin-bottom:8px;}
+    .passline{
+      font-size:13.5px;color:var(--ink-soft);line-height:1.6;margin:6px 0 16px;
+      padding:11px 12px;border-radius:14px;background:rgba(8,20,36,.5);border:1px solid rgba(150,190,230,.12);
+    }
+    .passline b{color:#fff;}
+    .passline .nm{color:#ffd690;font-weight:800;}
+    .primary{
+      width:100%;height:52px;border:none;border-radius:16px;background:var(--accent);color:#3a2406;font-weight:900;font-size:17px;
+      box-shadow:0 5px 0 var(--accent-deep),0 12px 22px rgba(255,177,61,.26);cursor:pointer;transition:transform .1s ease,box-shadow .1s ease;
+    }
+    .primary:active{transform:translateY(3px);box-shadow:0 2px 0 var(--accent-deep);}
+    .mini{display:flex;justify-content:center;gap:18px;margin-top:15px;}
+    .mini a,.mini button{border:none;background:none;color:var(--ink-soft);font-size:13px;font-weight:800;text-decoration:none;cursor:pointer;}
+    .credit{position:fixed;left:0;right:0;bottom:calc(4px + env(safe-area-inset-bottom));z-index:4;text-align:center;font-size:10px;color:rgba(159,182,204,.45);pointer-events:none;}
+  </style>
+</head>
+<body>
+  <svg style="display:none" aria-hidden="true">
+    <symbol id="p-speaker-high" viewBox="0 0 256 256"><path d="M160,32.25V223.69a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.57-51A4,4,0,0,1,80,176.16V79.84a4,4,0,0,1,1.55-3.15l65.57-51a8,8,0,0,1,10,.16A8.27,8.27,0,0,1,160,32.25ZM60,80H32A16,16,0,0,0,16,96v64a16,16,0,0,0,16,16H60a4,4,0,0,0,4-4V84A4,4,0,0,0,60,80Zm126.77,20.84a8,8,0,0,0-.72,11.3,24,24,0,0,1,0,31.72,8,8,0,1,0,12,10.58,40,40,0,0,0,0-52.88A8,8,0,0,0,186.74,100.84Zm40.89-26.17a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66Z"/></symbol>
+    <symbol id="p-speaker-slash" viewBox="0 0 256 256"><path d="M213.92,210.62a8,8,0,1,1-11.84,10.76L160,175.09v48.6a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.55-51A4,4,0,0,1,80,176.18V87.09L42.08,45.38A8,8,0,1,1,53.92,34.62Zm-27.21-55.46a8,8,0,0,0,11.29-.7,40,40,0,0,0,0-52.88,8,8,0,1,0-12,10.57,24,24,0,0,1,0,31.72A8,8,0,0,0,186.71,155.16Zm40.92-80.49a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66ZM153,119.87a4,4,0,0,0,7-2.7V32.25a8.27,8.27,0,0,0-2.88-6.4,8,8,0,0,0-10-.16L103.83,59.33a4,4,0,0,0-.5,5.85Z"/></symbol>
+    <symbol id="p-hand-tap" viewBox="0 0 256 256"><path d="M180,72a27.79,27.79,0,0,0-13.36,3.4A28,28,0,0,0,120,60.29V28a28,28,0,0,0-56,0v98.75l-9.52-13.32A28,28,0,0,0,5.92,145l40.79,71.37A16,16,0,0,0,60.59,224h114a16,16,0,0,0,15.07-10.62l16.49-46.07A47.61,47.61,0,0,0,208,151.38V100A28,28,0,0,0,180,72Zm12,79.38a31.7,31.7,0,0,1-1.9,10.86l-16.48,46.07a.0.0,0,0,1-.07.05H60.59a.0.0,0,0,1-.07,0L19.73,137a12,12,0,0,1,20.85-11.92l24,33.52A8,8,0,0,0,80,154V28a12,12,0,0,1,24,0v76a8,8,0,0,0,16,0V88a12,12,0,0,1,24,0v24a8,8,0,0,0,16,0V100a12,12,0,0,1,24,0Z"/></symbol>
+    <symbol id="g-fish" viewBox="0 0 512 512"><path d="M162.624 52.61C97.727 52.9 43.2 71.024 20.26 77.065c180.533-16.45 207.453 29.552 202.45 80.002-18.22 37.848-25.254 55.3-27.918 70.57-.1-.087-.194-.175-.297-.263-.137 1.532-.252 3.068-.353 4.604-1.174 9.332-.916 18.495-.844 31.853.232 42.953 20.353 78.605 35.563 123.858-19.41 34.982-62.905 40.407-111.138 40.017 15.68 4.238 57.39 35.154 183.93-18.266-18.39 38.19-101.927 66.29-104.35 80.708 95.706-8.18 156.83-50.263 172.442-113.7 26.875-16.655 51.02-37.67 71.22-88.49 4.977-15.1 26.364-16.513 42.844-20.37 8.092-1.892 12.803-17.88 0-19.664-16.856-3.743-41.087-1.758-50.568-18.963C359.963 85.33 251.557 52.22 162.624 52.61zM68.11 170.79c-6.35-.04-11.513.988-14.995 3.296 52.984 29.347 72.777 42.044 73.205 52.064.306 18.476-56.007 23.49-57.59 33.362-.602 3.75 45.222 28.75 51.972 38.277 8.175 14.697-18.264 35.887-52.675 58.995 7.18 11.277 72.52-13.598 116.69-36.805-7.365-34.743-12.074-70.132-6.827-105.548-32.393-23.226-82.256-43.47-109.78-43.643zm309.805 34.105c17.18 0 31.3 14.12 31.3 31.3s-14.12 31.3-31.3 31.3-31.298-14.12-31.298-31.3 14.12-31.3 31.298-31.3zm-71.578 12.435c4.01.062 8.036.29 12.076.705l.487.05.478.102c7.506 1.608 10.558 7.368 12.705 12.56 2.147 5.19 3.38 11.144 4.006 17.52 1.25 12.75.433 26.886-5.97 37.98-3.817 6.613-9.487 8.915-16.46 11.564-6.97 2.65-15.513 4.687-25.05 5.833-19.078 2.29-42.133 1.066-62.616-8.352l-19.9-9.147 20.58-7.487c9.96-3.622 17.247-7.86 22.49-11.594-8.457-3.524-18.93-9.306-28.448-18.88l-10.3-10.36 13.886-4.54c26.63-8.707 53.964-16.39 82.035-15.952zm71.578 5.565c-7.45 0-13.298 5.85-13.298 13.3 0 5.78 3.525 10.582 8.582 12.45a13.773 13.008 0 0 1-1.802-6.397 13.773 13.008 0 0 1 13.773-13.008 13.773 13.008 0 0 1 4.546.746c-2.2-4.245-6.607-7.09-11.8-7.09zm-71.863 12.443c-19.507-.27-39.51 4.09-59.924 10.098 11.728 7.197 22.06 8.86 22.06 8.86l14.735 2.25-8.855 11.99s-3.546 4.686-10.194 10.02c-2.56 2.052-5.814 4.29-9.447 6.55 10.906 1.81 22.13 1.855 32.033.665 8.256-.99 15.592-2.804 20.81-4.786 5.216-1.982 8.043-5.09 7.26-3.736 2.872-4.975 4.633-17.148 3.645-27.227-.494-5.038-1.58-9.627-2.724-12.393-.48-1.16-.863-1.54-1.085-1.813-2.764-.23-5.53-.438-8.313-.476z"/></symbol>
+  </svg>
+
+  <canvas id="cv"></canvas>
+
+  <div id="hud">
+    <div class="pill depth"><b id="depth">0</b>m</div>
+    <div class="pill">최고 <b id="best">0</b></div>
+    <button class="icon-btn" id="mute" aria-label="소리 켜기/끄기"><svg class="ki"><use href="#p-speaker-high"/></svg></button>
+  </div>
+
+  <div id="hint">
+    <div class="big">남을 차고 올라가!</div>
+    <div class="sm">화면을 톡톡 두드려 헤엄쳐 올라요<br>다른 물고기를 밟으면 더 높이 솟구쳐요</div>
+    <div class="tap"><svg class="ki"><use href="#p-hand-tap"/></svg></div>
+  </div>
+
+  <div class="credit">Icons: game-icons.net (CC BY 3.0) · Phosphor</div>
+
+  <div id="over">
+    <div class="card">
+      <div class="badge"><svg class="ki"><use href="#g-fish"/></svg></div>
+      <h2 id="over-title">상어밥이 됐어요!</h2>
+      <p class="sub" id="over-sub">조금만 더 부지런히 차올랐다면…</p>
+      <div class="bigscore"><span id="over-m">0</span><small>m</small></div>
+      <div class="rec" id="over-rec"></div>
+      <div class="passline" id="over-pass"></div>
+      <button class="primary" id="over-btn">다시 솟구치기</button>
+      <div class="mini">
+        <a href="/rank">기록실</a>
+        <button id="support">후원 · 의견</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    'use strict';
+    var KEY={best:'surgeBest',muted:'surgeMuted'};
+    function gi(k){try{return parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){return 0;}}
+    function set(k,v){try{localStorage.setItem(k,String(v));}catch(e){}}
+    var best=gi(KEY.best);
+    var muted=false; try{muted=localStorage.getItem(KEY.muted)==='1';}catch(e){}
+
+    // ====== 아이콘 (game-icons.net 글리프 → 스프라이트 프리렌더) ======
+    var ICONS={
+      fish:{vb:'0 0 512 512',inner:'<path d="M162.624 52.61C97.727 52.9 43.2 71.024 20.26 77.065c180.533-16.45 207.453 29.552 202.45 80.002-18.22 37.848-25.254 55.3-27.918 70.57-.1-.087-.194-.175-.297-.263-.137 1.532-.252 3.068-.353 4.604-1.174 9.332-.916 18.495-.844 31.853.232 42.953 20.353 78.605 35.563 123.858-19.41 34.982-62.905 40.407-111.138 40.017 15.68 4.238 57.39 35.154 183.93-18.266-18.39 38.19-101.927 66.29-104.35 80.708 95.706-8.18 156.83-50.263 172.442-113.7 26.875-16.655 51.02-37.67 71.22-88.49 4.977-15.1 26.364-16.513 42.844-20.37 8.092-1.892 12.803-17.88 0-19.664-16.856-3.743-41.087-1.758-50.568-18.963C359.963 85.33 251.557 52.22 162.624 52.61zM68.11 170.79c-6.35-.04-11.513.988-14.995 3.296 52.984 29.347 72.777 42.044 73.205 52.064.306 18.476-56.007 23.49-57.59 33.362-.602 3.75 45.222 28.75 51.972 38.277 8.175 14.697-18.264 35.887-52.675 58.995 7.18 11.277 72.52-13.598 116.69-36.805-7.365-34.743-12.074-70.132-6.827-105.548-32.393-23.226-82.256-43.47-109.78-43.643zm309.805 34.105c17.18 0 31.3 14.12 31.3 31.3s-14.12 31.3-31.3 31.3-31.298-14.12-31.298-31.3 14.12-31.3 31.298-31.3zm-71.578 12.435c4.01.062 8.036.29 12.076.705l.487.05.478.102c7.506 1.608 10.558 7.368 12.705 12.56 2.147 5.19 3.38 11.144 4.006 17.52 1.25 12.75.433 26.886-5.97 37.98-3.817 6.613-9.487 8.915-16.46 11.564-6.97 2.65-15.513 4.687-25.05 5.833-19.078 2.29-42.133 1.066-62.616-8.352l-19.9-9.147 20.58-7.487c9.96-3.622 17.247-7.86 22.49-11.594-8.457-3.524-18.93-9.306-28.448-18.88l-10.3-10.36 13.886-4.54c26.63-8.707 53.964-16.39 82.035-15.952zm71.578 5.565c-7.45 0-13.298 5.85-13.298 13.3 0 5.78 3.525 10.582 8.582 12.45a13.773 13.008 0 0 1-1.802-6.397 13.773 13.008 0 0 1 13.773-13.008 13.773 13.008 0 0 1 4.546.746c-2.2-4.245-6.607-7.09-11.8-7.09zm-71.863 12.443c-19.507-.27-39.51 4.09-59.924 10.098 11.728 7.197 22.06 8.86 22.06 8.86l14.735 2.25-8.855 11.99s-3.546 4.686-10.194 10.02c-2.56 2.052-5.814 4.29-9.447 6.55 10.906 1.81 22.13 1.855 32.033.665 8.256-.99 15.592-2.804 20.81-4.786 5.216-1.982 8.043-5.09 7.26-3.736 2.872-4.975 4.633-17.148 3.645-27.227-.494-5.038-1.58-9.627-2.724-12.393-.48-1.16-.863-1.54-1.085-1.813-2.764-.23-5.53-.438-8.313-.476z"/>'},
+      shark:{vb:'0 0 512 512',inner:'<path d="M257.97 20.22C150.394 88.557 72.1 275.18 69.874 494.374h375.188c-2.2-219.194-79.52-405.817-187.094-474.156zm-18.845 163.06l18.344 36.282 18.342-36.28c9.99 2.326 19.72 6.537 29.063 12.437l4.156 48.56 20.095-28.624c7.938 8.123 15.48 17.558 22.594 28.156L345.436 279l18.375-15.344c24.39 44.295 42.05 103.6 49.532 170.78-10.036-32.144-26.553-60.393-47.625-82.342l4-35.813L344.093 333c-6.098-4.53-12.452-8.595-19.03-12.156l-3.345-40.97-26.314 28.876c-7.31-2.074-14.792-3.58-22.437-4.438l-15.5-33.25-15.5 33.282c-8.14.916-16.12 2.522-23.876 4.812l-24.875-27.28-3.157 38.874c-6.645 3.585-13.065 7.68-19.22 12.25l-25.624-16.72 4.03 35.814c-21.08 21.95-37.618 50.19-47.656 82.344 7.482-67.188 25.17-126.485 49.562-170.782L169.5 279l-6.28-35.188c7.37-10.983 15.213-20.71 23.468-29.03l19.25 27.374 3.937-46.312c9.4-5.963 19.193-10.22 29.25-12.563z"/>'},
+      dragon:{vb:'0 0 512 512',inner:'<path d="M200.947 18.686c-6.98.087-14.64.774-22.85 1.9 27.57 20.468 51.098 45.25 67.594 70.527 1.66 0 3.312.012 4.958.047 18.066.39 35.487 2.906 53.217 7.2-15.695-28.457-29.935-50.19-47.45-63.22-13.817-10.278-30.063-16.168-52.52-16.454-.967-.013-1.95-.013-2.948 0zm-91.66 22.96c-.73-.002-1.46.006-2.195.022-14.045.31-29.36 3.92-46.86 11.13 56.18 18.807 106.985 50.468 133.907 83.585 18.377-5.13 29.44-14.72 36.454-28.817C195.84 78.18 168.118 56.19 140.65 46.96c-10.168-3.418-20.433-5.306-31.363-5.315zm-.203 52.786c-39.42 6.758-74.73 31.854-87.822 74.19v322.345h212.73C100.352 442.58 61.19 206.49 187.115 230.104c5.838-14.164 9.92-28.027 11.018-41.465l18.627 1.522c-1.684 20.592-8.828 40.49-18.033 59.943-.732 2.035-1.472 4.12-2.186 6.063 32.842 85.24 113.77 160.69 169.495 168.197.915.033 1.905-.002 2.953-.09 17.016 1.035 35.86-4.222 52.21-22.304l7.984-8.83-10.473-5.658c-6.507-3.515-14.29-7.094-18.167-10.925-1.938-1.916-2.793-3.47-3.074-5.194-.282-1.725-.13-4.227 2.23-8.578l10.673-19.656-21.484 6.222c-6.304 1.825-17.305-3.032-23.224-10.71-2.96-3.84-4.408-7.907-4.387-10.843.02-2.938.72-5.125 4.747-8.05l19.453-14.125-23.884-2.72c-9.974-1.137-16.37-6.658-19.17-12.294-2.802-5.634-2.312-10.084 1.375-13.31l12.204-10.677-15.358-5.205c-6.717-2.276-10.296-7.555-10.357-10.633-.028-1.373.238-2.666 1.843-4.476 10.93-2.39 21.258-.45 28.088 6.374 6.154 6.146 8.35 15.128 6.977 24.832 8.55-2.254 16.985-1.616 24.112 2.494 9.34 5.387 14.647 15.692 15.67 27.965 15.212-10.132 32.152-12.725 45.262-5.164 15.467 8.92 21.36 29.513 16.805 51.75 23.992-33.355 34.588-75.717 5.617-120.43-46.726-4.442-81.693-30.676-93.293-67.64-5.026-16.016-21.284-28.67-42-37.904l-.08.217c-29.74-10.823-55.575-17.35-82.604-18.733l.08.155c-2.294-.093-4.56-.16-6.762-.172-9.537 22.874-28.662 39.9-57.436 46.054l-5.906 1.262-3.576-4.864c-14.216-19.33-41.23-40.452-74.002-58.074zm156.215 65.26c27.927-.073 44.874 11.617 42.09 44.45-35.844 3.39-51.933-16.683-63.074-42.632 7.507-1.155 14.538-1.8 20.983-1.817zm48.407 66.363c3.708.07 7.14.994 10.014 2.812-1.51 1.102-2.898 2.28-4.16 3.543-5.246 5.24-8.087 12.122-7.956 18.742.183 9.322 5.27 17.184 12.68 22.56-3.14 8.103-2.452 17.455 1.407 25.22 3.813 7.668 10.54 14.273 19.302 18.398-1.445 3.366-2.375 6.862-2.4 10.33-.062 8.407 3.38 16.042 8.273 22.39 6.792 8.81 16.862 15.936 28.026 17.91-.183 2.18-.204 4.333.133 6.407 1.05 6.444 4.515 11.66 8.38 15.48 3.41 3.37 7.19 5.892 10.798 7.993-6.345 4.792-12.414 7.056-18.618 7.79-6.515-7.937-9.71-19.084-9.41-31.454-11.767 6.177-24.21 7.156-34.12 1.44-14.668-8.46-19.393-29.036-13.187-50.33-11.336 2.77-22.13.92-29.187-6.132-8.875-8.865-9.535-23.626-3.094-37.95-3.676-.615-6.963-2.166-9.525-4.725-8.808-8.798-5.773-26.09 6.776-38.626 7.843-7.835 17.546-11.957 25.87-11.8z"/>'}
+    };
+    var sprites={};
+    function makeSprite(key,color,size,cb){
+      var ic=ICONS[key];
+      var svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="'+ic.vb+'" fill="'+color+'">'+ic.inner+'</svg>';
+      var img=new Image();
+      img.onload=function(){
+        var c=document.createElement('canvas');c.width=c.height=size;
+        c.getContext('2d').drawImage(img,0,0,size,size);
+        cb(c);
+      };
+      img.onerror=function(){cb(null);};
+      img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+    }
+
+    // ====== 사운드 (WebAudio 합성) ======
+    var ac=null;
+    function actx(){ if(!ac){ try{ac=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} } return ac; }
+    function tone(f,t,d,type,vol){ if(muted)return; var c=actx(); if(!c)return; var o=c.createOscillator(),g=c.createGain(); o.type=type||'sine'; o.frequency.value=f; o.connect(g); g.connect(c.destination); var x=c.currentTime+(t||0); g.gain.setValueAtTime(.0001,x); g.gain.exponentialRampToValueAtTime(vol||.1,x+.012); g.gain.exponentialRampToValueAtTime(.0001,x+(d||.12)); o.start(x); o.stop(x+(d||.12)+.04); }
+    function sKick(){ tone(360+Math.random()*40,0,.08,'sine',.05); }
+    function sStomp(n){ tone(420+Math.min(n,8)*55,0,.09,'square',.09); tone(180,0,.07,'sine',.07); }
+    function sChomp(){ tone(110,0,.22,'sawtooth',.13); tone(70,.04,.28,'sawtooth',.1); }
+    function sMile(){ [523,659,784].forEach(function(f,i){tone(f,i*.06,.12,'triangle',.09);}); }
+    function sOver(){ tone(300,0,.3,'sawtooth',.09); tone(200,.16,.34,'sawtooth',.08); tone(120,.34,.4,'sawtooth',.08); }
+    function sRecord(){ [784,988,1319,1568].forEach(function(f,i){tone(f,.1+i*.08,.14,'triangle',.12);}); }
+
+    // ====== 캔버스 ======
+    var cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+    var W=0,H=0,DPR=1;
+    function resize(){
+      DPR=Math.min(window.devicePixelRatio||1,2.5);
+      W=window.innerWidth; H=window.innerHeight;
+      cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR);
+      cv.style.width=W+'px'; cv.style.height=H+'px';
+      ctx.setTransform(DPR,0,0,DPR,0,0);
+    }
+    window.addEventListener('resize',resize); resize();
+
+    // ====== 튜닝 ======
+    var PPM=15;            // 1m = 15px
+    var G=560;             // 가라앉는 중력(px/s^2)
+    var KICK=200, VKICK_MAX=300, VSINK_MAX=-300, VBURST_MAX=660;  // 평탄 탭은 300까지, 밟기 버스트는 그 위로
+    var STOMP=540, KNOCK=360, STUN=1.5;
+    var PLAYER_SY=0.60;    // 플레이어 화면 고정 높이 비율
+    var RAD=24;            // 기본 물고기 반지름(px)
+
+    // ====== 라이벌 닉네임 풀 ======
+    // NPC가 아니라 '다른 사람'으로 느껴지게: 봇이라 밝히지도, 진짜라 속이지도 않는다.
+    // 핵심은 라벨이 아니라 '사람 같은 움직임'(아래 updateRivals의 머뭇/버스트/정체).
+    var NAMES=['바다토끼','김초밥','멸치대장','파도타기','용왕님','새우깡','은빛지느러미','물방울','자라자라',
+      '미역줄기','해마러버','꼬리킥차기','산소부족','수면위로','참치王','거품둥둥','수달이','니모찾는중','심해러','정어리',
+      '방울이','해초비빔','꽁치선생','상어무서워','떡상가즈아','물칸','등푸른생선','해류타기','보글보글','잠수왕',
+      'ㅋㅋ루삥뽕','오늘만산다','한칸만더','지느러미신','파닥파닥'];
+    function shuffle(a){ for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;} return a; }
+    var ghostNames=[];
+    function seedGhosts(){
+      ghostNames=[];
+      var pool=shuffle(NAMES.slice());
+      for(var i=0;i<pool.length;i++){
+        // 실력대 제각각: 대부분 낮~중간(자주 추월 가능), 일부는 한참 위(쉽게 못 따라잡음)
+        ghostNames.push({name:pool[i], ceil:16+Math.floor(Math.random()*Math.random()*260)});
+      }
+    }
+    seedGhosts();
+
+    // ====== 상태 ======
+    var player, rivals, parts, floats, shark, cam, started, ended, raf;
+    var meters, maxMeters, overtakes, stomps, combo, comboT, lastMile, shake, chomp, recordBeaten;
+    var startBest=best;
+    var spawnAcc;
+
+    function reset(){
+      player={x:W/2,vy:120,vx:0,worldY:0,tilt:0,trail:0};
+      cam=player.worldY;
+      rivals=[]; parts=[]; floats=[];
+      shark={worldY:player.worldY-H*1.05,open:0};
+      started=false; ended=false;
+      meters=0; maxMeters=0; overtakes=0; stomps=0; combo=0; comboT=0; lastMile=0;
+      shake=0; chomp=0; recordBeaten=false; spawnAcc=0;
+      // 초반 라이벌 — 플레이어 바로 아래부터 위까지 촘촘히 (즉시 부대낄 트래픽)
+      for(var i=0;i<8;i++) spawnRival(player.worldY + H*(-0.05+i*0.14) + Math.random()*60);
+      document.getElementById('over').classList.remove('show');
+      document.getElementById('hint').style.opacity='1';
+      updateHud();
+    }
+
+    var ghostIdx=0;
+    function nextGhost(){
+      if(!ghostNames.length) seedGhosts();
+      var g=ghostNames[ghostIdx%ghostNames.length]; ghostIdx++;
+      return g;
+    }
+    function spawnRival(worldY){
+      var g=nextGhost();
+      var big=Math.random()<0.12;
+      // 사람 같은 불규칙성: 기본 상승속도 + 머뭇/버스트 성향 제각각
+      rivals.push({
+        name:g.name,
+        ceilY:g.ceil*PPM,                 // 이 라이벌의 한계 높이(월드px, 시작=0 기준)
+        x: 40+Math.random()*(W-80),
+        worldY: worldY,
+        vy: 40+Math.random()*60,
+        baseV: (big?70:95)+Math.random()*70,
+        phase: Math.random()*6.28,
+        stallT: 0, burstT: 0,
+        stun: 0, big:big, tilt:0, trail:0, passed:false, alive:true
+      });
+    }
+
+    // ====== 입력 ======
+    function kick(px){
+      if(ended) return;
+      if(!started){ started=true; document.getElementById('hint').style.opacity='0'; if(actx()&&ac.state==='suspended')ac.resume(); }
+      // 평탄 탭은 VKICK_MAX까지만. 밟기 버스트(VKICK_MAX 초과) 중에는 깎지 않는다.
+      if(player.vy < VKICK_MAX) player.vy = Math.min(VKICK_MAX, Math.max(player.vy,0) + KICK);
+      if(px!=null){ var dx=px-player.x; player.vx += Math.max(-1,Math.min(1,dx/90))*200; }
+      player.trail=1;
+      for(var i=0;i<4;i++) parts.push(bubble(player.x+(Math.random()-.5)*20, PLAYER_SY*H+14, .6));
+      sKick();
+    }
+    cv.addEventListener('pointerdown',function(e){ e.preventDefault(); kick(e.clientX); },{passive:false});
+    window.addEventListener('keydown',function(e){
+      if(e.code==='Space'||e.code==='ArrowUp'){ e.preventDefault(); kick(null); }
+      else if(e.code==='ArrowLeft') kick(player.x-120);
+      else if(e.code==='ArrowRight') kick(player.x+120);
+    });
+
+    // ====== 파티클 ======
+    function bubble(x,y,scl){ return {x:x,y:y,vx:(Math.random()-.5)*30,vy:-40-Math.random()*60,r:(2+Math.random()*4)*(scl||1),life:1,kind:'b'}; }
+    function ring(x,y,col){ return {x:x,y:y,r:6,col:col,life:1,kind:'r'}; }
+    function chunk(x,y,col){ return {x:x,y:y,vx:(Math.random()-.5)*260,vy:-60-Math.random()*200,r:3+Math.random()*4,col:col,life:1,kind:'c'}; }
+    function floatTxt(x,y,txt,col,sz){ floats.push({x:x,y:y,txt:txt,col:col||'#fff',sz:sz||22,life:1}); }
+
+    // ====== 메인 루프 ======
+    var last=0;
+    function loop(t){
+      raf=requestAnimationFrame(loop);
+      var dt=last?Math.min((t-last)/1000,0.05):0.016; last=t;
+      step(dt); draw();
+    }
+
+    function step(dt){
+      // 시작 전엔 살짝 둥실 + 라이벌만 움직임(분위기), 상어 정지
+      if(!started){
+        // 시작 전엔 제자리에서 둥실 (위로 떠오르지 않음 — 높이 누적 방지)
+        player.worldY = Math.sin(performance.now()/650)*10; player.vy=0;
+        cam += (player.worldY-cam)*Math.min(1,dt*6);
+        updateRivals(dt,false);
+        ageParts(dt);
+        return;
+      }
+      if(ended){ ageParts(dt); if(shake>0)shake=Math.max(0,shake-dt*60); if(chomp>0)chomp=Math.max(0,chomp-dt*2); return; }
+
+      // 플레이어 물리
+      player.vy -= G*dt;
+      player.vy = Math.max(VSINK_MAX, Math.min(VBURST_MAX, player.vy));
+      player.worldY += player.vy*dt;
+      player.x += player.vx*dt;
+      player.vx *= Math.pow(0.0009, dt);   // 수평 감쇠
+      if(player.x<RAD){player.x=RAD;player.vx*=-.3;} if(player.x>W-RAD){player.x=W-RAD;player.vx*=-.3;}
+      player.tilt += (Math.max(-.5,Math.min(.5,-player.vy/700))-player.tilt)*Math.min(1,dt*8);
+      player.trail=Math.max(0,player.trail-dt*3);
+      if(player.trail>0&&Math.random()<.5) parts.push(bubble(player.x+(Math.random()-.5)*16, PLAYER_SY*H+12,.5));
+
+      // 카메라
+      cam += (player.worldY-cam)*Math.min(1,dt*5);
+
+      // 깊이 갱신
+      meters=Math.max(0,player.worldY/PPM);
+      if(meters>maxMeters){
+        maxMeters=meters;
+        var fm=Math.floor(maxMeters);
+        // 마일스톤
+        if(fm>=lastMile+20){ lastMile=fm-(fm%20); floatTxt(player.x, PLAYER_SY*H-40, lastMile+'m!', '#9fe8ff',26); sMile(); }
+        // 신기록 라이브 저장(포털 자동 캡처)
+        if(fm>best){ best=fm; set(KEY.best,best); if(!recordBeaten&&startBest>0){ recordBeaten=true; floatTxt(player.x,PLAYER_SY*H-72,'신기록!','#ffd27a',24); sRecord(); for(var z=0;z<14;z++)parts.push(chunk(player.x,PLAYER_SY*H,'#ffd27a')); } }
+      }
+
+      // 상어 추격 (높이 오를수록 가속 — 후반엔 평탄 탭만으론 못 벗어남, 밟아야 산다)
+      var sharkV = Math.min(360, 70 + meters*1.4);
+      shark.worldY += sharkV*dt;
+      shark.open = 0.5+0.5*Math.sin(performance.now()/220);
+
+      updateRivals(dt,true);
+
+      // 밟기 판정
+      var pSY=PLAYER_SY*H;
+      for(var i=0;i<rivals.length;i++){
+        var r=rivals[i]; if(!r.alive||r.stun>0) continue;
+        var rsy=screenY(r.worldY);
+        var rr=(r.big?RAD*1.5:RAD*1.05);
+        var dx=r.x-player.x, dy=rsy-pSY;
+        if(dx*dx+dy*dy < (RAD+rr)*(RAD+rr)*0.82){
+          // 위쪽(=화면상 더 높은) 라이벌만 밟고 오를 수 있음
+          if(rsy <= pSY+RAD*0.6){
+            doStomp(r);
+          }
+        }
+      }
+
+      // 추월 카운트 (라이벌을 넘어선 순간)
+      for(var j=0;j<rivals.length;j++){
+        var rv=rivals[j];
+        if(rv.alive&&!rv.passed&&player.worldY>rv.worldY+RAD){ rv.passed=true; overtakes++; }
+      }
+
+      // 콤보 타이머
+      if(combo>0){ comboT-=dt; if(comboT<=0)combo=0; }
+
+      // 스폰 유지 — 화면 상단 바로 위에서 흘려보내 끊임없이 부대끼게
+      spawnAcc+=dt;
+      var onscreen=rivals.filter(function(r){return r.alive;}).length;
+      if(onscreen<9 && spawnAcc>0.2){ spawnAcc=0; spawnRival(cam + H*0.62 + 50 + Math.random()*H*0.4); }
+
+      // 화면 밖(아래로 한참) 라이벌 정리
+      rivals=rivals.filter(function(r){ return r.alive && r.worldY > cam - H*1.2; });
+
+      // 상어가 라이벌 삼킴 (밑으로 떨어진 놈) → 통쾌 연출
+      for(var k=0;k<rivals.length;k++){
+        var rk=rivals[k];
+        if(rk.alive && rk.worldY <= shark.worldY+6){ eatRival(rk); }
+      }
+
+      // 플레이어가 잡히면 끝
+      if(player.worldY <= shark.worldY+RAD*0.5){ gameOver(); }
+
+      ageParts(dt);
+      if(shake>0)shake=Math.max(0,shake-dt*55);
+      if(chomp>0)chomp=Math.max(0,chomp-dt*1.8);
+      updateHud();
+    }
+
+    function doStomp(r){
+      player.vy = Math.max(player.vy, STOMP + Math.min(combo,12)*10);
+      r.stun=STUN; r.vy=-KNOCK; r.tilt=1.4;
+      combo++; comboT=2.4; stomps++;
+      shake=Math.min(14,5+combo);
+      if(navigator.vibrate)navigator.vibrate(combo>1?[18,30,18]:18);
+      var sy=screenY(r.worldY);
+      parts.push(ring(r.x,sy,'#bfe9ff'));
+      for(var i=0;i<8;i++)parts.push(bubble(r.x+(Math.random()-.5)*30,sy,.8));
+      floatTxt(r.x,sy-22, (combo>1?'콤보 ×'+combo:'밟았다!'), combo>1?'#ffd27a':'#bfe9ff', combo>1?24:20);
+      // 누구를 밟았는지 — 진짜 사람 이름
+      floatTxt(r.x,sy+8, r.name, 'rgba(255,255,255,.7)', 13);
+      sStomp(combo);
+    }
+
+    function eatRival(r){
+      r.alive=false;
+      chomp=1; shake=Math.max(shake,10);
+      var sy=screenY(r.worldY);
+      for(var i=0;i<10;i++)parts.push(chunk(r.x,sy,'#ff6a5a'));
+      floatTxt(r.x, Math.min(sy,H-60), r.name+' 꿀꺽!', '#ff8a7a', 16);
+      if(navigator.vibrate)navigator.vibrate(40);
+      sChomp();
+    }
+
+    function updateRivals(dt,active){
+      for(var i=0;i<rivals.length;i++){
+        var r=rivals[i]; if(!r.alive) continue;
+        if(r.stun>0){
+          r.stun-=dt; r.vy -= G*0.7*dt; r.vy=Math.max(VSINK_MAX,r.vy);
+          r.tilt += (0-r.tilt)*Math.min(1,dt*3)+ (Math.random()-.5)*0.1;
+        } else if(active){
+          // 사람 같은 행동: 머뭇거림 / 버스트 / 한계 부근 정체
+          r.phase+=dt;
+          r.stallT-=dt; r.burstT-=dt;
+          if(r.stallT<-2 && Math.random()<dt*0.4) r.stallT=0.3+Math.random()*0.7;   // 가끔 멈칫
+          if(r.burstT<-3 && Math.random()<dt*0.3) r.burstT=0.4+Math.random()*0.5;   // 가끔 치고나감
+          var target=r.baseV*(0.8+0.4*Math.sin(r.phase*1.3));
+          if(r.stallT>0) target*=0.1;
+          if(r.burstT>0) target*=1.9;
+          // 자기 한계 높이에 가까워지면 점점 못 올라감(정체) — 여기서 플레이어가 추월
+          var head=r.ceilY - r.worldY;
+          if(head < 200) target*=Math.max(0.05, head/200);
+          r.vy += (target-r.vy)*Math.min(1,dt*2.5);
+          r.x += Math.sin(r.phase*0.8)*12*dt*5;
+          r.tilt += (Math.max(-.4,Math.min(.4,-r.vy/600))-r.tilt)*Math.min(1,dt*5);
+          if(Math.random()<dt*1.5) parts.push(bubble(r.x,screenY(r.worldY)+8,.4));
+        } else {
+          r.phase+=dt; r.worldY+=Math.sin(r.phase)*4*dt*5+10*dt;
+        }
+        r.worldY += r.vy*dt;
+        if(r.x<24)r.x=24; if(r.x>W-24)r.x=W-24;
+      }
+    }
+
+    function ageParts(dt){
+      for(var i=parts.length-1;i>=0;i--){
+        var p=parts[i];
+        if(p.kind==='b'){ p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy*=Math.pow(0.4,dt); p.life-=dt*1.1; }
+        else if(p.kind==='r'){ p.r+=dt*180; p.life-=dt*2.2; }
+        else if(p.kind==='c'){ p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=600*dt; p.life-=dt*1.3; }
+        if(p.life<=0) parts.splice(i,1);
+      }
+      for(var j=floats.length-1;j>=0;j--){ var f=floats[j]; f.y-=dt*46; f.life-=dt*1.05; if(f.life<=0)floats.splice(j,1); }
+    }
+
+    function screenY(worldY){ return PLAYER_SY*H - (worldY - cam); }
+
+    // ====== 렌더 ======
+    function zoneColors(){
+      // 깊은 곳(어둡) → 위로 오를수록 밝아짐
+      var depth=Math.max(0,meters);
+      var k=Math.min(1, depth/260);
+      function lerp(a,b,t){return Math.round(a+(b-a)*t);}
+      var top=[lerp(8,90,k),lerp(34,180,k),lerp(70,220,k)];
+      var bot=[lerp(4,24,k),lerp(16,70,k),lerp(34,110,k)];
+      return {top:'rgb('+top.join(',')+')',bot:'rgb('+bot.join(',')+')'};
+    }
+    function draw(){
+      ctx.save();
+      var sx=(Math.random()-.5)*shake, sy2=(Math.random()-.5)*shake;
+      ctx.translate(sx,sy2);
+
+      // 배경
+      var zc=zoneColors();
+      var g=ctx.createLinearGradient(0,0,0,H);
+      g.addColorStop(0,zc.top); g.addColorStop(1,zc.bot);
+      ctx.fillStyle=g; ctx.fillRect(-20,-20,W+40,H+40);
+
+      // 빛줄기 (위쪽)
+      ctx.save(); ctx.globalAlpha=0.05; ctx.fillStyle='#bfe9ff';
+      for(var i=0;i<4;i++){ var lx=W*(0.15+i*0.23); ctx.beginPath(); ctx.moveTo(lx,-20); ctx.lineTo(lx+60,-20); ctx.lineTo(lx-40,H); ctx.lineTo(lx-120,H); ctx.closePath(); ctx.fill(); }
+      ctx.restore();
+
+      // 깊이 눈금 (월드 기준 가로선) — 솟구치는 느낌
+      ctx.strokeStyle='rgba(180,220,255,.07)'; ctx.lineWidth=1; ctx.font='600 11px Pretendard Variable,sans-serif'; ctx.fillStyle='rgba(180,220,255,.18)';
+      var stepM=10; var firstM=Math.ceil((cam/PPM-H/PPM)/stepM)*stepM;
+      for(var m=firstM;m< (cam/PPM)+H/PPM; m+=stepM){ if(m<0)continue; var yy=screenY(m*PPM); ctx.beginPath(); ctx.moveTo(0,yy); ctx.lineTo(W,yy); ctx.stroke(); ctx.fillText(m+'m',8,yy-4); }
+
+      // 라이벌
+      for(var r,ix=0;ix<rivals.length;ix++){ r=rivals[ix]; if(!r.alive)continue; drawFish(r,false); }
+      // 플레이어
+      drawFish(player,true);
+
+      // 상어 (밑에서 솟아오름)
+      drawShark();
+
+      // 파티클
+      for(var p,pi=0;pi<parts.length;pi++){ p=parts[pi];
+        if(p.kind==='b'){ ctx.globalAlpha=p.life*0.5; ctx.strokeStyle='rgba(220,245,255,.9)'; ctx.lineWidth=1.4; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,6.28); ctx.stroke(); }
+        else if(p.kind==='r'){ ctx.globalAlpha=p.life*0.6; ctx.strokeStyle=p.col; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,6.28); ctx.stroke(); }
+        else if(p.kind==='c'){ ctx.globalAlpha=p.life; ctx.fillStyle=p.col; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,6.28); ctx.fill(); }
+      }
+      ctx.globalAlpha=1;
+
+      // 플로팅 텍스트
+      ctx.textAlign='center';
+      for(var f,fi=0;fi<floats.length;fi++){ f=floats[fi];
+        ctx.globalAlpha=Math.min(1,f.life*1.4);
+        ctx.font='900 '+f.sz+'px Pretendard Variable,sans-serif';
+        ctx.lineWidth=4; ctx.strokeStyle='rgba(0,0,0,.45)'; ctx.strokeText(f.txt,f.x,f.y);
+        ctx.fillStyle=f.col; ctx.fillText(f.txt,f.x,f.y);
+      }
+      ctx.globalAlpha=1; ctx.textAlign='left';
+
+      // 꿀꺽 빨강 플래시
+      if(chomp>0){ ctx.fillStyle='rgba(255,40,30,'+(chomp*0.32)+')'; ctx.fillRect(-20,-20,W+40,H+40); }
+
+      ctx.restore();
+    }
+
+    function drawFish(o,isPlayer){
+      var sprite = o===player ? sprites.player : (o.big? sprites.dragon : sprites.rivalGet(o));
+      var sy = isPlayer ? PLAYER_SY*H : screenY(o.worldY);
+      if(sy<-80||sy>H+80) return;
+      var rr=(o.big?RAD*1.6:RAD*(isPlayer?1.15:1.05));
+      ctx.save();
+      ctx.translate(o.x,sy);
+      ctx.rotate(o.tilt||0);
+      // 진행방향으로 좌우 반전 (수평 속도 기준)
+      var face = (o.vx||0) < -8 ? -1 : 1;
+      ctx.scale(face,1);
+      if(isPlayer){ ctx.shadowColor='rgba(255,200,90,.7)'; ctx.shadowBlur=18; }
+      else if(o.big){ ctx.shadowColor='rgba(120,60,160,.6)'; ctx.shadowBlur=12; }
+      if(o.stun>0) ctx.globalAlpha=0.6;
+      if(sprite) ctx.drawImage(sprite,-rr,-rr,rr*2,rr*2);
+      else { ctx.fillStyle=isPlayer?'#ffb13d':'#6fb6e8'; ctx.beginPath(); ctx.arc(0,0,rr,0,6.28); ctx.fill(); }
+      ctx.restore();
+
+      // 이름표 (사람이라는 인식의 핵심 — 행동이 8할, 이름이 2할)
+      if(!isPlayer){
+        ctx.save();
+        ctx.globalAlpha=o.stun>0?0.5:0.92;
+        ctx.font='800 12px Pretendard Variable,sans-serif'; ctx.textAlign='center';
+        var nm=o.name.length>7?o.name.slice(0,7):o.name;
+        var tw=ctx.measureText(nm).width;
+        var ny=sy-rr-12;
+        ctx.fillStyle='rgba(6,18,32,.5)';
+        roundRect(o.x-tw/2-7,ny-12,tw+14,18,9); ctx.fill();
+        ctx.fillStyle='#dcebf7';
+        ctx.fillText(nm,o.x,ny+1);
+        ctx.restore();
+      } else {
+        ctx.save();
+        ctx.font='800 12px Pretendard Variable,sans-serif'; ctx.textAlign='center';
+        var ny2=sy-rr-12; var tw2=ctx.measureText('나').width;
+        ctx.fillStyle='rgba(255,177,61,.85)'; roundRect(o.x-tw2/2-7,ny2-12,tw2+14,18,9); ctx.fill();
+        ctx.fillStyle='#3a2406'; ctx.fillText('나',o.x,ny2+1);
+        ctx.restore();
+      }
+    }
+    function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+    function drawShark(){
+      var sy=screenY(shark.worldY);
+      if(sy<H-40) {
+        // 가까이 오면 물이 어둑 + 그림자
+        var dz=Math.max(0,Math.min(1,(sy-(H-H*0.55))/(H*0.55)));
+      }
+      if(sy>H+260) { // 멀면 경고 그림자만 살짝
+        ctx.fillStyle='rgba(0,0,0,.0)'; return;
+      }
+      var sw=Math.min(W*1.5,420);
+      ctx.save();
+      // 근접 위협 어둠
+      var prox=Math.max(0,Math.min(1,(H-sy)/H));
+      ctx.fillStyle='rgba(0,0,0,'+(0.28*Math.max(0,1-(sy- (PLAYER_SY*H))/(H*0.5)))+')';
+      // 상어 본체(턱) — 화면 아래에서 위로
+      if(sprites.shark){
+        var sh=sw;
+        ctx.globalAlpha=0.96;
+        ctx.shadowColor='rgba(0,0,0,.5)'; ctx.shadowBlur=24;
+        ctx.drawImage(sprites.shark, W/2-sw/2, sy-sh*0.18, sw, sh);
+      } else {
+        ctx.fillStyle='#1b2b3d'; ctx.beginPath(); ctx.moveTo(W/2-sw/2,H); ctx.lineTo(W/2,sy); ctx.lineTo(W/2+sw/2,H); ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // ====== HUD ======
+    function updateHud(){
+      document.getElementById('depth').textContent=Math.floor(maxMeters);
+      document.getElementById('best').textContent=best;
+    }
+
+    // ====== 게임오버 ======
+    function gameOver(){
+      if(ended)return; ended=true;
+      shake=16; chomp=1;
+      var sy=PLAYER_SY*H;
+      for(var i=0;i<16;i++)parts.push(chunk(player.x,sy,'#ff6a5a'));
+      sOver();
+      if(navigator.vibrate)navigator.vibrate([40,40,80]);
+      var fm=Math.floor(maxMeters);
+      var isRec = startBest>0 ? fm>startBest : fm>0 && fm>=best;
+      // 결과 카드
+      setTimeout(function(){
+        document.getElementById('over-title').textContent = isRec?'신기록 등극!':'상어밥이 됐어요!';
+        document.getElementById('over-sub').textContent = isRec
+          ? '이 깊이까지 솟구친 건 처음이에요. 동네 최고 피라미!'
+          : (overtakes>0?'잘 밟고 올라갔지만, 상어가 더 빨랐어요.':'머뭇대면 상어가 따라잡아요. 쉬지 말고 톡톡!');
+        document.getElementById('over-m').textContent=fm;
+        var rec=document.getElementById('over-rec');
+        rec.textContent = isRec? ('이전 최고 '+startBest+'m → '+fm+'m') : ('최고 기록 '+best+'m');
+        // 제친 사람들 (진짜 닉네임)
+        var passedReal=rivals.concat([]).filter(function(r){return r.passed;});
+        // 보존: passed였던 라이벌은 정리됐을 수 있어 카운트는 overtakes로
+        var names=[]; for(var i=0;i<rivals.length;i++){ if(rivals[i].passed&&names.length<3)names.push(rivals[i].name); }
+        var pl=document.getElementById('over-pass');
+        if(overtakes>0){
+          var nstr = names.length? ('<span class="nm">'+names.join('</span>, <span class="nm">')+'</span>'+(overtakes>names.length?' 외':'')) : '';
+          pl.innerHTML='이번 판 <b>'+overtakes+'명</b> 제침'+(nstr?' · '+nstr:'')+' · 밟기 <b>'+stomps+'</b>회';
+        } else {
+          pl.innerHTML='아직 아무도 못 제쳤어요. 위 물고기를 밟고 올라보세요!';
+        }
+        document.getElementById('over').classList.add('show');
+      }, 650);
+    }
+
+    // ====== 버튼 ======
+    function setMuteIc(){ document.querySelector('#mute .ki use').setAttribute('href', muted?'#p-speaker-slash':'#p-speaker-high'); }
+    document.getElementById('mute').addEventListener('click',function(){ muted=!muted; set(KEY.muted,muted?'1':'0'); setMuteIc(); if(!muted)sKick(); });
+    document.getElementById('over-btn').addEventListener('click',function(){ startBest=best; reset(); });
+    document.getElementById('support').addEventListener('click',function(){ if(window.GamePortal&&GamePortal.openSupport)GamePortal.openSupport(); });
+    setMuteIc();
+
+    // ====== 스프라이트 프리로드 후 시작 ======
+    var pending=4;
+    function done(){ if(--pending<=0){ reset(); last=0; raf=requestAnimationFrame(loop); } }
+    makeSprite('fish','#ffd05b',128,function(c){sprites.player=c;done();});
+    makeSprite('shark','#cdd8e2',300,function(c){sprites.shark=c;done();});
+    makeSprite('dragon','#b08ad6',180,function(c){sprites.dragon=c;done();});
+    // 라이벌은 색을 여러 개 — 이름 해시로 고정 색 부여(같은 사람=같은 색)
+    var rivalColors=['#6fb6e8','#7fd6c0','#9db4e8','#e89bb8','#9fd07a','#e8c46f','#8fbfe0','#c79be8'];
+    var rivalSprites=[];
+    var rc=0;
+    rivalColors.forEach(function(col){ makeSprite('fish',col,96,function(c){ rivalSprites.push(c); if(++rc===rivalColors.length){ sprites.rivalGet=function(o){ if(o._sp==null){ var h=0; for(var i=0;i<o.name.length;i++)h=(h*31+o.name.charCodeAt(i))&255; o._sp=rivalSprites[h%rivalSprites.length]; } return o._sp; }; } done(); }); });
+  })();
+  </script>
+  <script>
+    if('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('./sw.js');
+  </script>
+</body>
+</html>

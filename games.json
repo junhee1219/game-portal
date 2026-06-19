@@ -388,6 +388,26 @@
           "merge": "lww"
         }
       ]
+    },
+    {
+      "id": "surge",
+      "shell_mode": "fullscreen",
+      "title": "피라미 비상",
+      "tagline": "밑에선 상어가, 옆에선 라이벌이. 다른 물고기를 차고 올라 더 높이 솟구쳐요 — 누가 더 높이?",
+      "unit": "m",
+      "score_key": "surgeBest",
+      "score_metric": "best",
+      "defer_share": true,
+      "state_keys": [
+        {
+          "key": "surgeBest",
+          "merge": "max"
+        },
+        {
+          "key": "surgeMuted",
+          "merge": "lww"
+        }
+      ]
     }
   ]
 }
