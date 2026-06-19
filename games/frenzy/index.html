@@ -165,8 +165,9 @@
       return {
         name:name, x:x, y:y, vx:0, vy:0, size:sz, col:col, isPlayer:!!isPlayer,
         face:1, tilt:0, alive:true, grace:0,
-        aggr:0.3+Math.random()*0.7, vision:60+sz*1.4+Math.random()*70, react:Math.random()*0.5, wob:Math.random()*6.28,
-        retarget:0, tx:x, ty:y, eaten:0, sq:0
+        aggr:0.3+Math.random()*0.7, vision:60+sz*1.4+Math.random()*70,
+        react:0.12+Math.random()*0.28, think:Math.random()*0.3, aimx:0, aimy:0, aimsp:0, wob:Math.random()*6.28,
+        eaten:0, sq:0
       };
     }
     function hash(s){ var h=0; for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0; return h; }
@@ -281,29 +282,36 @@
     }
 
     function aiThink(f,dt){
-      f.wob+=dt; f.retarget-=dt;
-      // 가장 가까운 위협/먹이 탐색
-      var threat=null,td=1e9, prey=null,pd=1e9;
-      for(var i=0;i<fishes.length;i++){ var o=fishes[i]; if(o===f||!o.alive)continue;
-        var d=Math.hypot(o.x-f.x,o.y-f.y); if(d>f.vision)continue;
-        if(o.size>f.size*1.12){ if(d<td){td=d;threat=o;} }
-        else if(f.size>o.size*1.12){ if(d<pd){pd=d;prey=o;} }
+      f.wob+=dt; f.think-=dt;
+      // 사람처럼: 매 프레임이 아니라 가끔만 '판단'을 갱신(반응 지연) → 그 사이엔 관성으로 미끄러짐(오버슈트=엉성함)
+      if(f.think<=0){
+        f.think = f.react + Math.random()*0.18;
+        var threat=null,td=1e9, prey=null,pd=1e9;
+        for(var i=0;i<fishes.length;i++){ var o=fishes[i]; if(o===f||!o.alive)continue;
+          var d=Math.hypot(o.x-f.x,o.y-f.y); if(d>f.vision)continue;
+          if(o.size>f.size*1.1){ if(d<td){td=d;threat=o;} }
+          else if(f.size>o.size*1.1){ if(d<pd){pd=d;prey=o;} }
+        }
+        var ang, sp=speedOf(f);
+        if(threat){                                   // 도망 — 패닉이라 살짝 빗나간 각도로
+          ang=Math.atan2(f.y-threat.y, f.x-threat.x) + (Math.random()-0.5)*1.2;
+          f.aimsp=sp*0.86;
+        } else if(prey && Math.random()<f.aggr+0.2){  // 사냥 — 조준이 완벽하진 않음
+          ang=Math.atan2(prey.y-f.y, prey.x-f.x) + (Math.random()-0.5)*0.55;
+          f.aimsp=sp;
+        } else {                                      // 배회 / 가까운 먹이 알갱이
+          var fp=null,fd=1e9; for(var p=0;p<pellets.length;p++){ var pe=pellets[p]; var d2=Math.hypot(pe.x-f.x,pe.y-f.y); if(d2<f.vision&&d2<fd){fd=d2;fp=pe;} }
+          if(fp){ ang=Math.atan2(fp.y-f.y, fp.x-f.x)+(Math.random()-0.5)*0.4; f.aimsp=sp*0.7; }
+          else { ang=(f.aimx||f.aimy)?Math.atan2(f.aimy,f.aimx)+(Math.random()-0.5)*0.9 : Math.random()*6.28; f.aimsp=sp*0.5; }
+        }
+        if(Math.random()<0.06) f.aimsp*=0.2;          // 가끔 헛발질/머뭇
+        f.aimx=Math.cos(ang); f.aimy=Math.sin(ang);
       }
-      var sp=speedOf(f), dirx=0,diry=0;
-      var wary = f.size>=16;   // 작은 피라미는 위협도 사냥도 모르고 그저 헤엄친다 = 쉬운 먹잇감
-      if(wary && threat){ dirx=f.x-threat.x; diry=f.y-threat.y; sp*=0.82; }            // 도망(허둥지둥)
-      else if(wary && prey && Math.random()<f.aggr+0.25){ dirx=prey.x-f.x; diry=prey.y-f.y; } // 사냥
-      else {
-        // 먹이 알갱이/배회
-        var fp=null,fd=1e9; for(var p=0;p<pellets.length;p++){ var pe=pellets[p]; var d2=Math.hypot(pe.x-f.x,pe.y-f.y); if(d2<f.vision&&d2<fd){fd=d2;fp=pe;} }
-        if(fp){ dirx=fp.x-f.x; diry=fp.y-f.y; }
-        else { if(f.retarget<=0){ f.tx=f.x+(Math.random()-.5)*400; f.ty=f.y+(Math.random()-.5)*400; f.retarget=1+Math.random()*2; } dirx=f.tx-f.x; diry=f.ty-f.y; sp*=0.6; }
-      }
-      var dl=Math.hypot(dirx,diry)||1;
-      // 약간의 흔들림(유기적)
-      var jx=Math.cos(f.wob*1.7)*0.15, jy=Math.sin(f.wob*1.3)*0.15;
-      f.vx += ((dirx/dl+jx)*sp - f.vx)*Math.min(1,dt*(3+f.aggr*3));
-      f.vy += ((diry/dl+jy)*sp - f.vy)*Math.min(1,dt*(3+f.aggr*3));
+      // 결정한 방향으로 '둔하게' 조향(관성) + 미세 흔들림
+      var jx=Math.cos(f.wob*1.7)*0.12, jy=Math.sin(f.wob*1.3)*0.12;
+      var turn=Math.min(1, dt*(2.1+f.aggr*2.2));
+      f.vx += ((f.aimx+jx)*f.aimsp - f.vx)*turn;
+      f.vy += ((f.aimy+jy)*f.aimsp - f.vy)*turn;
     }
 
     function resolveEats(dt){
