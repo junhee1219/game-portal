@@ -190,6 +190,7 @@
     function sKick(){ tone(360+Math.random()*40,0,.08,'sine',.05); }
     function sStomp(n){ tone(420+Math.min(n,8)*55,0,.09,'square',.09); tone(180,0,.07,'sine',.07); }
     function sChomp(){ tone(110,0,.22,'sawtooth',.13); tone(70,.04,.28,'sawtooth',.1); }
+    function sHit(){ tone(150,0,.13,'square',.1); tone(95,.03,.18,'sawtooth',.08); }
     function sMile(){ [523,659,784].forEach(function(f,i){tone(f,i*.06,.12,'triangle',.09);}); }
     function sOver(){ tone(300,0,.3,'sawtooth',.09); tone(200,.16,.34,'sawtooth',.08); tone(120,.34,.4,'sawtooth',.08); }
     function sRecord(){ [784,988,1319,1568].forEach(function(f,i){tone(f,.1+i*.08,.14,'triangle',.12);}); }
@@ -240,7 +241,7 @@
     var spawnAcc;
 
     function reset(){
-      player={x:W/2,vy:120,vx:0,worldY:0,tilt:0,trail:0};
+      player={x:W/2,vy:120,vx:0,worldY:0,tilt:0,trail:0,invuln:0,hitT:0};
       cam=player.worldY;
       rivals=[]; parts=[]; floats=[];
       shark={worldY:player.worldY-H*1.05,open:0};
@@ -263,16 +264,17 @@
     function spawnRival(worldY){
       var g=nextGhost();
       var big=Math.random()<0.12;
-      // 사람 같은 불규칙성: 기본 상승속도 + 머뭇/버스트 성향 제각각
       rivals.push({
         name:g.name,
         ceilY:g.ceil*PPM,                 // 이 라이벌의 한계 높이(월드px, 시작=0 기준)
         x: 40+Math.random()*(W-80),
         worldY: worldY,
         vy: 40+Math.random()*60,
-        baseV: (big?70:95)+Math.random()*70,
+        vmax: (big?150:100)+Math.random()*(big?120:150),  // 실력 = 상승 한계 속도(제각각)
+        tap: 0.16+Math.random()*0.26,                      // 탭 리듬(제각각, 사람마다 다름)
+        kickT: Math.random()*0.3,
+        aggro: big || Math.random()<0.35,                  // 나를 밟으려 드는 적극적 라이벌
         phase: Math.random()*6.28,
-        stallT: 0, burstT: 0,
         stun: 0, big:big, tilt:0, trail:0, passed:false, alive:true
       });
     }
@@ -329,6 +331,8 @@
       player.vx *= Math.pow(0.0009, dt);   // 수평 감쇠
       if(player.x<RAD){player.x=RAD;player.vx*=-.3;} if(player.x>W-RAD){player.x=W-RAD;player.vx*=-.3;}
       player.tilt += (Math.max(-.5,Math.min(.5,-player.vy/700))-player.tilt)*Math.min(1,dt*8);
+      if(player.invuln>0)player.invuln=Math.max(0,player.invuln-dt);
+      if(player.hitT>0)player.hitT=Math.max(0,player.hitT-dt);
       player.trail=Math.max(0,player.trail-dt*3);
       if(player.trail>0&&Math.random()<.5) parts.push(bubble(player.x+(Math.random()-.5)*16, PLAYER_SY*H+12,.5));
 
@@ -360,10 +364,12 @@
         var rsy=screenY(r.worldY);
         var rr=(r.big?RAD*1.5:RAD*1.05);
         var dx=r.x-player.x, dy=rsy-pSY;
-        if(dx*dx+dy*dy < (RAD+rr)*(RAD+rr)*0.82){
-          // 위쪽(=화면상 더 높은) 라이벌만 밟고 오를 수 있음
-          if(rsy <= pSY+RAD*0.6){
-            doStomp(r);
+        if(dx*dx+dy*dy < (RAD+rr)*(RAD+rr)*0.82 && rsy <= pSY+RAD*0.6){
+          // 모멘텀이 승부를 가른다 — 둘 다 서로를 밟을 수 있는 동등한 관계
+          if(player.vy > 80){
+            doStomp(r);                                  // 내가 치고 오르며 밟고 넘어감
+          } else if(r.aggro && player.invuln<=0){
+            doRivalStomp(r);                             // 내가 굼뜬 사이 라이벌이 나를 밟고 넘어감
           }
         }
       }
@@ -415,6 +421,20 @@
       sStomp(combo);
     }
 
+    function doRivalStomp(r){
+      var pSY=PLAYER_SY*H;
+      player.vy=-280; player.invuln=0.9; player.hitT=0.4;
+      r.vy=Math.max(r.vy, STOMP*0.62); r.tilt=-0.3;
+      combo=0; comboT=0;
+      shake=Math.min(14,10);
+      if(navigator.vibrate)navigator.vibrate([22,40,22]);
+      parts.push(ring(player.x,pSY,'#ff9a7a'));
+      for(var i=0;i<7;i++)parts.push(bubble(player.x+(Math.random()-.5)*28,pSY,.7));
+      floatTxt(player.x,pSY-22,'밟혔다!','#ff8a7a',22);
+      floatTxt(player.x,pSY+8,r.name+'에게', 'rgba(255,255,255,.7)',13);
+      sHit();
+    }
+
     function eatRival(r){
       r.alive=false;
       chomp=1; shake=Math.max(shake,10);
@@ -432,21 +452,23 @@
           r.stun-=dt; r.vy -= G*0.7*dt; r.vy=Math.max(VSINK_MAX,r.vy);
           r.tilt += (0-r.tilt)*Math.min(1,dt*3)+ (Math.random()-.5)*0.1;
         } else if(active){
-          // 사람 같은 행동: 머뭇거림 / 버스트 / 한계 부근 정체
-          r.phase+=dt;
-          r.stallT-=dt; r.burstT-=dt;
-          if(r.stallT<-2 && Math.random()<dt*0.4) r.stallT=0.3+Math.random()*0.7;   // 가끔 멈칫
-          if(r.burstT<-3 && Math.random()<dt*0.3) r.burstT=0.4+Math.random()*0.5;   // 가끔 치고나감
-          var target=r.baseV*(0.8+0.4*Math.sin(r.phase*1.3));
-          if(r.stallT>0) target*=0.1;
-          if(r.burstT>0) target*=1.9;
-          // 자기 한계 높이에 가까워지면 점점 못 올라감(정체) — 여기서 플레이어가 추월
+          // 사람처럼 '톡톡' 탭하며 펄스로 오른다 (매끄러운 글라이딩=NPC 티). 플레이어와 같은 물리.
+          r.phase+=dt; r.kickT-=dt;
           var head=r.ceilY - r.worldY;
-          if(head < 200) target*=Math.max(0.05, head/200);
-          r.vy += (target-r.vy)*Math.min(1,dt*2.5);
-          r.x += Math.sin(r.phase*0.8)*12*dt*5;
+          var tired = head<240 ? Math.max(0.12, head/240) : 1;   // 한계 부근이면 탭이 뜸하고 약해짐
+          if(r.kickT<=0){
+            if(r.vy < r.vmax) r.vy = Math.min(r.vmax, Math.max(r.vy,0) + (165+Math.random()*70)*tired);
+            var iv = r.tap*(tired<0.5?1.8:1);
+            if(Math.random()<0.10) iv += 0.5+Math.random()*0.8;   // 가끔 머뭇(쉼)
+            else if(Math.random()<0.12) iv *= 0.45;               // 가끔 연타 버스트
+            r.kickT = iv*(0.7+Math.random()*0.6);
+            if(Math.random()<0.6) parts.push(bubble(r.x,screenY(r.worldY)+8,.4));
+          }
+          r.vy -= G*dt; r.vy=Math.max(VSINK_MAX,r.vy);
+          r.x += Math.sin(r.phase*0.8)*10*dt*5;
+          // 공격적인 라이벌은 내가 굼뜬 사이 위에서 나를 노리고 달려든다
+          if(r.aggro && r.worldY>player.worldY && r.worldY-player.worldY < H*0.9){ r.x += (player.x-r.x)*Math.min(1,dt*0.9); }
           r.tilt += (Math.max(-.4,Math.min(.4,-r.vy/600))-r.tilt)*Math.min(1,dt*5);
-          if(Math.random()<dt*1.5) parts.push(bubble(r.x,screenY(r.worldY)+8,.4));
         } else {
           r.phase+=dt; r.worldY+=Math.sin(r.phase)*4*dt*5+10*dt;
         }
