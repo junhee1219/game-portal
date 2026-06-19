@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#07182a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="물고기 대난투">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="물고기 대난투 — 작은 놈은 잡아먹고, 큰 놈은 피하고">
+  <meta property="og:description" content="이름 달린 물고기들이 가득한 바다. 나보다 작으면 꿀꺽 — 먹을수록 커지고 순위가 오른다. 1등 포식자가 되어라.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>물고기 대난투</title>
+  <style>
+    @font-face{font-family:"Pretendard Variable";font-weight:45 920;font-style:normal;font-display:swap;src:url("/fonts/PretendardVariable.woff2") format("woff2-variations");}
+    :root{ --ink:#eaf4ff; --ink-soft:#9fb6cc; --accent:#ffb13d; --accent-deep:#e0871a; --card:#10243c; }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    html,body{height:100%;background:#07182a;}
+    body{font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;color:var(--ink);overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none;}
+    button{font:inherit;}
+    #cv{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0;touch-action:none;}
+    .icon-btn{
+      position:fixed;z-index:6;pointer-events:auto;width:40px;height:40px;border:1px solid rgba(150,190,230,.22);border-radius:12px;
+      background:rgba(8,22,38,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+      color:#cfe1f2;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .1s ease;
+      right:calc(10px + env(safe-area-inset-right));bottom:calc(14px + env(safe-area-inset-bottom));
+    }
+    .icon-btn:active{transform:scale(.92);}
+    .ki{width:22px;height:22px;fill:currentColor;display:block;}
+
+    #hint{position:fixed;left:50%;top:54%;transform:translate(-50%,-50%);z-index:5;text-align:center;pointer-events:none;transition:opacity .3s ease;text-shadow:0 2px 10px rgba(0,0,0,.6);}
+    #hint .big{font-size:21px;font-weight:900;color:#fff;}
+    #hint .sm{margin-top:7px;font-size:14px;font-weight:700;color:var(--ink-soft);line-height:1.5;}
+
+    #over{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(4,12,22,.62);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);opacity:0;pointer-events:none;transition:opacity .3s ease;}
+    #over.show{opacity:1;pointer-events:auto;}
+    .card{width:min(340px,90vw);border-radius:26px;background:linear-gradient(180deg,#15355a,var(--card));border:1px solid rgba(150,190,230,.16);padding:26px 22px 20px;text-align:center;box-shadow:0 30px 70px rgba(0,0,0,.5);transform:translateY(14px) scale(.97);transition:transform .3s cubic-bezier(.2,1.1,.4,1);}
+    #over.show .card{transform:none;}
+    .badge{width:70px;height:70px;border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#ffd27a,var(--accent));color:#5a3608;box-shadow:0 6px 0 var(--accent-deep),0 12px 24px rgba(255,177,61,.3);}
+    .badge .ki{width:42px;height:42px;}
+    .card h2{font-size:25px;font-weight:900;letter-spacing:-.02em;}
+    .card .sub{margin-top:6px;color:var(--ink-soft);font-size:14px;line-height:1.5;}
+    .bigscore{margin:16px 0 2px;font-size:54px;font-weight:900;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums;}
+    .bigscore small{font-size:22px;color:var(--ink-soft);font-weight:800;margin-left:3px;}
+    .rec{font-size:13px;font-weight:800;color:#7fe0a8;min-height:18px;margin-bottom:8px;}
+    .passline{font-size:13.5px;color:var(--ink-soft);line-height:1.6;margin:6px 0 16px;padding:11px 12px;border-radius:14px;background:rgba(8,20,36,.5);border:1px solid rgba(150,190,230,.12);}
+    .passline b{color:#fff;} .passline .nm{color:#ffd690;font-weight:800;}
+    .primary{width:100%;height:52px;border:none;border-radius:16px;background:var(--accent);color:#3a2406;font-weight:900;font-size:17px;box-shadow:0 5px 0 var(--accent-deep),0 12px 22px rgba(255,177,61,.26);cursor:pointer;transition:transform .1s ease,box-shadow .1s ease;}
+    .primary:active{transform:translateY(3px);box-shadow:0 2px 0 var(--accent-deep);}
+    .mini{display:flex;justify-content:center;gap:18px;margin-top:15px;}
+    .mini a,.mini button{border:none;background:none;color:var(--ink-soft);font-size:13px;font-weight:800;text-decoration:none;cursor:pointer;}
+    .credit{position:fixed;left:0;right:0;bottom:calc(4px + env(safe-area-inset-bottom));z-index:4;text-align:center;font-size:10px;color:rgba(159,182,204,.45);pointer-events:none;}
+  </style>
+</head>
+<body>
+  <svg style="display:none" aria-hidden="true">
+    <symbol id="p-speaker-high" viewBox="0 0 256 256"><path d="M160,32.25V223.69a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.57-51A4,4,0,0,1,80,176.16V79.84a4,4,0,0,1,1.55-3.15l65.57-51a8,8,0,0,1,10,.16A8.27,8.27,0,0,1,160,32.25ZM60,80H32A16,16,0,0,0,16,96v64a16,16,0,0,0,16,16H60a4,4,0,0,0,4-4V84A4,4,0,0,0,60,80Zm126.77,20.84a8,8,0,0,0-.72,11.3,24,24,0,0,1,0,31.72,8,8,0,1,0,12,10.58,40,40,0,0,0,0-52.88A8,8,0,0,0,186.74,100.84Zm40.89-26.17a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66Z"/></symbol>
+    <symbol id="p-speaker-slash" viewBox="0 0 256 256"><path d="M213.92,210.62a8,8,0,1,1-11.84,10.76L160,175.09v48.6a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.55-51A4,4,0,0,1,80,176.18V87.09L42.08,45.38A8,8,0,1,1,53.92,34.62Zm-27.21-55.46a8,8,0,0,0,11.29-.7,40,40,0,0,0,0-52.88,8,8,0,1,0-12,10.57,24,24,0,0,1,0,31.72A8,8,0,0,0,186.71,155.16Zm40.92-80.49a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66ZM153,119.87a4,4,0,0,0,7-2.7V32.25a8.27,8.27,0,0,0-2.88-6.4,8,8,0,0,0-10-.16L103.83,59.33a4,4,0,0,0-.5,5.85Z"/></symbol>
+    <symbol id="g-fish" viewBox="0 0 512 512"><path d="M162.624 52.61C97.727 52.9 43.2 71.024 20.26 77.065c180.533-16.45 207.453 29.552 202.45 80.002-18.22 37.848-25.254 55.3-27.918 70.57-.1-.087-.194-.175-.297-.263-.137 1.532-.252 3.068-.353 4.604-1.174 9.332-.916 18.495-.844 31.853.232 42.953 20.353 78.605 35.563 123.858-19.41 34.982-62.905 40.407-111.138 40.017 15.68 4.238 57.39 35.154 183.93-18.266-18.39 38.19-101.927 66.29-104.35 80.708 95.706-8.18 156.83-50.263 172.442-113.7 26.875-16.655 51.02-37.67 71.22-88.49 4.977-15.1 26.364-16.513 42.844-20.37 8.092-1.892 12.803-17.88 0-19.664-16.856-3.743-41.087-1.758-50.568-18.963C359.963 85.33 251.557 52.22 162.624 52.61zM68.11 170.79c-6.35-.04-11.513.988-14.995 3.296 52.984 29.347 72.777 42.044 73.205 52.064.306 18.476-56.007 23.49-57.59 33.362-.602 3.75 45.222 28.75 51.972 38.277 8.175 14.697-18.264 35.887-52.675 58.995 7.18 11.277 72.52-13.598 116.69-36.805-7.365-34.743-12.074-70.132-6.827-105.548-32.393-23.226-82.256-43.47-109.78-43.643zm309.805 34.105c17.18 0 31.3 14.12 31.3 31.3s-14.12 31.3-31.3 31.3-31.298-14.12-31.298-31.3 14.12-31.3 31.298-31.3zm-71.578 12.435c4.01.062 8.036.29 12.076.705l.487.05.478.102c7.506 1.608 10.558 7.368 12.705 12.56 2.147 5.19 3.38 11.144 4.006 17.52 1.25 12.75.433 26.886-5.97 37.98-3.817 6.613-9.487 8.915-16.46 11.564-6.97 2.65-15.513 4.687-25.05 5.833-19.078 2.29-42.133 1.066-62.616-8.352l-19.9-9.147 20.58-7.487c9.96-3.622 17.247-7.86 22.49-11.594-8.457-3.524-18.93-9.306-28.448-18.88l-10.3-10.36 13.886-4.54c26.63-8.707 53.964-16.39 82.035-15.952zm71.578 5.565c-7.45 0-13.298 5.85-13.298 13.3 0 5.78 3.525 10.582 8.582 12.45a13.773 13.008 0 0 1-1.802-6.397 13.773 13.008 0 0 1 13.773-13.008 13.773 13.008 0 0 1 4.546.746c-2.2-4.245-6.607-7.09-11.8-7.09zm-71.863 12.443c-19.507-.27-39.51 4.09-59.924 10.098 11.728 7.197 22.06 8.86 22.06 8.86l14.735 2.25-8.855 11.99s-3.546 4.686-10.194 10.02c-2.56 2.052-5.814 4.29-9.447 6.55 10.906 1.81 22.13 1.855 32.033.665 8.256-.99 15.592-2.804 20.81-4.786 5.216-1.982 8.043-5.09 7.26-3.736 2.872-4.975 4.633-17.148 3.645-27.227-.494-5.038-1.58-9.627-2.724-12.393-.48-1.16-.863-1.54-1.085-1.813-2.764-.23-5.53-.438-8.313-.476z"/></symbol>
+  </svg>
+
+  <canvas id="cv"></canvas>
+  <button class="icon-btn" id="mute" aria-label="소리 켜기/끄기"><svg class="ki"><use href="#p-speaker-high"/></svg></button>
+
+  <div id="hint">
+    <div class="big">손가락을 따라 헤엄쳐요</div>
+    <div class="sm">나보다 작은 물고기는 꿀꺽!<br>큰 놈은 피하고 — 먹을수록 커져요</div>
+  </div>
+
+  <div class="credit">Icons: game-icons.net (CC BY 3.0) · Phosphor</div>
+
+  <div id="over">
+    <div class="card">
+      <div class="badge"><svg class="ki"><use href="#g-fish"/></svg></div>
+      <h2 id="over-title">잡아먹혔어요!</h2>
+      <p class="sub" id="over-sub"></p>
+      <div class="bigscore"><span id="over-k">0</span><small>마리</small></div>
+      <div class="rec" id="over-rec"></div>
+      <div class="passline" id="over-pass"></div>
+      <button class="primary" id="over-btn">다시 도전</button>
+      <div class="mini"><a href="/rank">기록실</a><button id="support">후원 · 의견</button></div>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    'use strict';
+    var KEY={best:'frenzyBest',muted:'frenzyMuted'};
+    function gi(k){try{return parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){return 0;}}
+    function setLS(k,v){try{localStorage.setItem(k,String(v));}catch(e){}}
+    var best=gi(KEY.best);
+    var muted=false; try{muted=localStorage.getItem(KEY.muted)==='1';}catch(e){}
+
+    // ===== 아이콘 → 색상별 스프라이트 프리렌더 =====
+    var ICONS={ fish:{vb:'0 0 512 512',inner:'<path d="M162.624 52.61C97.727 52.9 43.2 71.024 20.26 77.065c180.533-16.45 207.453 29.552 202.45 80.002-18.22 37.848-25.254 55.3-27.918 70.57-.1-.087-.194-.175-.297-.263-.137 1.532-.252 3.068-.353 4.604-1.174 9.332-.916 18.495-.844 31.853.232 42.953 20.353 78.605 35.563 123.858-19.41 34.982-62.905 40.407-111.138 40.017 15.68 4.238 57.39 35.154 183.93-18.266-18.39 38.19-101.927 66.29-104.35 80.708 95.706-8.18 156.83-50.263 172.442-113.7 26.875-16.655 51.02-37.67 71.22-88.49 4.977-15.1 26.364-16.513 42.844-20.37 8.092-1.892 12.803-17.88 0-19.664-16.856-3.743-41.087-1.758-50.568-18.963C359.963 85.33 251.557 52.22 162.624 52.61zM68.11 170.79c-6.35-.04-11.513.988-14.995 3.296 52.984 29.347 72.777 42.044 73.205 52.064.306 18.476-56.007 23.49-57.59 33.362-.602 3.75 45.222 28.75 51.972 38.277 8.175 14.697-18.264 35.887-52.675 58.995 7.18 11.277 72.52-13.598 116.69-36.805-7.365-34.743-12.074-70.132-6.827-105.548-32.393-23.226-82.256-43.47-109.78-43.643zm309.805 34.105c17.18 0 31.3 14.12 31.3 31.3s-14.12 31.3-31.3 31.3-31.298-14.12-31.298-31.3 14.12-31.3 31.298-31.3zm-71.578 12.435c4.01.062 8.036.29 12.076.705l.487.05.478.102c7.506 1.608 10.558 7.368 12.705 12.56 2.147 5.19 3.38 11.144 4.006 17.52 1.25 12.75.433 26.886-5.97 37.98-3.817 6.613-9.487 8.915-16.46 11.564-6.97 2.65-15.513 4.687-25.05 5.833-19.078 2.29-42.133 1.066-62.616-8.352l-19.9-9.147 20.58-7.487c9.96-3.622 17.247-7.86 22.49-11.594-8.457-3.524-18.93-9.306-28.448-18.88l-10.3-10.36 13.886-4.54c26.63-8.707 53.964-16.39 82.035-15.952zm71.578 5.565c-7.45 0-13.298 5.85-13.298 13.3 0 5.78 3.525 10.582 8.582 12.45a13.773 13.008 0 0 1-1.802-6.397 13.773 13.008 0 0 1 13.773-13.008 13.773 13.008 0 0 1 4.546.746c-2.2-4.245-6.607-7.09-11.8-7.09zm-71.863 12.443c-19.507-.27-39.51 4.09-59.924 10.098 11.728 7.197 22.06 8.86 22.06 8.86l14.735 2.25-8.855 11.99s-3.546 4.686-10.194 10.02c-2.56 2.052-5.814 4.29-9.447 6.55 10.906 1.81 22.13 1.855 32.033.665 8.256-.99 15.592-2.804 20.81-4.786 5.216-1.982 8.043-5.09 7.26-3.736 2.872-4.975 4.633-17.148 3.645-27.227-.494-5.038-1.58-9.627-2.724-12.393-.48-1.16-.863-1.54-1.085-1.813-2.764-.23-5.53-.438-8.313-.476z"/>'}, dolphin:{vb:'0 0 512 512',inner:'<path d="M123.22 47.23c29.498 15.152 55.025 36.05 55.53 67.366-93.62 83.867-83.862 179.356-97.002 270.34-67.68 55.552-67.57 90.948-60.9 101.227 3.94.743 29.11-25.94 48.326-30.397 14.23-4.094 12.284-15.99 16.273-25.275 2.438 14.55 7.17 22.612 17.133 25.485 12.874 3.36 44.932 28.15 51.53 25.504 1.374-20.382-26.01-63.854-48.028-90.087 41.012-63.28 81.365-136.458 211.162-207.77-3.21-3.706-6.216-6.45-8.8-7.986l9.198-15.472c11.617 6.907 20.522 19.56 29.248 35.033 5.94 10.532 11.528 22.644 16.96 35.117 15.682-32.87 22.983-66.406 16.402-90.254l17.35-4.786a87.287 87.287 0 0 1 1.927 8.83c33.29-4.253 55.718-13.083 85.11-29.322 3.744-2.068 19.054-13.012-.117-16.03 12.62-9.017 7.54-12.063 1.973-15.152-6.486-3.6-20.302-8.948-35.758-8.556-12.124-27.863-39.63-47.772-82.225-47.696-28.532.052-63.842 9.086-105.828 30.688C217.895 27.64 164.92 20.468 123.22 47.23zm286.942 28.74a9 9 0 1 1 0 18 9 9 0 0 1 0-18z"/>'}, whale:{vb:'0 0 512 512',inner:'<path d="M388.81 85.863c-10.106.254-17.64 6.364-22.757 14.442-6.165-4.3-13.264-7.895-21.207-10.39-6.427-2.02-26.645 4.732-45.768 18.536 16.392 6.376 11.844 6.948 16.82 19.672-19.66-1.988-28.31-2.94-30.048-17.138-.314-1.5-.81-2.916-1.467-4.254-15.234 3.722-22.6 8.77-41.026 11.262-4.858 1.226 9.583-18.77 28.99-22.52-17.26-9.138-46.225-9.985-60.945-6.962-38.524 7.91-42.33 52.6-23.88 65.316 3.717-9.353 14.566-12.168 29.5-11.238-6.366 11.284-9.915 22.665-2.81 34.414 12.574-8.952 22.625-20.764 41.436-21.068 9.623 2.09 11.337 1.27 17.832-4.88l15.178 108 14.834-3.673-17.642-88.91s26.496 16.27 32.306 11.938c5.81-4.33 4.52-17.324 2.108-25.986 8.803-10.564 32.432 10.386 50.568 20.367 4.478 2.463 8.11 2.078 11.05.108 5.887 9.216 28.117 16.154 29.333 8.32-7.037-6.56-5.26-19.9-21.938-19.044 3.03-7.668 4.03-16.074 4.03-16.074.157-5.07-.863-10.5-2.957-15.952 4.736 4.108 12.537 8.33 17.173 11.89 13.703-7.19 31.292.545 35.612-7.997-12.8-13.524-33.406-21.83-50.864-15.343-3.113 1.157-4.855 2.447-5.567 3.826-2.825-4.944-6.51-9.768-10.996-14.203 3.144.37 7.633-.016 14.79-1.902 9.453-4.466 11.325-11 10.534-18.26-4.425-1.688-8.496-2.388-12.22-2.295zm-222.017 27.145c-12.067.374-20 12.273-24.922 24.664 8.988 1.977 24.257 1.042 30.202-7.024 4.057-5.503 4.395-16.866-2.81-17.558a19.48 19.48 0 0 0-2.47-.082zm5.135 30.133c-1.324-.01-3.125.28-5.475.854-9.398 2.297-10.538 15.336-11.94 24.58 5.744-4.33 14.544-9.105 18.26-16.855 2.788-5.814 3.125-8.546-.845-8.58zm-22.887 73.38c-11.094.18-46.64 9.46-55.977 17.11-2.352 1.925-6.47 11.213-8.688 11.042-3.068-.237-5.27-10.055-5.27-10.055-22.123-12.38-60.006-10.56-59.652-8.71.858 4.478 4.636 49.63 63.166 65.92 9.884 67.545 64.372 95.08 134.497 98.36-19.497 13.367-75.48 18.697-67.775 30.55 12.604 10.522 83.862 4.593 124.504-8.34 14.09-4.484 28.865-8.31 44.047-11.637 43.23 10.56 111.83 23.66 151.36 10.984 13.348-4.28 7.064-20.362 1.054-18.262-14.39 5.03-63.573 1.735-91.79-3.49 34.826-5.05 69.914-8.652 102.325-12.45 9.162-20.386 12.522-54.712 11.545-79.774-1.878-48.145-32-52.028-101.092-44.247-104.013 11.715-145.852 43.226-218.777 61.837-11.118 2.838-47.684-4.157-63.373-29.783 36.728-17.253 50.916-61.758 43.005-68.545-.44-.378-1.524-.536-3.11-.51zm220.81 141.173c-1.616 4.194-4.184 8.546-11.72 9.526-7.538.978-11.46-3.26-13.696-8.824 8.47 1.463 16.944 1.146 25.416-.703z"/>'}, dragon:{vb:'0 0 512 512',inner:'<path d="M200.947 18.686c-6.98.087-14.64.774-22.85 1.9 27.57 20.468 51.098 45.25 67.594 70.527 1.66 0 3.312.012 4.958.047 18.066.39 35.487 2.906 53.217 7.2-15.695-28.457-29.935-50.19-47.45-63.22-13.817-10.278-30.063-16.168-52.52-16.454-.967-.013-1.95-.013-2.948 0zm-91.66 22.96c-.73-.002-1.46.006-2.195.022-14.045.31-29.36 3.92-46.86 11.13 56.18 18.807 106.985 50.468 133.907 83.585 18.377-5.13 29.44-14.72 36.454-28.817C195.84 78.18 168.118 56.19 140.65 46.96c-10.168-3.418-20.433-5.306-31.363-5.315zm-.203 52.786c-39.42 6.758-74.73 31.854-87.822 74.19v322.345h212.73C100.352 442.58 61.19 206.49 187.115 230.104c5.838-14.164 9.92-28.027 11.018-41.465l18.627 1.522c-1.684 20.592-8.828 40.49-18.033 59.943-.732 2.035-1.472 4.12-2.186 6.063 32.842 85.24 113.77 160.69 169.495 168.197.915.033 1.905-.002 2.953-.09 17.016 1.035 35.86-4.222 52.21-22.304l7.984-8.83-10.473-5.658c-6.507-3.515-14.29-7.094-18.167-10.925-1.938-1.916-2.793-3.47-3.074-5.194-.282-1.725-.13-4.227 2.23-8.578l10.673-19.656-21.484 6.222c-6.304 1.825-17.305-3.032-23.224-10.71-2.96-3.84-4.408-7.907-4.387-10.843.02-2.938.72-5.125 4.747-8.05l19.453-14.125-23.884-2.72c-9.974-1.137-16.37-6.658-19.17-12.294-2.802-5.634-2.312-10.084 1.375-13.31l12.204-10.677-15.358-5.205c-6.717-2.276-10.296-7.555-10.357-10.633-.028-1.373.238-2.666 1.843-4.476 10.93-2.39 21.258-.45 28.088 6.374 6.154 6.146 8.35 15.128 6.977 24.832 8.55-2.254 16.985-1.616 24.112 2.494 9.34 5.387 14.647 15.692 15.67 27.965 15.212-10.132 32.152-12.725 45.262-5.164 15.467 8.92 21.36 29.513 16.805 51.75 23.992-33.355 34.588-75.717 5.617-120.43-46.726-4.442-81.693-30.676-93.293-67.64-5.026-16.016-21.284-28.67-42-37.904l-.08.217c-29.74-10.823-55.575-17.35-82.604-18.733l.08.155c-2.294-.093-4.56-.16-6.762-.172-9.537 22.874-28.662 39.9-57.436 46.054l-5.906 1.262-3.576-4.864c-14.216-19.33-41.23-40.452-74.002-58.074zm156.215 65.26c27.927-.073 44.874 11.617 42.09 44.45-35.844 3.39-51.933-16.683-63.074-42.632 7.507-1.155 14.538-1.8 20.983-1.817zm48.407 66.363c3.708.07 7.14.994 10.014 2.812-1.51 1.102-2.898 2.28-4.16 3.543-5.246 5.24-8.087 12.122-7.956 18.742.183 9.322 5.27 17.184 12.68 22.56-3.14 8.103-2.452 17.455 1.407 25.22 3.813 7.668 10.54 14.273 19.302 18.398-1.445 3.366-2.375 6.862-2.4 10.33-.062 8.407 3.38 16.042 8.273 22.39 6.792 8.81 16.862 15.936 28.026 17.91-.183 2.18-.204 4.333.133 6.407 1.05 6.444 4.515 11.66 8.38 15.48 3.41 3.37 7.19 5.892 10.798 7.993-6.345 4.792-12.414 7.056-18.618 7.79-6.515-7.937-9.71-19.084-9.41-31.454-11.767 6.177-24.21 7.156-34.12 1.44-14.668-8.46-19.393-29.036-13.187-50.33-11.336 2.77-22.13.92-29.187-6.132-8.875-8.865-9.535-23.626-3.094-37.95-3.676-.615-6.963-2.166-9.525-4.725-8.808-8.798-5.773-26.09 6.776-38.626 7.843-7.835 17.546-11.957 25.87-11.8z"/>'}, octopus:{vb:'0 0 512 512',inner:'<path d="M150.25 19.97c-114.48-.574-139.972 184.95 20.563 212.124-29.5.534-55.382 8.11-91.75 25.97C-19.2 306.313.665 462.966 100.874 446c34.48-5.838 51.21-50.325.875-65.375 16.515 29.61-27.968 47.1-41.906 1.938-11.262-36.49 21.145-74.914 52.468-85 30.5-9.82 55.244-10.86 82.47-5.844-36.585 34.247-56.547 80.465-42.376 123.624 44.522 135.595 192.146 82.52 162.844-6.72-10.346-31.506-41.408-46.505-68-10.155 35.164-8.854 50.45 38.75 18.188 49.342-26.355 8.655-60.212-13.527-66.032-41.343-7.82-37.39 19.77-77.195 54.78-95.25 22.176 35.37 38.812 48.68 83.22 72.186 85.843 45.436 212.957-36.54 143.906-110.53-22.626-24.244-54.574-30.02-67.5 13.124 30.188-20.09 60.748 26.8 33.875 47.563-21.95 16.96-61.503 19.135-86.437 5.5-30.797-16.842-53.79-37.798-70.188-66.532 57.07 13.69 119.584-1.065 143-45.342 45.72-86.45-7.046-152.467-59.125-153.375-20.378-.356-40.654 9.237-54.875 31.5-17.85 27.946-9.815 61.533 35.157 59.124-29.11-21.628-1.9-63.623 26.717-45.343 23.378 14.932 22.494 51.88 9.75 77.28-15.165 30.23-60.573 50.738-95.062 24.657-3.008-5.71-5.563-11.683-7.78-17.843 8.99-6.49 14.874-17.028 14.874-28.875 0-17.772-13.252-32.64-30.345-35.218-9.763-47.134-23.34-92.648-84.844-112.594-13.64-4.424-26.437-6.472-38.28-6.53zm117.844 137.405c9.463 0 16.937 7.474 16.937 16.938 0 9.463-7.473 16.937-16.936 16.937-9.463 0-16.906-7.474-16.906-16.938 0-9.463 7.443-16.937 16.906-16.937zm-65.406 10.5c9.463 0 16.937 7.474 16.937 16.938 0 9.463-7.474 16.937-16.938 16.937-9.463 0-16.937-7.474-16.937-16.938 0-9.463 7.474-16.937 16.938-16.937z"/>'} };
+    var spriteCache={};
+    function hx(c){ c=c.replace('#',''); return [parseInt(c.substr(0,2),16),parseInt(c.substr(2,2),16),parseInt(c.substr(4,2),16)]; }
+    function shade(c,f){ var r=hx(c); function k(v){return Math.max(0,Math.min(255,Math.round(v)));} return 'rgb('+k(r[0]+f)+','+k(r[1]+f)+','+k(r[2]+f)+')'; }
+    function sprite(shape,color){
+      var key=shape+'|'+color;
+      if(spriteCache[key]!==undefined) return spriteCache[key];
+      spriteCache[key]=null;
+      var ic=ICONS[shape]; var size=160;
+      var light=shade(color,50), dark=shade(color,-34), line=shade(color,-78);
+      // 그라데이션 몸체(윗 림 밝게→아래 어둡게) + 부드러운 외곽선 = 입체감
+      var svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="'+ic.vb+'">'
+        +'<defs><linearGradient id="b" x1="0" y1="0" x2="0" y2="1">'
+        +'<stop offset="0" stop-color="'+light+'"/><stop offset="0.55" stop-color="'+color+'"/><stop offset="1" stop-color="'+dark+'"/>'
+        +'</linearGradient></defs>'
+        +'<g fill="url(#b)" stroke="'+line+'" stroke-width="9" stroke-linejoin="round" stroke-linecap="round">'+ic.inner+'</g></svg>';
+      var img=new Image();
+      img.onload=function(){ var c=document.createElement('canvas');c.width=c.height=size;c.getContext('2d').drawImage(img,0,0,size,size);spriteCache[key]=c; };
+      img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+      return null;
+    }
+
+    // ===== 사운드 =====
+    var ac=null;
+    function actx(){ if(!ac){ try{ac=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} } return ac; }
+    function tone(f,t,d,type,vol){ if(muted)return; var c=actx(); if(!c)return; var o=c.createOscillator(),g=c.createGain(); o.type=type||'sine'; o.frequency.value=f; o.connect(g); g.connect(c.destination); var x=c.currentTime+(t||0); g.gain.setValueAtTime(.0001,x); g.gain.exponentialRampToValueAtTime(vol||.1,x+.012); g.gain.exponentialRampToValueAtTime(.0001,x+(d||.12)); o.start(x); o.stop(x+(d||.12)+.04); }
+    function sEat(sz){ tone(280+Math.min(sz,40)*6,0,.09,'triangle',.09); tone(150,0,.06,'sine',.06); }
+    function sPellet(){ tone(660+Math.random()*120,0,.04,'sine',.04); }
+    function sRankUp(){ [523,659,784].forEach(function(f,i){tone(f,i*.05,.1,'triangle',.08);}); }
+    function sTier(){ [392,523,659,880].forEach(function(f,i){tone(f,i*.07,.14,'triangle',.11);}); }
+    function sDie(){ tone(300,0,.3,'sawtooth',.1); tone(170,.16,.34,'sawtooth',.09); tone(90,.36,.4,'sawtooth',.08); }
+    function sRecord(){ [784,988,1319,1568].forEach(function(f,i){tone(f,.1+i*.08,.14,'triangle',.12);}); }
+
+    // ===== 캔버스 =====
+    var cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+    var W=0,H=0,DPR=1;
+    function resize(){ DPR=Math.min(window.devicePixelRatio||1,2.5); W=window.innerWidth; H=window.innerHeight; cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR); cv.style.width=W+'px'; cv.style.height=H+'px'; ctx.setTransform(DPR,0,0,DPR,0,0); }
+    window.addEventListener('resize',resize); resize();
+
+    // ===== 세계 =====
+    var WORLD=2000;
+    var START=18;
+    // 닉네임: 형용사+명사 조합으로 매번 새로 생성(반복 없이 다양하게)
+    var ADJ=['배고픈','귀여운','사나운','빠른','느긋한','조용한','용감한','게으른','화난','신난','거대한','수줍은',
+      '엉뚱한','까칠한','졸린','통통한','날쌘','우아한','행복한','무서운','외로운','굶주린','도도한','명랑한',
+      '심술난','터프한','수상한','발랄한','노련한','수줍은','잘생긴','어리바리','새침한','촐랑이'];
+    var NOUN=['멸치','고등어','정어리','참치','갈치','복어','해마','새우','문어','도미','광어','가오리','해파리',
+      '피라미','송사리','소라','수달','펭귄','물개','전갱이','방어','조개','고래','상어','꽁치','전복','오징어',
+      '대게','연어','붕어','장어','가재','거북이','홍어'];
+    function newName(){ return ADJ[(Math.random()*ADJ.length)|0]+' '+NOUN[(Math.random()*NOUN.length)|0]; }
+    var COLORS=['#6fb6e8','#7fd6c0','#9db4e8','#e89bb8','#9fd07a','#e8c46f','#8fbfe0','#c79be8','#e8967a','#74c8d8'];
+    function shuffle(a){ for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;} return a; }
+
+    // 몸집 → 모양/티어 (숫자 없이도 강함이 보이게)
+    function shapeFor(sz){ if(sz<26)return 'fish'; if(sz<40)return 'octopus'; if(sz<62)return 'dolphin'; if(sz<95)return 'whale'; return 'dragon'; }
+    function tierName(sz){ if(sz<26)return '피라미'; if(sz<40)return '문어'; if(sz<62)return '돌고래'; if(sz<95)return '고래'; return '대왕'; }
+
+    var fishes, pellets, parts, floats, player, cam, zoom, started, ended;
+    var kills, maxSize, tier, shake, danger, namePool, nameIdx, startBest, recordBeaten, rankFlash;
+    var pointer={x:0,y:0,active:false};
+
+    function massOf(sz){ return sz*sz; }
+
+    function makeFish(x,y,sz,isPlayer){
+      var name=isPlayer?'나':newName();
+      var col=isPlayer?'#ffd05b':COLORS[(Math.abs(hash(name)))%COLORS.length];
+      return {
+        name:name, x:x, y:y, vx:0, vy:0, size:sz, col:col, isPlayer:!!isPlayer,
+        face:1, tilt:0, alive:true, grace:0,
+        aggr:0.3+Math.random()*0.7, vision:60+sz*1.4+Math.random()*70, react:Math.random()*0.5, wob:Math.random()*6.28,
+        retarget:0, tx:x, ty:y, eaten:0, sq:0
+      };
+    }
+    function hash(s){ var h=0; for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0; return h; }
+
+    function reset(){
+      fishes=[]; pellets=[]; parts=[]; floats=[];
+      player=makeFish(WORLD/2,WORLD/2,START,true); player.grace=3.0;
+      fishes.push(player);
+      // 라이벌들 — 잡아먹기 좋은 작은 놈이 풍성, 큰 놈은 소수
+      for(var i=0;i<48;i++){
+        var r=Math.random();
+        var sz = r<0.68 ? 9+Math.random()*7 : (r<0.88 ? 20+Math.random()*16 : 46+Math.random()*46);
+        // 시작 안전지대: 큰 놈은 중앙(플레이어)에서 멀리, 작은 놈도 코앞은 피해서 배치
+        var fx,fy,safe=(sz>START?500:190),tries=0;
+        do{ fx=Math.random()*WORLD; fy=Math.random()*WORLD; tries++; }while(Math.hypot(fx-WORLD/2,fy-WORLD/2)<safe && tries<30);
+        fishes.push(makeFish(fx,fy,sz,false));
+      }
+      // 먹이 알갱이
+      for(var p=0;p<180;p++) pellets.push({x:Math.random()*WORLD,y:Math.random()*WORLD,c:COLORS[p%COLORS.length]});
+      cam={x:player.x,y:player.y}; zoom=1;
+      started=false; ended=false; kills=0; maxSize=START; tier=0; shake=0; danger=0;
+      recordBeaten=false; startBest=best; rankFlash=0;
+      pointer.active=false;
+      document.getElementById('over').classList.remove('show');
+      document.getElementById('hint').style.opacity='1';
+    }
+
+    // ===== 입력 =====
+    function setPointer(e){ pointer.x=e.clientX; pointer.y=e.clientY; pointer.active=true; if(!started){ started=true; document.getElementById('hint').style.opacity='0'; if(actx()&&ac.state==='suspended')ac.resume(); } }
+    cv.addEventListener('pointerdown',function(e){ e.preventDefault(); setPointer(e); },{passive:false});
+    cv.addEventListener('pointermove',function(e){ if(e.pressure>0||e.buttons||pointer.active) setPointer(e); },{passive:false});
+    cv.addEventListener('pointerup',function(){ /* 마지막 방향 유지 */ },{passive:false});
+    window.addEventListener('keydown',function(e){ if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].indexOf(e.code)>=0){ e.preventDefault(); started=started||(document.getElementById('hint').style.opacity='0',true); } });
+    var keys={};
+    window.addEventListener('keydown',function(e){keys[e.code]=1;}); window.addEventListener('keyup',function(e){keys[e.code]=0;});
+
+    // ===== 파티클 =====
+    function burst(x,y,col,n){ for(var i=0;i<(n||8);i++){ var a=Math.random()*6.28,s=40+Math.random()*160; parts.push({x:x,y:y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,r:2+Math.random()*4,col:col,life:1,kind:'c'}); } }
+    function ring(x,y,col){ parts.push({x:x,y:y,r:4,col:col,life:1,kind:'r'}); }
+    function floatTxt(x,y,txt,col,sz){ floats.push({x:x,y:y,txt:txt,col:col||'#fff',sz:sz||20,life:1}); }
+
+    // ===== 루프 =====
+    var last=0, raf;
+    function loop(t){ raf=requestAnimationFrame(loop); var dt=last?Math.min((t-last)/1000,0.05):0.016; last=t; step(dt); draw(); }
+
+    // 속도는 크기에 거의 무관(평탄). 플레이어는 +12% 우위 → 작은 먹이를 따라잡을 수 있다.
+    function speedOf(f){ var s=Math.max(130,Math.min(228,176*Math.pow(START/f.size,0.10))); return f.isPlayer?s*1.22:s; }
+
+    function step(dt){
+      // 플레이어 조준
+      if(started && !ended){
+        var dirx, diry;
+        if(keys['ArrowLeft']||keys['ArrowRight']||keys['ArrowUp']||keys['ArrowDown']){
+          dirx=(keys['ArrowRight']?1:0)-(keys['ArrowLeft']?1:0); diry=(keys['ArrowDown']?1:0)-(keys['ArrowUp']?1:0);
+        } else {
+          dirx=(pointer.x-W/2); diry=(pointer.y-H/2);
+        }
+        var dl=Math.hypot(dirx,diry)||1;
+        var sp=speedOf(player);
+        var pull=Math.min(1,dl/90);
+        player.vx += ((dirx/dl)*sp*pull - player.vx)*Math.min(1,dt*8);
+        player.vy += ((diry/dl)*sp*pull - player.vy)*Math.min(1,dt*8);
+      } else { player.vx*=0.9; player.vy*=0.9; }
+      if(started && !ended && player.grace>0) player.grace=Math.max(0,player.grace-dt);
+
+      // 물고기 업데이트
+      for(var i=0;i<fishes.length;i++){ var f=fishes[i]; if(!f.alive)continue; if(!f.isPlayer && started && !ended) aiThink(f,dt); moveFish(f,dt); }
+
+      // 먹기 판정
+      if(started && !ended) resolveEats(dt);
+
+      // 카메라 / 줌
+      cam.x += (player.x-cam.x)*Math.min(1,dt*5);
+      cam.y += (player.y-cam.y)*Math.min(1,dt*5);
+      var tz=Math.max(0.42,Math.min(1.1, Math.pow(START/player.size,0.5)));
+      zoom += (tz-zoom)*Math.min(1,dt*3);
+
+      // 성장 추적 / 티어업 / 기록
+      if(player.size>maxSize){ maxSize=player.size; }
+      var nt=['fish','octopus','dolphin','whale','dragon'].indexOf(shapeFor(player.size));
+      if(nt>tier){ tier=nt; floatTxt(player.x,player.y-player.size-18,tierName(player.size)+'로 진화!','#ffd27a',22); ring(player.x,player.y,'#ffd27a'); burst(player.x,player.y,'#ffd27a',16); sTier(); }
+
+      // 위협 감지(가까운 더 큰 물고기) → 위험 비네트
+      danger=Math.max(0,danger-dt*2);
+      for(var j=0;j<fishes.length;j++){ var o=fishes[j]; if(o.alive&&!o.isPlayer&&o.size>player.size*1.12){ var d=Math.hypot(o.x-player.x,o.y-player.y); if(d<player.size+o.size+140) danger=Math.max(danger,1-(d/(player.size+o.size+140))); } }
+
+      // 개체수 유지 — 항상 '먹잇감(새우)'을 충분히, 그리고 새 유저(작은 놈)가 끊임없이 입장
+      var alive=0, fry=0;
+      for(var a=0;a<fishes.length;a++){ var fa=fishes[a]; if(fa.alive){ alive++; if(!fa.isPlayer&&fa.size<Math.max(18,player.size*0.85)) fry++; } }
+      if(fry<18 && Math.random()<dt*9){ spawnFry(); }        // 플레이어가 먹을 수 있는 작은 놈 보충(근처에)
+      if(alive<46 && Math.random()<dt*5){ spawnEdge(); }     // 새 유저가 가장자리에서 계속 입장
+
+      // 파티클 수명
+      ageParts(dt);
+      if(shake>0)shake=Math.max(0,shake-dt*55);
+      if(rankFlash>0)rankFlash=Math.max(0,rankFlash-dt*2);
+
+      // 죽은 fishes 정리(배열 비대화 방지)
+      if(fishes.length>60){ fishes=fishes.filter(function(f){return f.alive;}); }
+    }
+
+    function moveFish(f,dt){
+      f.x+=f.vx*dt; f.y+=f.vy*dt;
+      // 경계 반사
+      var m=f.size;
+      if(f.x<m){f.x=m;f.vx=Math.abs(f.vx)*0.5;} if(f.x>WORLD-m){f.x=WORLD-m;f.vx=-Math.abs(f.vx)*0.5;}
+      if(f.y<m){f.y=m;f.vy=Math.abs(f.vy)*0.5;} if(f.y>WORLD-m){f.y=WORLD-m;f.vy=-Math.abs(f.vy)*0.5;}
+      if(Math.abs(f.vx)>6) f.face=f.vx<0?-1:1;
+      var tt=Math.max(-.5,Math.min(.5,f.vy/(speedOf(f)+1)*0.8));
+      f.tilt+=(tt-f.tilt)*Math.min(1,dt*6);
+      if(f.sq>0)f.sq=Math.max(0,f.sq-dt*3);
+    }
+
+    function aiThink(f,dt){
+      f.wob+=dt; f.retarget-=dt;
+      // 가장 가까운 위협/먹이 탐색
+      var threat=null,td=1e9, prey=null,pd=1e9;
+      for(var i=0;i<fishes.length;i++){ var o=fishes[i]; if(o===f||!o.alive)continue;
+        var d=Math.hypot(o.x-f.x,o.y-f.y); if(d>f.vision)continue;
+        if(o.size>f.size*1.12){ if(d<td){td=d;threat=o;} }
+        else if(f.size>o.size*1.12){ if(d<pd){pd=d;prey=o;} }
+      }
+      var sp=speedOf(f), dirx=0,diry=0;
+      var wary = f.size>=16;   // 작은 피라미는 위협도 사냥도 모르고 그저 헤엄친다 = 쉬운 먹잇감
+      if(wary && threat){ dirx=f.x-threat.x; diry=f.y-threat.y; sp*=0.82; }            // 도망(허둥지둥)
+      else if(wary && prey && Math.random()<f.aggr+0.25){ dirx=prey.x-f.x; diry=prey.y-f.y; } // 사냥
+      else {
+        // 먹이 알갱이/배회
+        var fp=null,fd=1e9; for(var p=0;p<pellets.length;p++){ var pe=pellets[p]; var d2=Math.hypot(pe.x-f.x,pe.y-f.y); if(d2<f.vision&&d2<fd){fd=d2;fp=pe;} }
+        if(fp){ dirx=fp.x-f.x; diry=fp.y-f.y; }
+        else { if(f.retarget<=0){ f.tx=f.x+(Math.random()-.5)*400; f.ty=f.y+(Math.random()-.5)*400; f.retarget=1+Math.random()*2; } dirx=f.tx-f.x; diry=f.ty-f.y; sp*=0.6; }
+      }
+      var dl=Math.hypot(dirx,diry)||1;
+      // 약간의 흔들림(유기적)
+      var jx=Math.cos(f.wob*1.7)*0.15, jy=Math.sin(f.wob*1.3)*0.15;
+      f.vx += ((dirx/dl+jx)*sp - f.vx)*Math.min(1,dt*(3+f.aggr*3));
+      f.vy += ((diry/dl+jy)*sp - f.vy)*Math.min(1,dt*(3+f.aggr*3));
+    }
+
+    function resolveEats(dt){
+      // 알갱이
+      for(var p=pellets.length-1;p>=0;p--){ var pe=pellets[p];
+        for(var i=0;i<fishes.length;i++){ var f=fishes[i]; if(!f.alive)continue;
+          if(Math.hypot(pe.x-f.x,pe.y-f.y)<f.size*0.95){ f.size=Math.sqrt(massOf(f.size)+34); f.sq=1; if(f.isPlayer){sPellet();} pellets.splice(p,1); pellets.push({x:Math.random()*WORLD,y:Math.random()*WORLD,c:COLORS[(Math.random()*COLORS.length)|0]}); break; }
+        }
+      }
+      // 물고기끼리
+      for(var a=0;a<fishes.length;a++){ var A=fishes[a]; if(!A.alive)continue;
+        for(var b=0;b<fishes.length;b++){ var B=fishes[b]; if(A===B||!B.alive)continue;
+          if(A.size>B.size*1.1){ var d=Math.hypot(A.x-B.x,A.y-B.y); if(d < A.size + B.size*0.4){ eat(A,B); } }
+        }
+      }
+    }
+
+    function eat(A,B){
+      if(B.isPlayer && B.grace>0) return;   // 스폰 보호
+      // AI 과성장 상한 — 안 그러면 거대 물고기만 남아 먹잇감이 사라진다
+      if(!A.isPlayer && A.size>120){ B.alive=false; burst(B.x,B.y,B.col,8); return; }
+      A.size=Math.sqrt(massOf(A.size)+massOf(B.size)*0.92); A.sq=1; A.eaten++;
+      B.alive=false;
+      burst(B.x,B.y,B.col,Math.min(20,8+B.size/4)); ring(B.x,B.y,B.isPlayer?'#ff7a6a':'#bfe9ff');
+      if(A.isPlayer){
+        kills++;
+        floatTxt(B.x,B.y,'냠! '+B.name,'#bfe9ff',Math.min(26,15+B.size/6));
+        shake=Math.min(12,4+B.size/8); if(navigator.vibrate)navigator.vibrate(B.size>player.size*0.7?22:10);
+        sEat(B.size);
+        var fk=Math.floor(kills);
+        if(fk>best){ best=fk; setLS(KEY.best,best); if(!recordBeaten&&startBest>0){recordBeaten=true; floatTxt(player.x,player.y-player.size-40,'신기록!','#ffd27a',24); sRecord();} }
+      } else if(B.isPlayer){
+        gameOver(A);
+      } else {
+        if(A.size>40) floatTxt(B.x,B.y,B.name+' 잡아먹힘','rgba(255,255,255,.55)',13);
+      }
+    }
+
+    function spawnFry(){
+      // 플레이어가 잡아먹기 좋은 크기를, 화면 가장자리쯤(보이되 코앞은 아닌) 거리에 둔다
+      var ang=Math.random()*6.28, dist=220+Math.random()*300;
+      var x=Math.max(12,Math.min(WORLD-12,player.x+Math.cos(ang)*dist));
+      var y=Math.max(12,Math.min(WORLD-12,player.y+Math.sin(ang)*dist));
+      var sz=Math.max(8,Math.min(player.size*0.7, 9+Math.random()*9));
+      fishes.push(makeFish(x,y,sz,false));
+    }
+    function spawnEdge(){
+      var side=(Math.random()*4)|0, x,y;
+      if(side===0){x=Math.random()*WORLD;y=10;} else if(side===1){x=Math.random()*WORLD;y=WORLD-10;}
+      else if(side===2){x=10;y=Math.random()*WORLD;} else {x=WORLD-10;y=Math.random()*WORLD;}
+      var r=Math.random();
+      // 새 유저는 대부분 작게 입장(신규 유입 느낌), 가끔 중간/큰 놈
+      var sz = r<0.78 ? 9+Math.random()*9 : (r<0.94 ? 20+Math.random()*18 : Math.max(20,player.size*(0.7+Math.random()*0.6)));
+      fishes.push(makeFish(x,y,sz,false));
+    }
+
+    function ageParts(dt){
+      for(var i=parts.length-1;i>=0;i--){ var p=parts[i];
+        if(p.kind==='c'){ p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=Math.pow(0.2,dt);p.vy*=Math.pow(0.2,dt);p.life-=dt*1.4; }
+        else if(p.kind==='r'){ p.r+=dt*240;p.life-=dt*2; }
+        if(p.life<=0)parts.splice(i,1);
+      }
+      for(var j=floats.length-1;j>=0;j--){ var f=floats[j]; f.y-=dt*36*(1/zoom); f.life-=dt*1.0; if(f.life<=0)floats.splice(j,1); }
+    }
+
+    // ===== 렌더 =====
+    function sx(wx){ return W/2 + (wx-cam.x)*zoom; }
+    function sy(wy){ return H/2 + (wy-cam.y)*zoom; }
+    function draw(){
+      ctx.save();
+      var shx=(Math.random()-.5)*shake, shy=(Math.random()-.5)*shake; ctx.translate(shx,shy);
+      // 배경
+      var g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,'#0d2b4a'); g.addColorStop(1,'#07182a'); ctx.fillStyle=g; ctx.fillRect(-20,-20,W+40,H+40);
+      // 경계
+      ctx.strokeStyle='rgba(150,190,230,.16)'; ctx.lineWidth=2; ctx.strokeRect(sx(0),sy(0),WORLD*zoom,WORLD*zoom);
+      // 그리드 점
+      ctx.fillStyle='rgba(150,190,230,.06)'; var gs=130;
+      for(var gx=0;gx<=WORLD;gx+=gs){ for(var gy=0;gy<=WORLD;gy+=gs){ var px=sx(gx),py=sy(gy); if(px>-10&&px<W+10&&py>-10&&py<H+10){ ctx.beginPath();ctx.arc(px,py,1.5,0,6.28);ctx.fill(); } } }
+
+      // 먹이 알갱이
+      for(var p=0;p<pellets.length;p++){ var pe=pellets[p]; var px=sx(pe.x),py=sy(pe.y); if(px<-10||px>W+10||py<-10||py>H+10)continue;
+        ctx.fillStyle=pe.c; ctx.globalAlpha=.22; ctx.beginPath();ctx.arc(px,py,6.5*zoom,0,6.28);ctx.fill();
+        ctx.globalAlpha=.95; ctx.beginPath();ctx.arc(px,py,3.6*zoom,0,6.28);ctx.fill();
+        ctx.fillStyle='rgba(255,255,255,.65)'; ctx.beginPath();ctx.arc(px-1.1*zoom,py-1.1*zoom,1.3*zoom,0,6.28);ctx.fill();
+      }
+      ctx.globalAlpha=1;
+
+      // 물고기 (작은 것부터 그려 큰 게 위로)
+      var sorted=fishes.filter(function(f){return f.alive;}).sort(function(a,b){return a.size-b.size;});
+      for(var i=0;i<sorted.length;i++) drawFish(sorted[i]);
+
+      // 파티클
+      for(var q=0;q<parts.length;q++){ var pt=parts[q]; var X=sx(pt.x),Y=sy(pt.y);
+        if(pt.kind==='c'){ ctx.globalAlpha=pt.life; ctx.fillStyle=pt.col; ctx.beginPath();ctx.arc(X,Y,pt.r*zoom,0,6.28);ctx.fill(); }
+        else if(pt.kind==='r'){ ctx.globalAlpha=pt.life*0.6; ctx.strokeStyle=pt.col; ctx.lineWidth=3; ctx.beginPath();ctx.arc(X,Y,pt.r*zoom,0,6.28);ctx.stroke(); }
+      }
+      ctx.globalAlpha=1;
+
+      // 플로팅 텍스트
+      ctx.textAlign='center';
+      for(var f2=0;f2<floats.length;f2++){ var fl=floats[f2]; ctx.globalAlpha=Math.min(1,fl.life*1.4); ctx.font='900 '+fl.sz+'px Pretendard Variable,sans-serif'; ctx.lineWidth=4; ctx.strokeStyle='rgba(0,0,0,.5)'; var fx=sx(fl.x),fy=sy(fl.y); ctx.strokeText(fl.txt,fx,fy); ctx.fillStyle=fl.col; ctx.fillText(fl.txt,fx,fy); }
+      ctx.globalAlpha=1; ctx.textAlign='left';
+
+      ctx.restore();
+
+      // 위험 비네트
+      if(danger>0){ var rg=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.3,W/2,H/2,Math.max(W,H)*0.7); rg.addColorStop(0,'rgba(255,40,30,0)'); rg.addColorStop(1,'rgba(255,30,20,'+(danger*0.4)+')'); ctx.fillStyle=rg; ctx.fillRect(0,0,W,H); }
+
+      drawLeaderboard();
+    }
+
+    function drawFish(f){
+      var X=sx(f.x),Y=sy(f.y), r=f.size*zoom;
+      if(X< -r-20||X>W+r+20||Y<-r-20||Y>H+r+20) return;
+      var shp=shapeFor(f.size); var spr=sprite(shp,f.col);
+      var rad=r*(1.7); var pop=1+(f.sq||0)*0.16;
+      ctx.save(); ctx.translate(X,Y); ctx.rotate(f.tilt*0.5); ctx.scale(f.face*pop,pop);
+      if(f.isPlayer){ ctx.shadowColor='rgba(255,200,90,.75)'; ctx.shadowBlur=18; }
+      else { ctx.shadowColor='rgba(0,0,0,.35)'; ctx.shadowBlur=8; ctx.shadowOffsetY=3*zoom; }
+      if(spr) ctx.drawImage(spr,-rad/2,-rad/2,rad,rad);
+      else { ctx.fillStyle=f.col; ctx.beginPath();ctx.arc(0,0,r,0,6.28);ctx.fill(); }
+      ctx.restore();
+      // 이름표
+      if(r>9){
+        ctx.save(); ctx.globalAlpha=f.isPlayer?1:0.9; ctx.textAlign='center';
+        ctx.font='800 '+Math.max(10,Math.min(15,r*0.34))+'px Pretendard Variable,sans-serif';
+        var nm=f.name.length>7?f.name.slice(0,7):f.name; var ny=Y-r-6;
+        var tw=ctx.measureText(nm).width;
+        ctx.fillStyle=f.isPlayer?'rgba(255,177,61,.9)':'rgba(6,18,32,.45)'; rr(X-tw/2-6,ny-12,tw+12,16,8); ctx.fill();
+        ctx.fillStyle=f.isPlayer?'#3a2406':'#dcebf7'; ctx.fillText(nm,X,ny);
+        ctx.restore();
+      }
+    }
+    function rr(x,y,w,h,r){ ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath(); }
+
+    function drawLeaderboard(){
+      var rank=fishes.filter(function(f){return f.alive;}).sort(function(a,b){return b.size-a.size;});
+      var myRank=rank.indexOf(player)+1;
+      var x=W-calcLbW(rank)-12, y=14+ (window.__safeTop||0);
+      var rows=Math.min(5,rank.length);
+      ctx.save();
+      ctx.font='800 13px Pretendard Variable,sans-serif'; ctx.textAlign='left';
+      ctx.fillStyle='rgba(8,22,38,.55)'; rr(x-10,y-6,calcLbW(rank)+10,rows*22+ (myRank>5?26:0) +14,12); ctx.fill();
+      ctx.fillStyle='rgba(159,182,204,.8)'; ctx.font='800 11px Pretendard Variable,sans-serif'; ctx.fillText('순위',x,y+8);
+      ctx.font='800 13px Pretendard Variable,sans-serif';
+      for(var i=0;i<rows;i++){ var f=rank[i]; var ry=y+20+i*22;
+        var me=f.isPlayer;
+        ctx.fillStyle=me?'#ffd27a':'rgba(220,235,247,.9)';
+        var nm=f.name.length>7?f.name.slice(0,7):f.name;
+        ctx.fillText((i+1)+'. '+nm,x,ry+8);
+        ctx.fillStyle=me?'rgba(255,210,122,.7)':'rgba(159,182,204,.6)'; ctx.textAlign='right';
+        ctx.fillText(Math.round(massOf(f.size)/100)+'', W-16, ry+8); ctx.textAlign='left';
+      }
+      if(myRank>5){ var yy=y+20+5*22+4; ctx.fillStyle='#ffd27a'; ctx.fillText(myRank+'. 나',x,yy+8); ctx.textAlign='right'; ctx.fillStyle='rgba(255,210,122,.7)'; ctx.fillText(Math.round(massOf(player.size)/100)+'',W-16,yy+8); ctx.textAlign='left'; }
+      ctx.restore();
+    }
+    function calcLbW(){ return 150; }
+
+    // ===== 게임오버 =====
+    function gameOver(killer){
+      if(ended)return; ended=true;
+      player.alive=false; shake=14;
+      burst(player.x,player.y,'#ff7a6a',22); sDie(); if(navigator.vibrate)navigator.vibrate([40,40,80]);
+      var rank=fishes.filter(function(f){return f.alive;}).concat([player]).sort(function(a,b){return b.size-a.size;});
+      var fk=Math.floor(kills);
+      var isRec= startBest>0 ? fk>startBest : fk>0;
+      setTimeout(function(){
+        document.getElementById('over-title').textContent= isRec?'신기록!':( killer&&killer.name?(killer.name+'에게 먹힘'):'잡아먹혔어요!');
+        document.getElementById('over-sub').textContent= isRec?'이렇게 많이 잡아먹은 건 처음이에요. 최강 포식자!':(fk>0?'더 작은 놈만 노렸어야 했나… 큰 놈을 조심!':'먼저 작은 물고기부터 노려 몸집을 키워요.');
+        document.getElementById('over-k').textContent=fk;
+        document.getElementById('over-rec').textContent= isRec?('이전 최고 '+startBest+'마리 → '+fk+'마리'):('최고 기록 '+best+'마리');
+        document.getElementById('over-pass').innerHTML='최고 몸집 <b>'+tierName(maxSize)+'</b> · 최종 순위 <b>'+(rank.indexOf(player)+1)+'위</b>';
+        document.getElementById('over').classList.add('show');
+      },600);
+    }
+
+    // ===== 버튼 =====
+    function setMuteIc(){ document.querySelector('#mute .ki use').setAttribute('href',muted?'#p-speaker-slash':'#p-speaker-high'); }
+    document.getElementById('mute').addEventListener('click',function(){ muted=!muted; setLS(KEY.muted,muted?'1':'0'); setMuteIc(); if(!muted)sPellet(); });
+    document.getElementById('over-btn').addEventListener('click',function(){ startBest=best; reset(); });
+    document.getElementById('support').addEventListener('click',function(){ if(window.GamePortal&&GamePortal.openSupport)GamePortal.openSupport(); });
+    setMuteIc();
+
+    // 스프라이트 워밍업 후 시작 (몇 종만 미리)
+    ['fish','octopus','dolphin','whale','dragon'].forEach(function(s){ COLORS.forEach(function(c){sprite(s,c);}); sprite(s,'#ffd05b'); });
+    reset();
+    pointer.x=W/2; pointer.y=H/2;
+    last=0; raf=requestAnimationFrame(loop);
+  })();
+  </script>
+  <script>
+    if('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('./sw.js');
+  </script>
+</body>
+</html>

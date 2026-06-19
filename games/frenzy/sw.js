@@ -1,5 +1,5 @@
-// 피라미 비상 서비스 워커 — 배포 시 CACHE 버전을 올릴 것 (필수!)
-const CACHE = 'surge-v1';
+// 물고기 대난투 서비스 워커 — 배포 시 CACHE 버전을 올릴 것 (필수!)
+const CACHE = 'frenzy-v1';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {

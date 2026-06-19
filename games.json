@@ -390,21 +390,21 @@
       ]
     },
     {
-      "id": "surge",
+      "id": "frenzy",
       "shell_mode": "fullscreen",
-      "title": "피라미 비상",
-      "tagline": "밑에선 상어가, 옆에선 라이벌이. 다른 물고기를 차고 올라 더 높이 솟구쳐요 — 누가 더 높이?",
-      "unit": "m",
-      "score_key": "surgeBest",
+      "title": "물고기 대난투",
+      "tagline": "이름 달린 물고기들이 가득한 바다. 작은 놈은 꿀꺽, 큰 놈은 피하고 — 먹을수록 커져 1등 포식자로!",
+      "unit": "마리",
+      "score_key": "frenzyBest",
       "score_metric": "best",
       "defer_share": true,
       "state_keys": [
         {
-          "key": "surgeBest",
+          "key": "frenzyBest",
           "merge": "max"
         },
         {
-          "key": "surgeMuted",
+          "key": "frenzyMuted",
           "merge": "lww"
         }
       ]
