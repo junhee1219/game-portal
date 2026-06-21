@@ -164,10 +164,12 @@ def _render_cards() -> str:
         gid = html.escape(g["id"])
         title = html.escape(g.get("title", gid))
         desc = html.escape(g.get("tagline", ""))
+        hot = '<span class="hot">HOT</span>' if g.get("hot") else ""
+        card_cls = "card is-hot" if g.get("hot") else "card"
         cards.append(
-            f'<a class="card" href="/{gid}/">'
+            f'<a class="{card_cls}" href="/{gid}/">'
             f'<img src="/{gid}/icon-192.png" alt="" width="64" height="64" loading="lazy">'
-            f'<span class="meta"><span class="name">{title}</span>'
+            f'<span class="meta"><span class="name">{title}{hot}</span>'
             f'<span class="desc">{desc}</span></span>'
             f'<span class="go" aria-hidden="true">&rarr;</span></a>'
         )

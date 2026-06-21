@@ -110,6 +110,24 @@ body {
   letter-spacing: -0.01em;
 }
 
+.card .name .hot {
+  display: inline-block;
+  margin-left: 7px;
+  vertical-align: middle;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #1a1208;
+  background: var(--accent);
+  padding: 2px 7px;
+  border-radius: 9999px;
+  box-shadow: 0 0 12px -2px var(--accent);
+}
+
+.card.is-hot {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+
 .card .desc {
   font-size: var(--fs-3);
   color: var(--dim);

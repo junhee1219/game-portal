@@ -1,6 +1,100 @@
 {
   "games": [
     {
+      "id": "twos",
+      "shell_mode": "panel",
+      "title": "2048",
+      "tagline": "같은 수가 만나면 두 배! 한 방향으로 쓱 밀어 2048 타일에 도전하세요.",
+      "unit": "점",
+      "score_key": "twosBest",
+      "score_metric": "score",
+      "defer_share": true,
+      "state_keys": [
+        {
+          "key": "twosBest",
+          "merge": "max"
+        },
+        {
+          "key": "twosMuted",
+          "merge": "lww"
+        }
+      ],
+      "hot": true
+    },
+    {
+      "id": "merge",
+      "shell_mode": "panel",
+      "title": "동물 합치기",
+      "tagline": "동그란 동물을 떨어뜨려 합치는 중독성 드롭 퍼즐 — 넘치기 전에 최고 점수에!",
+      "unit": "점",
+      "score_key": "mergeBest",
+      "score_metric": "score",
+      "defer_share": true,
+      "state_keys": [
+        {
+          "key": "mergeBest",
+          "merge": "max"
+        },
+        {
+          "key": "mergeMuted",
+          "merge": "lww"
+        }
+      ],
+      "hot": true
+    },
+    {
+      "id": "vase",
+      "shell_mode": "panel",
+      "title": "물병 정렬",
+      "tagline": "알록달록 물을 옮겨 담는 퍼즐. 봇보다 적게 움직이면 별 셋.",
+      "unit": "레벨",
+      "score_key": "vaseMaxClear",
+      "score_metric": "level",
+      "state_keys": [
+        {
+          "key": "vaseMaxClear",
+          "merge": "max"
+        },
+        {
+          "key": "vaseLevel",
+          "merge": "max"
+        },
+        {
+          "key": "vaseStars",
+          "merge": "union"
+        },
+        {
+          "key": "vaseBest",
+          "merge": "union_min"
+        },
+        {
+          "key": "vaseMuted",
+          "merge": "lww"
+        }
+      ],
+      "hot": true
+    },
+    {
+      "id": "cube",
+      "shell_mode": "fullscreen",
+      "title": "Cube Snake",
+      "tagline": "3D 큐브 표면을 기어다니는 스네이크. 모서리를 넘으면 세상이 돌아간다.",
+      "unit": "점",
+      "score_key": "cubeSnakeBest",
+      "score_metric": "best",
+      "state_keys": [
+        {
+          "key": "cubeSnakeBest",
+          "merge": "max"
+        },
+        {
+          "key": "cubeSnakeMuted",
+          "merge": "lww"
+        }
+      ],
+      "hot": true
+    },
+    {
       "id": "hop",
       "shell_mode": "panel",
       "title": "삐약이 건널목",
@@ -40,76 +134,6 @@
       ]
     },
     {
-      "id": "vase",
-      "shell_mode": "panel",
-      "title": "물병 정렬",
-      "tagline": "알록달록 물을 옮겨 담는 퍼즐. 봇보다 적게 움직이면 별 셋.",
-      "unit": "레벨",
-      "score_key": "vaseMaxClear",
-      "score_metric": "level",
-      "state_keys": [
-        {
-          "key": "vaseMaxClear",
-          "merge": "max"
-        },
-        {
-          "key": "vaseLevel",
-          "merge": "max"
-        },
-        {
-          "key": "vaseStars",
-          "merge": "union"
-        },
-        {
-          "key": "vaseBest",
-          "merge": "union_min"
-        },
-        {
-          "key": "vaseMuted",
-          "merge": "lww"
-        }
-      ]
-    },
-    {
-      "id": "merge",
-      "shell_mode": "panel",
-      "title": "동물 합치기",
-      "tagline": "동그란 동물을 떨어뜨려 합치는 중독성 드롭 퍼즐 — 넘치기 전에 최고 점수에!",
-      "unit": "점",
-      "score_key": "mergeBest",
-      "score_metric": "score",
-      "defer_share": true,
-      "state_keys": [
-        {
-          "key": "mergeBest",
-          "merge": "max"
-        },
-        {
-          "key": "mergeMuted",
-          "merge": "lww"
-        }
-      ]
-    },
-    {
-      "id": "cube",
-      "shell_mode": "fullscreen",
-      "title": "Cube Snake",
-      "tagline": "3D 큐브 표면을 기어다니는 스네이크. 모서리를 넘으면 세상이 돌아간다.",
-      "unit": "점",
-      "score_key": "cubeSnakeBest",
-      "score_metric": "best",
-      "state_keys": [
-        {
-          "key": "cubeSnakeBest",
-          "merge": "max"
-        },
-        {
-          "key": "cubeSnakeMuted",
-          "merge": "lww"
-        }
-      ]
-    },
-    {
       "id": "escape",
       "shell_mode": "panel",
       "title": "차 빼주세요",
@@ -132,26 +156,6 @@
         },
         {
           "key": "escapeMuted",
-          "merge": "lww"
-        }
-      ]
-    },
-    {
-      "id": "twos",
-      "shell_mode": "panel",
-      "title": "2048",
-      "tagline": "같은 수가 만나면 두 배! 한 방향으로 쓱 밀어 2048 타일에 도전하세요.",
-      "unit": "점",
-      "score_key": "twosBest",
-      "score_metric": "score",
-      "defer_share": true,
-      "state_keys": [
-        {
-          "key": "twosBest",
-          "merge": "max"
-        },
-        {
-          "key": "twosMuted",
           "merge": "lww"
         }
       ]
@@ -349,9 +353,18 @@
       "score_key": "flipBest",
       "score_metric": "best",
       "state_keys": [
-        { "key": "flipBest", "merge": "max" },
-        { "key": "flipStreak", "merge": "lww" },
-        { "key": "flipMuted", "merge": "lww" }
+        {
+          "key": "flipBest",
+          "merge": "max"
+        },
+        {
+          "key": "flipStreak",
+          "merge": "lww"
+        },
+        {
+          "key": "flipMuted",
+          "merge": "lww"
+        }
       ]
     },
     {
@@ -363,10 +376,22 @@
       "score_key": "digBest",
       "score_metric": "level",
       "state_keys": [
-        { "key": "digBest", "merge": "max" },
-        { "key": "digLevel", "merge": "max" },
-        { "key": "digStars", "merge": "union" },
-        { "key": "digMuted", "merge": "lww" }
+        {
+          "key": "digBest",
+          "merge": "max"
+        },
+        {
+          "key": "digLevel",
+          "merge": "max"
+        },
+        {
+          "key": "digStars",
+          "merge": "union"
+        },
+        {
+          "key": "digMuted",
+          "merge": "lww"
+        }
       ]
     },
     {
