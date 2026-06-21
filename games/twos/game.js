@@ -608,17 +608,17 @@
     if (floats.length) compact(floats, T);
     if (scoreShown !== score) { const d = score - scoreShown; scoreShown += Math.sign(d) * Math.max(1, Math.ceil(Math.abs(d) * 0.18)); if ((d > 0 && scoreShown > score) || (d < 0 && scoreShown < score)) scoreShown = score; scoreEl.textContent = scoreShown; }
     draw(T);
-    ensureLoop(T);
+    rearm(T);
   }
-  // 멱등 루프 재무장 — 진짜 애니면 60fps rAF, 앰비언트 sparkle뿐이면 ~9fps, 둘 다 아니면 park.
-  // looping 플래그로 재진입(이벤트 fn 안 kick) 시 체인 중복 생성 방지.
-  function ensureLoop(T) {
-    if (looping) return;
-    T = T || now();
+  // frame() 끝에서만 호출 — 다음 프레임 재무장. 진짜 애니면 60fps rAF, 앰비언트 sparkle뿐이면 ~9fps, 둘 다 아니면 park.
+  function rearm(T) {
     if (anim(T)) { looping = true; raf = requestAnimationFrame(frame); }
     else if (sparkleAlive()) { looping = true; idleTimer = setTimeout(frame, 110); }
+    // else: park (looping=false 유지)
   }
-  function kick() { ensureLoop(); }
+  // 외부 트리거(입력/레이아웃/리사이즈/복귀) — '최소 1프레임' 보장. layout()이 cv.width 재할당으로 캔버스를
+  // 지우므로, 정적(park) 상태여도 반드시 1회는 다시 그려야 보드가 사라지지 않는다. looping 플래그로 중복 방지.
+  function kick() { if (looping) return; looping = true; lastT = now(); raf = requestAnimationFrame(frame); }
   function stopLoop() { looping = false; if (raf) cancelAnimationFrame(raf); if (idleTimer) clearTimeout(idleTimer); raf = 0; idleTimer = 0; }
 
   // ───────────────────────── 게임오버 ─────────────────────────
@@ -677,6 +677,8 @@
   function onResize() { clearTimeout(rT); rT = setTimeout(() => { layout(); kick(); }, 80); }
   window.addEventListener('resize', onResize);
   if (window.visualViewport) window.visualViewport.addEventListener('resize', onResize);
+  // 보드 실제 크기 변화(초기 0→실측, 폰트 로드 리플로우 등)를 직접 관측 — 캔버스가 비는 케이스 방지
+  if (window.ResizeObserver) { try { new ResizeObserver(onResize).observe(boardEl); } catch (e) {} }
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') kick(); else stopLoop(); });
 
   // ───────────────────────── 부팅 ─────────────────────────
