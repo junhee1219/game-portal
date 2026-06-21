@@ -6,17 +6,34 @@
   src: url("/fonts/PretendardVariable.woff2") format("woff2-variations");
 }
 
+@font-face {
+  font-family: "JalnanGothic";
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url("/fonts/JalnanGothic.woff2") format("woff2");
+}
+
 :root {
-  --bg: #101014;
-  --panel: #18181f;
-  --panel-hover: #1e1e27;
-  --line: #26262f;
-  --text: #f2f2f0;
-  --dim: #8e8e98;
-  --accent: #ffb13d;
-  /* 타입 스케일 — 딱 3종. 위계는 font-weight + color로 만든다. */
-  --fs-1: clamp(30px, 8vw, 44px);  /* display / hero */
-  --fs-2: 16px;                     /* body / 제목(굵게) / 버튼 */
+  /* Candy Portal — 밝고 말랑한 캔디 톤. 위계는 색 + 디스플레이 폰트로. */
+  --bg: #FFF6E5;
+  --panel: #FFFFFF;
+  --panel-hover: #FFFBF2;
+  --line: #EFE4CF;
+  --text: #3A2D28;
+  --dim: #8C7B6E;
+  --accent: #FF6B6B;          /* coral — 주요 강조/CTA */
+  /* 카드 4색 순환 */
+  --c-coral: #FF6B6B;
+  --c-yellow: #FFCA66;
+  --c-mint: #66CC99;
+  --c-blue: #6C6CFF;
+  --shadow: 0 6px 18px -10px rgba(120, 90, 50, 0.32);
+  /* 디스플레이(타이틀·게임명)는 잘난체, 본문은 Pretendard */
+  --display: "JalnanGothic", "Pretendard Variable", Pretendard, sans-serif;
+  /* 타입 스케일 — 딱 3종. */
+  --fs-1: clamp(34px, 9vw, 48px);  /* display / hero */
+  --fs-2: 16px;                     /* body / 제목 / 버튼 */
   --fs-3: 13px;                     /* caption / 라벨 / dim */
 }
 
@@ -31,35 +48,43 @@ body {
     system-ui, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   line-height: 1.5;
   min-height: 100dvh;
+  background-image:
+    radial-gradient(60% 30% at 85% -5%, rgba(255, 202, 102, 0.22), transparent 70%),
+    radial-gradient(50% 26% at -10% 4%, rgba(108, 108, 255, 0.12), transparent 70%);
+  background-attachment: fixed;
 }
 
 .wrap {
   max-width: 560px;
   margin: 0 auto;
-  padding: 56px 20px calc(40px + env(safe-area-inset-bottom));
+  padding: 48px 20px calc(40px + env(safe-area-inset-bottom));
 }
 
-.hero { margin-bottom: 40px; }
+.hero { margin-bottom: 32px; }
 
 .kicker {
   font-size: var(--fs-3);
-  letter-spacing: 0.22em;
+  letter-spacing: 0.18em;
   color: var(--accent);
-  font-weight: 700;
-  margin-bottom: 14px;
+  font-weight: 800;
+  margin-bottom: 12px;
 }
 
 .hero h1 {
+  font-family: var(--display);
   font-size: var(--fs-1);
-  font-weight: 800;
-  line-height: 1.12;
-  letter-spacing: -0.02em;
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  text-shadow: 0 2px 0 #fff, 0 6px 16px rgba(255, 107, 107, 0.18);
 }
 
 .hero .sub {
-  margin-top: 14px;
+  margin-top: 12px;
   color: var(--dim);
   font-size: var(--fs-2);
+  font-weight: 600;
 }
 
 .list {
@@ -72,29 +97,31 @@ body {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 18px;
+  padding: 16px;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 18px;
   text-decoration: none;
   color: inherit;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  box-shadow: var(--shadow);
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease, box-shadow 0.2s ease;
 }
 
 .card:hover, .card:focus-visible {
   background: var(--panel-hover);
-  border-color: #34343f;
-  transform: translateY(-1px);
+  border-color: #F2D2C2;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px -12px rgba(120, 90, 50, 0.4);
 }
 
-.card:active { transform: translateY(0); }
+.card:active { transform: scale(0.985); }
 
 .card img {
-  width: 64px;
-  height: 64px;
+  width: 60px;
+  height: 60px;
   border-radius: 14px;
   flex-shrink: 0;
-  background: #000;
+  background: #F4ECDE;
 }
 
 .card .meta {
@@ -105,27 +132,32 @@ body {
 }
 
 .card .name {
-  font-size: var(--fs-2);
-  font-weight: 700;
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 400;
   letter-spacing: -0.01em;
+  color: var(--text);
+  line-height: 1.2;
 }
 
 .card .name .hot {
+  font-family: "Pretendard Variable", Pretendard, sans-serif;
   display: inline-block;
   margin-left: 7px;
   vertical-align: middle;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.04em;
-  color: #1a1208;
+  color: #fff;
   background: var(--accent);
-  padding: 2px 7px;
+  padding: 2px 8px;
   border-radius: 9999px;
-  box-shadow: 0 0 12px -2px var(--accent);
+  box-shadow: 0 2px 7px -1px rgba(255, 107, 107, 0.55);
 }
 
 .card.is-hot {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  border-color: #FFD0D0;
+  background: linear-gradient(180deg, #FFFBF4, #fff);
 }
 
 .card .desc {
@@ -136,19 +168,30 @@ body {
 
 .card .go {
   margin-left: auto;
-  color: var(--dim);
-  font-size: var(--fs-2);
   flex-shrink: 0;
-  transition: color 0.15s ease, transform 0.15s ease;
+  width: 34px;
+  height: 34px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 900;
+  color: #fff;
+  background: var(--accent);
+  transition: transform 0.15s ease;
 }
 
-.card:hover .go {
-  color: var(--accent);
-  transform: translateX(2px);
-}
+/* 카드 4색 순환 — 캔디 액센트 */
+.list .card:nth-child(4n + 1) .go { background: var(--c-coral); }
+.list .card:nth-child(4n + 2) .go { background: var(--c-yellow); color: #7a5a14; }
+.list .card:nth-child(4n + 3) .go { background: var(--c-mint); }
+.list .card:nth-child(4n + 4) .go { background: var(--c-blue); }
+
+.card:hover .go { transform: translateX(2px); }
 
 .foot {
-  margin-top: 44px;
+  margin-top: 40px;
   padding-top: 20px;
   border-top: 1px solid var(--line);
   color: var(--dim);
@@ -160,7 +203,7 @@ body {
 .foot-link {
   color: var(--accent);
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .foot-link:hover { text-decoration: underline; }
@@ -176,7 +219,7 @@ body {
   font-size: var(--fs-3);
 }
 
-.topbar a { color: var(--accent); text-decoration: none; font-weight: 600; }
+.topbar a { color: var(--accent); text-decoration: none; font-weight: 700; }
 .topbar a:hover { text-decoration: underline; }
 .topbar .who { color: var(--dim); }
 .topbar .who b { color: var(--text); font-weight: 700; }
@@ -189,7 +232,7 @@ body {
 /* 가입/로그인 폼 */
 .auth-card {
   background: var(--panel); border: 1px solid var(--line);
-  border-radius: 16px; padding: 24px;
+  border-radius: 18px; padding: 24px; box-shadow: var(--shadow);
 }
 .auth-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
 .auth-tabs button {
@@ -197,23 +240,23 @@ body {
   background: transparent; color: var(--dim); font: inherit; font-weight: 700;
   cursor: pointer;
 }
-.auth-tabs button.active { background: var(--accent); color: #14110a; border-color: var(--accent); }
+.auth-tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .auth-field { margin-bottom: 14px; }
 .auth-field label { display: block; font-size: var(--fs-3); color: var(--dim); margin-bottom: 6px; }
 .auth-field input {
   width: 100%; padding: 12px 14px; border-radius: 10px;
-  border: 1px solid var(--line); background: var(--bg); color: var(--text);
+  border: 1px solid var(--line); background: #FFFDF8; color: var(--text);
   font: inherit;
 }
 .auth-field input:focus { outline: none; border-color: var(--accent); }
 .auth-hint { font-size: var(--fs-3); margin-top: 6px; min-height: 16px; }
-.auth-hint.ok { color: #5fd08a; }
-.auth-hint.bad { color: #ff7a7a; }
+.auth-hint.ok { color: #2faa6a; }
+.auth-hint.bad { color: #e0564f; }
 .auth-submit {
   width: 100%; padding: 14px; border-radius: 12px; border: none;
-  background: var(--accent); color: #14110a; font: inherit; font-weight: 800;
+  background: var(--accent); color: #fff; font: inherit; font-weight: 800;
   font-size: var(--fs-2); cursor: pointer; margin-top: 6px;
 }
 .auth-submit:active { transform: scale(0.99); }
 .auth-submit:disabled { opacity: 0.5; cursor: default; }
-.auth-error { color: #ff7a7a; font-size: var(--fs-3); margin-top: 12px; min-height: 18px; text-align: center; }
+.auth-error { color: #e0564f; font-size: var(--fs-3); margin-top: 12px; min-height: 18px; text-align: center; }
