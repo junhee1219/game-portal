@@ -1,31 +1,60 @@
-<!DOCTYPE html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#fff;}</style></head>
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#101014;}</style>
+<link rel="preload" href="/fonts/PretendardVariable.woff2" as="font" type="font/woff2" crossorigin>
+<style>@font-face{font-family:"Pretendard Variable";font-weight:45 920;src:url("/fonts/PretendardVariable.woff2") format("woff2-variations");}</style>
+</head>
 <body>
 <canvas id="c" width="512" height="512"></canvas>
 <script>
 const cv=document.getElementById('c'), x=cv.getContext('2d');
+function hx(h){h=h.replace('#','');return{r:parseInt(h.slice(0,2),16),g:parseInt(h.slice(2,4),16),b:parseInt(h.slice(4,6),16)};}
+function cssC(c){return'rgb('+(c.r|0)+','+(c.g|0)+','+(c.b|0)+')';}
+function mix(a,b,t){return{r:a.r+(b.r-a.r)*t,g:a.g+(b.g-a.g)*t,b:a.b+(b.b-a.b)*t};}
+const WH={r:255,g:255,b:255},BK={r:0,g:0,b:0};
+const lt=(c,t)=>mix(c,WH,t), dk=(c,t)=>mix(c,BK,t), lum=(c)=>(0.299*c.r+0.587*c.g+0.114*c.b)/255;
 function rr(ctx,X,Y,W,H,R){R=Math.min(R,W/2,H/2);ctx.beginPath();ctx.moveTo(X+R,Y);ctx.arcTo(X+W,Y,X+W,Y+H,R);ctx.arcTo(X+W,Y+H,X,Y+H,R);ctx.arcTo(X,Y+H,X,Y,R);ctx.arcTo(X,Y,X+W,Y,R);ctx.closePath();}
-// 파스텔 배경 (하늘→크림, 명도폭 좁게), 마스커블 안전영역 고려해 라운드 사각
-const g=x.createLinearGradient(0,0,0,512);
-g.addColorStop(0,'#f2f8ff'); g.addColorStop(1,'#e1ebf8');
-rr(x,0,0,512,512,112); x.fillStyle=g; x.fill();
-// 캔디 타일 (윗 림 + 하단 음영) + 숫자
-function tile(cx,cy,w,bg,fg,label,fontK){
-  const r=w*0.20;
-  rr(x,cx,cy,w,w,r); x.fillStyle=bg; x.fill();
-  x.save(); rr(x,cx,cy,w,w,r); x.clip();
-  let lg=x.createLinearGradient(0,cy,0,cy+w);
-  lg.addColorStop(0,'rgba(255,255,255,.42)'); lg.addColorStop(.5,'rgba(255,255,255,0)'); lg.addColorStop(1,'rgba(0,0,0,.12)');
-  x.fillStyle=lg; x.fillRect(cx,cy,w,w); x.restore();
-  x.fillStyle=fg; x.textAlign='center'; x.textBaseline='middle';
-  x.font='800 '+Math.round(w*fontK)+'px "Pretendard Variable",-apple-system,sans-serif';
-  x.fillText(label, cx+w/2, cy+w/2+w*0.02);
+// 다크 라운드 배경 (마스커블 안전영역 고려)
+const bg=x.createLinearGradient(0,0,0,512); bg.addColorStop(0,'#1b1c24'); bg.addColorStop(1,'#101014');
+rr(x,0,0,512,512,112); x.fillStyle=bg; x.fill();
+// 보석 면
+function gem(cx,cy,S,base,rim,facetN,fc,diamond,spec,label,fontK){
+  base=hx(base); const rad=S*0.18;
+  x.save(); x.translate(cx,cy);
+  // 하드 섀도
+  rr(x,0,4,S,S,rad); x.fillStyle='rgba(0,0,0,.34)'; x.fill();
+  x.save(); rr(x,0,0,S,S,rad); x.clip();
+  const grd=x.createLinearGradient(0,0,0,S);
+  grd.addColorStop(0,cssC(lt(base,diamond?0.03:0.06))); grd.addColorStop(1,cssC(dk(base,0.06)));
+  x.fillStyle=grd; x.fillRect(0,0,S,S);
+  const ccx=S/2,ccy=S*0.46,R=S*0.78;
+  for(let i=0;i<facetN;i++){const a0=-Math.PI/2+i/facetN*Math.PI*2,a1=-Math.PI/2+(i+1)/facetN*Math.PI*2,am=(a0+a1)/2,up=-Math.sin(am),adj=fc*up;
+    x.beginPath();x.moveTo(ccx,ccy);x.lineTo(ccx+R*Math.cos(a0),ccy+R*Math.sin(a0));x.lineTo(ccx+R*Math.cos(a1),ccy+R*Math.sin(a1));x.closePath();
+    x.fillStyle=cssC(adj>=0?lt(base,adj):dk(base,-adj));x.globalAlpha=0.6;x.fill();x.globalAlpha=1;}
+  if(facetN){const tr=S*0.16;x.beginPath();x.moveTo(ccx,ccy-tr);x.lineTo(ccx+tr,ccy);x.lineTo(ccx,ccy+tr);x.lineTo(ccx-tr,ccy);x.closePath();x.fillStyle=cssC(lt(base,fc*0.9));x.globalAlpha=0.5;x.fill();x.globalAlpha=1;}
+  if(diamond){[['#ffd9d9',0,0],['#d9ffe4',S,0],['#d9e8ff',0,S]].forEach(p=>{x.fillStyle=p[0];x.globalAlpha=0.5;x.beginPath();x.arc(p[1],p[2],S*0.1,0,7);x.fill();});x.globalAlpha=1;}
+  x.restore();
+  // 림 + 하단 음영
+  x.save(); rr(x,0.5,0.5,S-1,S-1,rad); x.clip();
+  x.strokeStyle=rim; x.lineWidth=diamond?2.4:2; x.globalAlpha=diamond?1:0.9; x.beginPath(); x.moveTo(rad,1.5); x.lineTo(S-rad,1.5); x.stroke();
+  x.globalAlpha=0.5; x.strokeStyle=cssC(dk(base,0.14)); x.beginPath(); x.moveTo(rad,S-2); x.lineTo(S-rad,S-2); x.stroke(); x.globalAlpha=1; x.restore();
+  if(spec){x.fillStyle='rgba(255,255,255,'+(diamond?0.95:0.8)+')';x.beginPath();x.arc(S*0.30,S*0.26,S*0.04,0,7);x.fill();}
+  if(diamond){ // 회전 별 (정적)
+    function star(sx,sy,r){x.save();x.translate(sx,sy);x.fillStyle='#fff';x.beginPath();for(let i=0;i<8;i++){const a=i/8*Math.PI*2,rr2=i%2?r*0.28:r;x.lineTo(Math.cos(a)*rr2,Math.sin(a)*rr2);}x.closePath();x.fill();x.restore();}
+    star(S*0.74,S*0.26,S*0.12); star(S*0.30,S*0.7,S*0.06);
+  }
+  // 숫자
+  const td=lum(base)>0.62;
+  x.font='800 '+Math.round(S*fontK)+'px "Pretendard Variable",-apple-system,sans-serif';
+  x.textAlign='center'; x.textBaseline='middle'; x.lineJoin='round'; x.lineWidth=S*0.055;
+  x.strokeStyle=td?'rgba(255,255,255,.5)':'rgba(24,28,44,.5)'; x.strokeText(label,S/2,S/2+S*0.02);
+  x.fillStyle=td?'#262b38':'#fff'; x.fillText(label,S/2,S/2+S*0.02);
+  x.restore();
 }
-// 2×2 합치기 타일 — 파랑→초록→앰버→골드 ramp, 골드 칸이 2048 브랜드
-const W=176, G=22, ox=(512-(W*2+G))/2, oy=ox;
-tile(ox,        oy,        W, '#8fc0f0', '#ffffff', '2',    0.52);
-tile(ox+W+G,    oy,        W, '#7fcf9f', '#ffffff', '8',    0.52);
-tile(ox,        oy+W+G,    W, '#efb65f', '#ffffff', '64',   0.40);
-tile(ox+W+G,    oy+W+G,    W, '#f5a623', '#ffffff', '2048', 0.27);
+// 2×2 진화 ramp — 다이아몬드(2048)가 브랜드 클라이맥스
+const W=176,G=22,ox=(512-(W*2+G))/2,oy=ox;
+gem(ox,      oy,      W, '#7c8190','#888d9c', 0,  0.02, false, 0, '2',    0.5);
+gem(ox+W+G,  oy,      W, '#3f6fa8','#5180b6', 4,  0.05, false, 1, '8',    0.5);
+gem(ox,      oy+W+G,  W, '#e09433','#eea64a', 12, 0.10, false, 1, '256',  0.36);
+gem(ox+W+G,  oy+W+G,  W, '#eef2f6','#ffffff', 16, 0.12, true,  1, '2048', 0.26);
 window.__png=()=>cv.toDataURL('image/png');
 </script>
 </body></html>
