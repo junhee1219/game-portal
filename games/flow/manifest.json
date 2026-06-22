@@ -1,0 +1,15 @@
+{
+  "name": "무지개 잇기 — 같은 색 구슬을 쓱 이어요",
+  "short_name": "무지개 잇기",
+  "description": "같은 색 구슬을 선으로 이어 보드를 가득 채우는 퍼즐. 길이 겹치면 안 돼요. 시간제한 없이 한 손으로 즐기는 논리 게임.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e6eefb",
+  "theme_color": "#eaf2fb",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

@@ -433,6 +433,33 @@
           "merge": "lww"
         }
       ]
+    },
+    {
+      "id": "flow",
+      "shell_mode": "panel",
+      "title": "무지개 잇기",
+      "tagline": "같은 색 구슬을 선으로 쓱— 이어요. 길이 겹치지 않게 보드를 가득 채우면 클리어!",
+      "unit": "레벨",
+      "score_key": "flowBest",
+      "score_metric": "level",
+      "state_keys": [
+        {
+          "key": "flowBest",
+          "merge": "max"
+        },
+        {
+          "key": "flowLevel",
+          "merge": "max"
+        },
+        {
+          "key": "flowStars",
+          "merge": "union"
+        },
+        {
+          "key": "flowMuted",
+          "merge": "lww"
+        }
+      ]
     }
   ]
 }

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#eaf2fb">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="무지개 잇기">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="무지개 잇기 — 같은 색 구슬을 쓱 이어요">
+<meta property="og:description" content="같은 색 구슬을 선으로 이어 보드를 가득 채우는 퍼즐. 길이 겹치면 안 돼요. 시간제한 없이 한 손으로 즐기는 논리 게임.">
+<title>무지개 잇기</title>
+<style>
+  @font-face{font-family:"Pretendard Variable";font-weight:45 920;font-style:normal;font-display:swap;src:url("/fonts/PretendardVariable.woff2") format("woff2-variations");}
+  :root{
+    --bg-a:#f2f8ff; --bg-b:#e6eefb; --bg-c:#dde7f6;
+    --ink:#3b4258; --ink-soft:#7b8298;
+    --card:#ffffff;
+    --scrim:rgba(45,52,75,.34);
+    --glass:rgba(255,255,255,.66);
+    --glass-border:rgba(70,84,120,.16);
+    --shadow:rgba(70,84,120,.22);
+    --accent:#6e8cff;
+    --fs-1:clamp(34px,11vw,46px);
+    --fs-2:16px;
+    --fs-3:13px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;background:var(--bg-b);}
+  body{
+    font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
+    background-color:var(--bg-b);
+    background-image:radial-gradient(130% 100% at 50% 0%, var(--bg-a) 0%, var(--bg-b) 55%, var(--bg-c) 100%);
+    color:var(--ink);
+    user-select:none;-webkit-user-select:none;touch-action:none;
+  }
+  /* 공통 shell 헤더가 제목 표시 — 인라인 제목·워터마크 숨김 */
+  .topbar h1{display:none;}
+  .topbar h1 + *{margin-left:auto;}
+  button{font-family:inherit;}
+
+  .topbar{display:flex;align-items:center;gap:8px;z-index:2;width:100%;max-width:480px;flex:0 0 auto;}
+  h1{font-weight:800;font-size:var(--fs-2);letter-spacing:-.3px;color:var(--ink);margin-right:auto;white-space:nowrap;display:flex;align-items:center;gap:7px;}
+  .pill{
+    background:var(--glass);border:1px solid var(--glass-border);backdrop-filter:blur(10px);
+    padding:6px 13px;border-radius:999px;font-size:var(--fs-3);
+    display:flex;align-items:center;gap:6px;white-space:nowrap;color:var(--ink);line-height:1;
+  }
+  .pill .lbl{color:var(--ink-soft);font-size:var(--fs-3);letter-spacing:.3px;}
+  .pill b{font-size:var(--fs-2);}
+  #best-pill b{color:#e8943a;}
+  .mute-btn{
+    width:42px;height:42px;flex:0 0 auto;border-radius:13px;cursor:pointer;
+    background:linear-gradient(180deg,#ffffff,#eef2fb);border:1px solid var(--glass-border);
+    box-shadow:0 3px 0 rgba(110,124,170,.2), 0 4px 10px var(--shadow);
+    display:flex;align-items:center;justify-content:center;color:#6b7295;transition:transform .1s;
+  }
+  .mute-btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(110,124,170,.2);}
+  .ki{width:24px;height:24px;fill:currentColor;display:block;}
+  .ki.sm{width:18px;height:18px;}
+
+  /* 무대(캔버스) */
+  #stage{flex:1 1 auto;display:flex;align-items:center;justify-content:center;width:100%;max-width:480px;min-height:0;z-index:2;margin-top:8px;}
+  #wrap{
+    position:relative;width:100%;aspect-ratio:1/1;max-height:100%;border-radius:24px;overflow:hidden;
+    background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,.18));
+    border:1px solid var(--glass-border);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.7), 0 10px 26px var(--shadow);
+  }
+  #game{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;}
+  #hint{
+    position:absolute;left:0;right:0;bottom:10px;text-align:center;z-index:3;pointer-events:none;
+    color:var(--ink);font-size:var(--fs-3);font-weight:700;opacity:.9;transition:opacity .3s;
+    display:flex;align-items:center;justify-content:center;gap:6px;
+  }
+  #hint.hide{opacity:0;}
+
+  /* 하단 액션 (엄지 영역) */
+  .actions{
+    display:flex;gap:10px;width:100%;max-width:480px;margin-top:10px;flex:0 0 auto;z-index:2;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .act{
+    flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;
+    padding:13px 0;border-radius:15px;font-size:var(--fs-2);font-weight:800;color:#5a6486;
+    background:linear-gradient(180deg,#ffffff,#eef2fb);border:1px solid var(--glass-border);
+    box-shadow:0 3px 0 rgba(110,124,170,.2), 0 4px 10px var(--shadow);transition:transform .1s,opacity .15s;
+  }
+  .act:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(110,124,170,.2);}
+  .act[disabled]{opacity:.42;pointer-events:none;}
+
+  /* 클리어 오버레이 */
+  #over{
+    position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;
+    background:var(--scrim);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .3s;
+  }
+  #over.show{opacity:1;pointer-events:auto;}
+  .over-card{
+    background:var(--card);border:1px solid var(--glass-border);
+    border-radius:26px;padding:26px 26px 22px;text-align:center;width:min(330px,86vw);
+    box-shadow:0 24px 60px rgba(45,40,80,.28), inset 0 1px 0 rgba(255,255,255,.9);
+    transform:scale(.82);transition:transform .35s cubic-bezier(.2,1.4,.4,1);
+  }
+  #over.show .over-card{transform:scale(1);}
+  .over-card h2{font-size:var(--fs-2);font-weight:800;color:var(--ink);}
+  .over-card .lvl{font-size:var(--fs-1);font-weight:800;color:var(--accent);margin:6px 0 0;line-height:1;}
+  .over-card .lvl-lbl{font-size:var(--fs-3);color:var(--ink-soft);letter-spacing:.5px;}
+  #stars{display:flex;justify-content:center;gap:8px;margin:14px 0 4px;}
+  #stars .ki{width:36px;height:36px;color:#e2e6f0;transition:transform .3s cubic-bezier(.2,1.6,.4,1);transform:scale(.4);}
+  #stars .ki.on{color:#ffce4a;transform:scale(1);filter:drop-shadow(0 3px 5px rgba(255,180,40,.45));}
+  #over-record{
+    display:none;font-size:var(--fs-3);color:#7a4d00;font-weight:800;
+    background:linear-gradient(135deg,#ffe6a3,#ffcf7e);border-radius:999px;padding:4px 14px;margin-top:8px;
+  }
+  #over-record.show{display:inline-flex;align-items:center;gap:5px;animation:rec-pop .5s ease;}
+  @keyframes rec-pop{0%{transform:scale(.5);}60%{transform:scale(1.12);}100%{transform:scale(1);}}
+  .over-row{display:flex;gap:10px;margin-top:18px;}
+  .over-row button{
+    flex:1 1 0;border:none;border-radius:16px;cursor:pointer;font-size:var(--fs-2);font-weight:800;
+    padding:14px 0;transition:transform .1s;
+  }
+  #btn-retry{color:#5a6486;background:linear-gradient(180deg,#ffffff,#eaeefb);box-shadow:0 4px 0 #cdd5e8,0 6px 12px var(--shadow);}
+  #btn-retry:active{transform:translateY(2px);box-shadow:0 2px 0 #cdd5e8;}
+  #btn-next{color:#fff;background:linear-gradient(180deg,#8aa0ff,#6478ee);box-shadow:0 4px 0 #5161c8,0 6px 14px rgba(80,90,200,.4);}
+  #btn-next:active{transform:translateY(2px);box-shadow:0 2px 0 #5161c8;}
+  .over-links{display:flex;justify-content:center;gap:18px;margin-top:14px;}
+  .over-links button{
+    background:none;border:none;cursor:pointer;color:var(--ink-soft);font-size:var(--fs-3);font-weight:700;
+    display:inline-flex;align-items:center;gap:5px;padding:4px;
+  }
+  .over-links button:active{color:var(--ink);}
+</style>
+</head>
+<body>
+  <svg style="display:none" aria-hidden="true">
+    <symbol id="p-speaker-high" viewBox="0 0 256 256"><path d="M160,32.25V223.69a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.57-51A4,4,0,0,1,80,176.16V79.84a4,4,0,0,1,1.55-3.15l65.57-51a8,8,0,0,1,10,.16A8.27,8.27,0,0,1,160,32.25ZM60,80H32A16,16,0,0,0,16,96v64a16,16,0,0,0,16,16H60a4,4,0,0,0,4-4V84A4,4,0,0,0,60,80Zm126.77,20.84a8,8,0,0,0-.72,11.3,24,24,0,0,1,0,31.72,8,8,0,1,0,12,10.58,40,40,0,0,0,0-52.88A8,8,0,0,0,186.74,100.84Zm40.89-26.17a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66Z"/></symbol>
+    <symbol id="p-speaker-slash" viewBox="0 0 256 256"><path d="M213.92,210.62a8,8,0,1,1-11.84,10.76L160,175.09v48.6a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.55-51A4,4,0,0,1,80,176.18V87.09L42.08,45.38A8,8,0,1,1,53.92,34.62Zm-27.21-55.46a8,8,0,0,0,11.29-.7,40,40,0,0,0,0-52.88,8,8,0,1,0-12,10.57,24,24,0,0,1,0,31.72A8,8,0,0,0,186.71,155.16Zm40.92-80.49a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66ZM153,119.87a4,4,0,0,0,7-2.7V32.25a8.27,8.27,0,0,0-2.88-6.4,8,8,0,0,0-10-.16L103.83,59.33a4,4,0,0,0-.5,5.85Z"/></symbol>
+    <symbol id="p-arrow-counter-clockwise" viewBox="0 0 256 256"><path d="M224,128a96,96,0,0,1-94.71,96H128A95.38,95.38,0,0,1,62.1,197.8a8,8,0,0,1,11-11.63A80,80,0,1,0,71.43,71.39a3.07,3.07,0,0,1-.26.25L60.63,81.29l17,17A8,8,0,0,1,72,112H24a8,8,0,0,1-8-8V56A8,8,0,0,1,29.66,50.3L49.31,70,60.25,60A96,96,0,0,1,224,128Z"/></symbol>
+    <symbol id="p-arrows-clockwise" viewBox="0 0 256 256"><path d="M224,48V96a8,8,0,0,1-8,8H168a8,8,0,0,1-5.66-13.66L180.65,72a79.48,79.48,0,0,0-54.72-22.09h-.45A79.52,79.52,0,0,0,69.59,72.71,8,8,0,0,1,58.41,61.27,96,96,0,0,1,192,60.7l18.36-18.36A8,8,0,0,1,224,48ZM186.41,183.29A80,80,0,0,1,75.35,184l18.31-18.31A8,8,0,0,0,88,152H40a8,8,0,0,0-8,8v48a8,8,0,0,0,13.66,5.66L64,195.3a95.42,95.42,0,0,0,66,26.76h.53a95.36,95.36,0,0,0,67.07-27.33,8,8,0,0,0-11.18-11.44Z"/></symbol>
+    <symbol id="p-star" viewBox="0 0 256 256"><path d="M234.5,114.38l-45.1,39.36,13.51,58.6a16,16,0,0,1-23.84,17.34l-51.11-31-51,31a16,16,0,0,1-23.84-17.34L80.6,153.74,35.5,114.38a16,16,0,0,1,9.11-28.06l59.46-5.15,23.21-55.36a15.95,15.95,0,0,1,29.44,0L180,81.17l59.44,5.15a16,16,0,0,1,9.11,28.06Z"/></symbol>
+    <symbol id="p-share-network" viewBox="0 0 256 256"><path d="M212,200a36,36,0,1,1-69.85-12.25l-53-34.05a36,36,0,1,1,0-51.4l53-34a36.09,36.09,0,1,1,8.67,13.45l-53,34.05a36,36,0,0,1,0,24.5l53,34.05A36,36,0,0,1,212,200Z"/></symbol>
+    <symbol id="p-hand-tap" viewBox="0 0 256 256"><path d="M64,64a48,48,0,0,1,96,0,8,8,0,0,1-16,0,32,32,0,0,0-64,0,8,8,0,0,1-16,0Zm143.23,56c-8.61.4-15.23,7.82-15.23,16.43v7.28a8.17,8.17,0,0,1-7.47,8.25,8,8,0,0,1-8.53-8V120.45c0-8.61-6.62-16-15.23-16.43A16,16,0,0,0,144,120v15.73a8.17,8.17,0,0,1-7.47,8.25,8,8,0,0,1-8.53-8V64.45c0-8.61-6.62-16-15.23-16.43A16,16,0,0,0,96,64V183.74a8.19,8.19,0,0,1-6.72,8.16l-.12,0a6.09,6.09,0,0,1-6-3.09l-21-36.44c-4.3-7.46-13.74-10.57-21.4-6.62A16,16,0,0,0,34.15,168L65.1,228.05A8,8,0,0,0,72,232H208a8,8,0,0,0,7.16-4.42c.36-.72,8.84-15.06,8.84-40.65V136A16,16,0,0,0,207.23,120Z"/></symbol>
+  </svg>
+
+  <div class="topbar">
+    <h1>무지개 잇기</h1>
+    <div class="pill"><span class="lbl">레벨</span><b id="level">1</b></div>
+    <div class="pill" id="best-pill"><span class="lbl">최고</span><b id="best">0</b></div>
+    <button class="mute-btn" id="mute" aria-label="소리 켜기/끄기">
+      <svg class="ki"><use id="mute-use" href="#p-speaker-high"/></svg>
+    </button>
+  </div>
+
+  <div id="stage">
+    <div id="wrap">
+      <canvas id="game"></canvas>
+      <div id="hint"><svg class="ki sm"><use href="#p-hand-tap"/></svg>같은 색 구슬을 선으로 이어요</div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="act" id="undo" disabled><svg class="ki sm"><use href="#p-arrow-counter-clockwise"/></svg>되돌리기</button>
+    <button class="act" id="restart"><svg class="ki sm"><use href="#p-arrows-clockwise"/></svg>다시</button>
+  </div>
+
+  <div id="over">
+    <div class="over-card">
+      <h2>레벨 클리어!</h2>
+      <div class="lvl" id="over-level">1</div>
+      <div class="lvl-lbl">레벨</div>
+      <div id="stars">
+        <svg class="ki"><use href="#p-star"/></svg>
+        <svg class="ki"><use href="#p-star"/></svg>
+        <svg class="ki"><use href="#p-star"/></svg>
+      </div>
+      <span id="over-record">최고 기록!</span>
+      <div class="over-row">
+        <button id="btn-retry">다시</button>
+        <button id="btn-next">다음 레벨</button>
+      </div>
+      <div class="over-links">
+        <button id="btn-share"><svg class="ki sm"><use href="#p-share-network"/></svg>공유</button>
+        <button id="btn-feedback">의견 남기기</button>
+      </div>
+    </div>
+  </div>
+
+<script src="core.js"></script>
+<script src="game.js"></script>
+<script>
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('./sw.js');
+  }
+</script>
+</body>
+</html>

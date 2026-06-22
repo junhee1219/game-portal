@@ -1,0 +1,50 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#fff;}</style></head>
+<body>
+<canvas id="c" width="512" height="512"></canvas>
+<script>
+const cv=document.getElementById('c'), x=cv.getContext('2d');
+function rr(ctx,X,Y,W,H,R){R=Math.min(R,W/2,H/2);ctx.beginPath();ctx.moveTo(X+R,Y);ctx.arcTo(X+W,Y,X+W,Y+H,R);ctx.arcTo(X+W,Y+H,X,Y+H,R);ctx.arcTo(X,Y+H,X,Y,R);ctx.arcTo(X,Y,X+W,Y,R);ctx.closePath();}
+// 파스텔 배경 (하늘→크림, 명도폭 좁게)
+const bg=x.createLinearGradient(0,0,0,512);
+bg.addColorStop(0,'#f2f8ff'); bg.addColorStop(1,'#e1ebf8');
+rr(x,0,0,512,512,112); x.fillStyle=bg; x.fill();
+
+// 격자 좌표 헬퍼 (3x3, 중앙 배치)
+const G=128, ox=128, oy=128;        // cell 128, 안전영역 안
+const cx=(gx)=>ox+gx*G, cy=(gy)=>oy+gy*G;
+const COL=[
+  {base:'#ff7a8a',rim:'#ffd2d8'},   // 딸기
+  {base:'#5fd08a',rim:'#c8f0d6'},   // 민트
+  {base:'#6e9bff',rim:'#cad9ff'},   // 하늘
+];
+// 두 개의 ㄱ자 리본이 교차하지 않게 짜인 모습
+function ribbon(pts,c){
+  x.lineJoin='round'; x.lineCap='round';
+  x.beginPath(); x.moveTo(cx(pts[0][0]),cy(pts[0][1]));
+  for(let i=1;i<pts.length;i++) x.lineTo(cx(pts[i][0]),cy(pts[i][1]));
+  x.lineWidth=G*0.46; x.strokeStyle=c.base; x.stroke();
+  x.lineWidth=G*0.46*0.42; x.strokeStyle=c.rim; x.globalAlpha=.55; x.stroke(); x.globalAlpha=1;
+}
+function gem(gx,gy,c){
+  const X=cx(gx),Y=cy(gy),R=G*0.33;
+  x.beginPath(); x.ellipse(X,Y+R*0.6,R*0.9,R*0.48,0,0,Math.PI*2); x.fillStyle='rgba(70,84,120,0.16)'; x.fill();
+  const g=x.createRadialGradient(X-R*0.3,Y-R*0.35,R*0.1,X,Y,R);
+  g.addColorStop(0,c.rim); g.addColorStop(.5,c.base); g.addColorStop(1,c.base);
+  x.beginPath(); x.arc(X,Y,R,0,Math.PI*2); x.fillStyle=g; x.fill();
+  x.beginPath(); x.arc(X-R*0.28,Y-R*0.3,R*0.32,0,Math.PI*2); x.fillStyle='rgba(255,255,255,0.7)'; x.fill();
+}
+// 빈 슬롯 점들(은은)
+for(let gy=0;gy<3;gy++)for(let gx=0;gx<3;gx++){rr(x,cx(gx)-G*0.34,cy(gy)-G*0.34,G*0.68,G*0.68,G*0.2);x.fillStyle='rgba(70,84,120,0.05)';x.fill();}
+// 분홍: 위쪽 ㄱ자
+ribbon([[0,0],[2,0],[2,1]],COL[0]);
+// 민트: 아래쪽 ㄴ자
+ribbon([[0,2],[0,1],[1,1]],COL[1]);
+// 하늘: 짧은 세로
+ribbon([[1,2],[2,2]],COL[2]);
+// 구슬
+gem(0,0,COL[0]); gem(2,1,COL[0]);
+gem(0,2,COL[1]); gem(1,1,COL[1]);
+gem(1,2,COL[2]); gem(2,2,COL[2]);
+window.__png=()=>cv.toDataURL('image/png');
+</script>
+</body></html>
