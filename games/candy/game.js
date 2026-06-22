@@ -62,6 +62,7 @@
   let started = false;     // 첫 입력 여부 (힌트 숨김)
   let combo = 0;           // 이번 드롭의 연쇄 파동 수
   let waveTimer = 0;       // ms — 다음 파동까지
+  let activeObj = null;    // 캐스케이드 중인 타일(드롭/직전 합체 결과) — 연쇄는 여기서만
   let hoverCol = 2;        // 현재 조준 열
   let shakeAmt = 0;
 
@@ -104,11 +105,14 @@
   function isColFull(col) { return board[0][col] !== null; }
   function boardMaxTier() { let m = 0; for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (board[r][c]) m = Math.max(m, board[r][c].tier); return m; }
 
-  // 스폰: 진행에 맞춰 창이 위로 — 초반 0~2, 후반 중간 티어도 (계속 합칠 수 있게)
+  // 스폰: 낮은 사탕을 꾸준히(2048식). 높은 사탕은 합쳐서 만든다 → 계단 바닥을
+  // 항상 트리거할 수 있어 연쇄(쾅쾅)가 설계 가능. 보드 최고 티어를 따라가지 않는다.
   function rndSpawn() {
-    const hi = Math.max(2, Math.min(6, boardMaxTier() - 2));
-    const lo = Math.max(0, hi - 2);
-    return lo + Math.floor(Math.random() * (hi - lo + 1));
+    const r = Math.random();
+    if (r < 0.55) return 0;
+    if (r < 0.85) return 1;
+    if (r < 0.97) return 2;
+    return 3;
   }
 
   // ── 드롭 ──
@@ -120,6 +124,7 @@
     const cd = newCandy(cur);
     cd.ay = -(ccy(row) - launchY()) - CS * 0.2;  // 런치 위치에서 떨어지는 모션
     board[row][col] = cd;
+    activeObj = cd;                              // 이 타일에서만 연쇄 시작
     sfxDrop(cur);
     haptic(8);
     // 다음 손패로 회전
@@ -129,76 +134,57 @@
     busy = true; combo = 0; waveTimer = FALL_MS;
   }
 
-  // 같은 티어 정직교 연결 컴포넌트(크기≥2) 모두 찾기
-  function findGroups() {
+  // 보드에서 특정 타일 객체의 현재 칸 찾기 (중력으로 위치가 바뀌어도 객체 참조로 추적)
+  function findCell(obj) {
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (board[r][c] === obj) return { r, c };
+    return null;
+  }
+  // (sr,sc)와 정직교로 연결된 같은 티어 컴포넌트(자기 포함)
+  function sameComp(sr, sc, tier) {
     const seen = Array.from({ length: ROWS }, () => new Array(COLS).fill(false));
-    const groups = [];
-    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
-      if (seen[r][c] || !board[r][c]) continue;
-      const tier = board[r][c].tier;
-      const stack = [[r, c]], comp = [];
-      seen[r][c] = true;
-      while (stack.length) {
-        const [y, x] = stack.pop(); comp.push([y, x]);
-        const nb = [[y-1,x],[y+1,x],[y,x-1],[y,x+1]];
-        for (const [ny, nx] of nb) {
-          if (ny<0||ny>=ROWS||nx<0||nx>=COLS) continue;
-          if (seen[ny][nx] || !board[ny][nx]) continue;
-          if (board[ny][nx].tier === tier) { seen[ny][nx] = true; stack.push([ny, nx]); }
-        }
+    const stack = [[sr, sc]], comp = []; seen[sr][sc] = true;
+    while (stack.length) {
+      const [y, x] = stack.pop(); comp.push([y, x]);
+      for (const [ny, nx] of [[y-1,x],[y+1,x],[y,x-1],[y,x+1]]) {
+        if (ny<0||ny>=ROWS||nx<0||nx>=COLS||seen[ny][nx]) continue;
+        if (board[ny][nx] && board[ny][nx].tier === tier) { seen[ny][nx] = true; stack.push([ny, nx]); }
       }
-      if (comp.length >= 2) groups.push({ tier, cells: comp });
     }
-    return groups;
+    return comp;
   }
 
-  // 한 파동: 그룹 병합 → 중력. 더 처리할 게 있으면 true.
+  // 한 파동: "방금 떨어뜨린(또는 직전 합체 결과) 타일"에서만 연쇄.
+  // 다른 곳의 같은 사탕끼리는 자동 합체하지 않는다 → 보드가 차서 게임이 끝나고,
+  // 서로 다른 티어 계단을 미리 깔아 한 방에 연쇄(쾅쾅)시키는 게 실력이 된다.
   function doWave() {
-    const groups = findGroups();
-    if (!groups.length) return false;
-    combo++;
-    let bumpedNewTier = false;
-    for (const g of groups) {
-      // 타깃 = 그룹에서 가장 아래(그리고 그 중 가장 오른쪽) 칸
-      let tr = -1, tc = -1;
-      for (const [r, c] of g.cells) { if (r > tr || (r === tr && c > tc)) { tr = r; tc = c; } }
-      const tx = ccx(tc), ty = ccy(tr);
-
-      if (g.tier >= MAX) {
-        // 최종 사탕 2개+ → 잭팟! 싹 비우고 큰 보너스
-        for (const [r, c] of g.cells) { spawnSources(ccx(c), ccy(r), LADDER[MAX].c); board[r][c] = null; }
-        const gain = VAL[MAX] * 3 * Math.max(1, combo);
-        addScore(gain);
-        jackpotFx(tx, ty, gain);
-        continue;
-      }
-      const newT = g.tier + 1;
-      // 소스 제거(타깃 제외) + 파편
-      for (const [r, c] of g.cells) {
-        if (r === tr && c === tc) continue;
-        spawnSources(ccx(c), ccy(r), LADDER[g.tier].c);
-        board[r][c] = null;
-      }
-      // 타깃을 업그레이드 (통통 팝)
-      const nc = board[tr][tc] || newCandy(newT);
-      nc.tier = newT; nc.sq = 1; nc.pop = 1; nc.ax = 0; nc.ay = 0;
-      board[tr][tc] = nc;
-
-      const gain = VAL[newT] * Math.max(1, combo);
-      addScore(gain);
-      mergeFx(tx, ty, newT, combo, gain);
-      sfxMerge(newT, combo);
-
-      if (newT > maxEver) { maxEver = newT; bumpedNewTier = true; }
+    if (!activeObj) return false;
+    const pos = findCell(activeObj);
+    if (!pos) { activeObj = null; return false; }
+    const tier = activeObj.tier;
+    const comp = sameComp(pos.r, pos.c, tier);
+    if (comp.length < 2) {                 // 더 합칠 같은 사탕 없음 → 연쇄 종료
+      if (combo >= 3) floats.push({ x: ccx(pos.c), y: ccy(pos.r) - RAD() - 8, t: 0, txt: combo + '연쇄!', big: true, c: '#d9468a', slow: true });
+      activeObj = null;
+      return false;
     }
-    // 콤보 배지
-    if (combo >= 2) showCombo(combo);
-    if (groups.some(g => g.tier < MAX)) sfxCombo(combo);
-    if (bumpedNewTier) newTierFx();
+    combo++;
+    const tx = ccx(pos.c), ty = ccy(pos.r);
+    if (tier >= MAX) {                     // 최종 사탕 연결 → 잭팟! 싹 비우고 큰 보너스
+      for (const [r, c] of comp) { spawnSources(ccx(c), ccy(r), LADDER[MAX].c); board[r][c] = null; }
+      const gain = VAL[MAX] * 3 * combo; addScore(gain); jackpotFx(tx, ty, gain);
+      activeObj = null; applyGravity(); return true;
+    }
+    const newT = tier + 1;
+    // 컴포넌트의 다른 칸 제거(파편) — 결과는 활성 타일 자리에 한 단계 위로
+    for (const [r, c] of comp) { if (r === pos.r && c === pos.c) continue; spawnSources(ccx(c), ccy(r), LADDER[tier].c); board[r][c] = null; }
+    activeObj.tier = newT; activeObj.sq = 1; activeObj.pop = 1;
+    const gain = VAL[newT] * combo; addScore(gain);
+    mergeFx(tx, ty, newT, combo, gain); sfxMerge(newT, combo);
+    if (combo >= 2) { showCombo(combo); sfxCombo(combo); }
+    if (newT > maxEver) { maxEver = newT; newTierFx(); }
     shakeAmt = Math.min(24, shakeAmt + 2 + combo * 1.6);
     haptic(combo >= 3 ? [10, 24, 10] : 12);
-
-    applyGravity();
+    applyGravity();                        // 활성 타일이 빈칸으로 떨어질 수 있음(다음 파동에서 추적)
     return true;
   }
 
@@ -561,7 +547,7 @@
     overEl.classList.remove('show');
     board = emptyBoard();
     scoreVal = 0; scoreEl.textContent = '0';
-    maxEver = 0; combo = 0; busy = false; over = false; started = false; shakeAmt = 0;
+    maxEver = 0; combo = 0; busy = false; over = false; started = false; shakeAmt = 0; activeObj = null;
     particles.length = 0; rings.length = 0; floats.length = 0; hideCombo();
     hintEl.classList.remove('hide');
     cur = rndSpawn(); next = rndSpawn();
