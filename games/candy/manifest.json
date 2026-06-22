@@ -1,0 +1,15 @@
+{
+  "name": "사탕 폭포 — 떨어뜨려 연쇄로 쾅쾅!",
+  "short_name": "사탕 폭포",
+  "description": "같은 사탕을 떨어뜨려 합치면 한 단계 위로! 연쇄로 쾅쾅 터뜨려 대왕 솜사탕까지.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffeede",
+  "theme_color": "#ffeede",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

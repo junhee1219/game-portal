@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#ffeede">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="사탕 폭포">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="사탕 폭포 — 떨어뜨려 연쇄로 쾅쾅!">
+<meta property="og:description" content="같은 사탕을 떨어뜨려 합치면 한 단계 위로! 연쇄로 쾅쾅 터뜨려 대왕 솜사탕까지. 시간제한 없이 한 손으로.">
+<title>사탕 폭포</title>
+<style>
+  @font-face{font-family:"Pretendard Variable";font-weight:45 920;font-style:normal;font-display:swap;src:url("/fonts/PretendardVariable.woff2") format("woff2-variations");}
+  :root{
+    /* 따뜻한 살구/크림 캔디 톤 — 명도 폭 좁게 (포털 일관) */
+    --base:#fff3e6;
+    --deep:#ffe7d2;
+    --vig:#fcdcc1;
+    --glass:rgba(255,255,255,.62);
+    --glass-border:rgba(120,85,55,.18);
+    --ink:#5a4636;
+    --ink-soft:#9c8472;
+    --card:#fffaf4;
+    --scrim:rgba(70,48,32,.34);
+    --accent:#ff9a6b;
+    --line:#ff7a59;
+    --fs-1:26px; --fs-2:16px; --fs-3:13px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  button{font-family:inherit;}
+  html,body{height:100%;background:var(--vig);}
+  body{
+    font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
+    background:radial-gradient(130% 100% at 50% 0%, var(--base) 0%, var(--deep) 55%, var(--vig) 100%);
+    color:var(--ink);
+    user-select:none;-webkit-user-select:none;touch-action:manipulation;
+  }
+  .topbar h1{display:none;}
+  #score-pill{margin-left:auto;}
+  /* 옅은 흰 블룸이 숨쉬듯 (단일 빛 표현) */
+  body::after{
+    content:'';position:fixed;top:-25%;left:-40%;width:90%;height:80%;z-index:0;pointer-events:none;
+    background:radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,.5), transparent 70%);
+    animation:bg-breathe 14s ease-in-out infinite alternate;
+  }
+  @keyframes bg-breathe{from{transform:translate(0,0) scale(1);}to{transform:translate(55vw,30vh) scale(1.3);}}
+  @media (prefers-reduced-motion:reduce){body::after{animation:none;}}
+
+  .topbar{display:flex;align-items:center;gap:8px;z-index:2;width:100%;max-width:480px;flex:0 0 auto;}
+  h1{font-weight:800;font-size:var(--fs-2);letter-spacing:-.5px;color:var(--ink);margin-right:auto;white-space:nowrap;}
+  .pill{
+    background:var(--glass);border:1px solid var(--glass-border);backdrop-filter:blur(10px);
+    padding:6px 13px;border-radius:999px;font-size:var(--fs-3);font-weight:600;
+    display:flex;align-items:center;gap:5px;white-space:nowrap;color:var(--ink);line-height:1;
+  }
+  .pill .lab{font-size:var(--fs-3);font-weight:600;color:var(--ink-soft);}
+  .pill b{font-size:var(--fs-2);font-weight:800;font-variant-numeric:tabular-nums;transition:transform .14s cubic-bezier(.2,1.5,.4,1);}
+  #score-pill b{color:var(--accent);}
+  #best-pill.pulse b{animation:bp .42s cubic-bezier(.2,1.4,.4,1);}
+  @keyframes bp{0%{transform:scale(1)}45%{transform:scale(1.18)}100%{transform:scale(1)}}
+  .sq{
+    min-height:40px;min-width:44px;width:44px;border-radius:13px;cursor:pointer;
+    background:var(--glass);border:1px solid var(--glass-border);backdrop-filter:blur(10px);
+    color:var(--ink);display:flex;align-items:center;justify-content:center;
+    transition:transform .12s;box-shadow:0 3px 7px rgba(120,85,55,.12);
+  }
+  .sq:active{transform:scale(.92);}
+  .ki{width:22px;height:22px;fill:currentColor;flex:0 0 auto;}
+
+  #stage{
+    flex:1 1 auto;display:flex;align-items:center;justify-content:center;
+    z-index:2;width:100%;max-width:480px;min-height:0;padding:6px 0 2px;position:relative;
+  }
+  #board{
+    position:relative;height:100%;aspect-ratio:5/8;max-width:100%;
+    border-radius:22px;
+    background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,.24));
+    border:3px solid rgba(120,85,55,.22);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.85), 0 8px 0 rgba(120,85,55,.13), 0 14px 22px rgba(120,85,55,.16);
+  }
+  #g{position:absolute;inset:0;width:100%;height:100%;border-radius:19px;display:block;}
+  #next{
+    position:absolute;top:8px;left:8px;z-index:3;display:flex;align-items:center;gap:5px;
+    background:rgba(255,255,255,.72);border:1px solid var(--glass-border);border-radius:999px;
+    padding:3px 9px 3px 5px;font-size:var(--fs-3);font-weight:600;color:var(--ink-soft);backdrop-filter:blur(8px);
+  }
+  #next canvas{width:22px;height:22px;display:block;}
+  #combo{
+    position:absolute;top:8px;right:8px;z-index:4;display:flex;align-items:center;gap:3px;
+    background:linear-gradient(135deg,#ff9a6b,#ff6f4d);color:#fff;
+    border-radius:999px;padding:4px 11px;font-size:var(--fs-2);font-weight:800;letter-spacing:-.3px;
+    box-shadow:0 4px 12px rgba(255,110,80,.45),inset 0 1px 0 rgba(255,255,255,.5);
+    opacity:0;transform:scale(.6);transition:opacity .12s;pointer-events:none;
+  }
+  #combo.show{opacity:1;}
+  #combo.pulse{animation:combo-pulse .42s cubic-bezier(.2,1.5,.4,1);}
+  @keyframes combo-pulse{0%{transform:scale(.6)}45%{transform:scale(1.28)}100%{transform:scale(1)}}
+
+  #hint{
+    position:absolute;left:0;right:0;bottom:10px;text-align:center;z-index:3;pointer-events:none;
+    color:var(--ink-soft);font-size:var(--fs-3);font-weight:700;opacity:.96;transition:opacity .35s;padding:0 12px;
+  }
+  #hint.hide{opacity:0;}
+
+  #credit{font-size:11px;color:var(--ink-soft);opacity:.55;z-index:2;margin-top:3px;flex:0 0 auto;}
+
+  /* ── 게임오버 ── */
+  #over{
+    position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;
+    background:var(--scrim);backdrop-filter:blur(6px);
+    opacity:0;pointer-events:none;transition:opacity .3s;padding:24px;
+  }
+  #over.show{opacity:1;pointer-events:auto;}
+  .over-card{
+    background:var(--card);border:1px solid var(--glass-border);
+    border-radius:26px;padding:24px 24px 20px;text-align:center;width:min(320px,86vw);
+    box-shadow:0 24px 60px rgba(70,48,32,.28), inset 0 1px 0 rgba(255,255,255,.9);
+    transform:scale(.84);transition:transform .35s cubic-bezier(.2,1.4,.4,1);
+  }
+  #over.show .over-card{transform:scale(1);}
+  #over-candy{width:78px;height:78px;margin:0 auto 4px;display:block;}
+  .over-card .cname{font-size:var(--fs-3);font-weight:800;color:var(--ink-soft);margin-bottom:9px;}
+  .over-card h2{font-size:var(--fs-3);font-weight:700;color:var(--ink-soft);margin-bottom:2px;}
+  .over-card .sc{font-size:var(--fs-1);font-weight:800;color:var(--ink);line-height:1;font-variant-numeric:tabular-nums;}
+  .over-card .sc-lbl{font-size:var(--fs-3);color:var(--ink-soft);margin-top:3px;}
+  #over-sub{font-size:var(--fs-3);color:var(--ink-soft);margin-top:9px;}
+  #over-record{
+    display:none;font-size:var(--fs-2);color:#7a3a12;font-weight:800;
+    background:linear-gradient(135deg,#ffe2a6,#ffba7a);border-radius:999px;padding:4px 14px;margin-top:11px;
+  }
+  #over-record.show{display:inline-flex;align-items:center;gap:5px;animation:pop .5s ease;}
+  @keyframes pop{0%{transform:scale(.6)}45%{transform:scale(1.12)}100%{transform:scale(1)}}
+  #btn-again{
+    margin-top:16px;width:100%;font-size:var(--fs-2);font-weight:800;padding:14px 0;
+    border:none;border-radius:16px;cursor:pointer;color:#fff;
+    background:linear-gradient(135deg,#ff9a6b,#ff7a59);
+    box-shadow:0 6px 16px rgba(255,120,80,.4);transition:transform .12s;
+  }
+  #btn-again:active{transform:scale(.96);}
+  .over-actions{display:flex;gap:8px;margin-top:9px;}
+  .over-actions button{
+    flex:1 1 0;border:1px solid var(--glass-border);background:transparent;color:var(--ink-soft);
+    border-radius:13px;padding:11px 0;font-size:var(--fs-3);font-weight:700;cursor:pointer;transition:transform .1s,background .15s;
+  }
+  .over-actions button:active{transform:scale(.97);}
+</style>
+</head>
+<body>
+  <svg style="display:none" aria-hidden="true">
+    <symbol id="p-speaker-high" viewBox="0 0 256 256"><path d="M160,32.25V223.69a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.57-51A4,4,0,0,1,80,176.16V79.84a4,4,0,0,1,1.55-3.15l65.57-51a8,8,0,0,1,10,.16A8.27,8.27,0,0,1,160,32.25ZM60,80H32A16,16,0,0,0,16,96v64a16,16,0,0,0,16,16H60a4,4,0,0,0,4-4V84A4,4,0,0,0,60,80Zm126.77,20.84a8,8,0,0,0-.72,11.3,24,24,0,0,1,0,31.72,8,8,0,1,0,12,10.58,40,40,0,0,0,0-52.88A8,8,0,0,0,186.74,100.84Zm40.89-26.17a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66Z"/></symbol>
+    <symbol id="p-speaker-slash" viewBox="0 0 256 256"><path d="M213.92,210.62a8,8,0,1,1-11.84,10.76L160,175.09v48.6a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.55-51A4,4,0,0,1,80,176.18V87.09L42.08,45.38A8,8,0,1,1,53.92,34.62Zm-27.21-55.46a8,8,0,0,0,11.29-.7,40,40,0,0,0,0-52.88,8,8,0,1,0-12,10.57,24,24,0,0,1,0,31.72A8,8,0,0,0,186.71,155.16Zm40.92-80.49a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66ZM153,119.87a4,4,0,0,0,7-2.7V32.25a8.27,8.27,0,0,0-2.88-6.4,8,8,0,0,0-10-.16L103.83,59.33a4,4,0,0,0-.5,5.85Z"/></symbol>
+  </svg>
+
+  <div class="topbar">
+    <h1>사탕 폭포</h1>
+    <div class="pill" id="score-pill"><span class="lab">점수</span> <b id="score">0</b></div>
+    <div class="pill" id="best-pill"><span class="lab">최고</span> <b id="best">0</b></div>
+    <button class="sq" id="mute" aria-label="소리 켜기/끄기"><svg class="ki"><use id="mute-use" href="#p-speaker-high"/></svg></button>
+  </div>
+
+  <div id="stage">
+    <div id="board">
+      <div id="next"><canvas id="next-c" width="44" height="44"></canvas><span>다음</span></div>
+      <div id="combo"><span id="combo-x">x2</span></div>
+      <canvas id="g"></canvas>
+      <div id="hint">열을 톡 — 같은 사탕이 만나면 합쳐져요</div>
+    </div>
+  </div>
+  <div id="credit">Icons: Phosphor</div>
+
+  <div id="over" role="dialog" aria-modal="true" aria-label="게임 결과">
+    <div class="over-card">
+      <canvas id="over-candy" width="156" height="156"></canvas>
+      <div class="cname" id="over-cname">젤리빈</div>
+      <h2>더 둘 곳이 없어요</h2>
+      <div class="sc" id="over-score">0</div>
+      <div class="sc-lbl">점</div>
+      <span id="over-record">신기록!</span>
+      <div id="over-sub">최고 0점</div>
+      <button id="btn-again">다시 하기</button>
+      <div class="over-actions">
+        <button id="btn-support">의견 · 후원하기</button>
+      </div>
+    </div>
+  </div>
+
+<script src="game.js"></script>
+<script>
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('./sw.js').catch(function(){});
+  }
+</script>
+</body>
+</html>

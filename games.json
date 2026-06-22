@@ -43,6 +43,27 @@
       "hot": true
     },
     {
+      "id": "candy",
+      "shell_mode": "panel",
+      "title": "사탕 폭포",
+      "tagline": "열을 톡 — 같은 사탕이 만나면 합쳐져요. 잘 쌓아 한 방에 연쇄로 쾅쾅, 대왕 솜사탕까지!",
+      "unit": "점",
+      "score_key": "candyBest",
+      "score_metric": "score",
+      "defer_share": true,
+      "state_keys": [
+        {
+          "key": "candyBest",
+          "merge": "max"
+        },
+        {
+          "key": "candyMuted",
+          "merge": "lww"
+        }
+      ],
+      "hot": true
+    },
+    {
       "id": "vase",
       "shell_mode": "panel",
       "title": "물병 정렬",
