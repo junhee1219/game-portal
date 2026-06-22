@@ -10,18 +10,19 @@
   const W = 360; // 가상 좌표계 폭 (실제 렌더는 DPR 스케일)
   // 동물 이미지: Twemoji 동물 얼굴 (CC BY 4.0), animals/NN-<name>.svg. 작은→큰 진화 순서.
   // img = animals/ 파일명(확장자 제외). 티어 인덱스 = 파일 번호 순서.
+  // 반지름을 약 14% 줄였다 — 통에 더 많이 들어가 합치기·고티어 진행이 쉬워진다(난이도 완화).
   const LADDER = [
-    { img:'01-mouse',   r:0.072, c:'#f5d9c2' }, // 0
-    { img:'02-hamster', r:0.090, c:'#fbd3a8' }, // 1
-    { img:'03-rabbit',  r:0.110, c:'#fde2d0' }, // 2
-    { img:'04-cat',     r:0.132, c:'#ffd9a0' }, // 3
-    { img:'05-dog',     r:0.156, c:'#ffcf9a' }, // 4
-    { img:'06-fox',     r:0.182, c:'#ffba7a' }, // 5
-    { img:'07-tiger',   r:0.210, c:'#ffc96b' }, // 6
-    { img:'08-cow',     r:0.240, c:'#ffe0b0' }, // 7
-    { img:'09-pig',     r:0.272, c:'#ffc7cf' }, // 8
-    { img:'10-panda',   r:0.305, c:'#f0e6dc' }, // 9
-    { img:'11-bear',    r:0.340, c:'#e9c39a' }, // 10 (최종)
+    { img:'01-mouse',   r:0.062, c:'#f5d9c2' }, // 0
+    { img:'02-hamster', r:0.077, c:'#fbd3a8' }, // 1
+    { img:'03-rabbit',  r:0.095, c:'#fde2d0' }, // 2
+    { img:'04-cat',     r:0.113, c:'#ffd9a0' }, // 3
+    { img:'05-dog',     r:0.134, c:'#ffcf9a' }, // 4
+    { img:'06-fox',     r:0.156, c:'#ffba7a' }, // 5
+    { img:'07-tiger',   r:0.180, c:'#ffc96b' }, // 6
+    { img:'08-cow',     r:0.206, c:'#ffe0b0' }, // 7
+    { img:'09-pig',     r:0.234, c:'#ffc7cf' }, // 8
+    { img:'10-panda',   r:0.262, c:'#f0e6dc' }, // 9
+    { img:'11-bear',    r:0.292, c:'#e9c39a' }, // 10 (최종)
   ];
   const MAX_TIER = LADDER.length - 1;
 
@@ -58,7 +59,7 @@
   const SPECIAL_FIRST_GAP = 22;   // 첫 특수는 이만큼 드롭한 뒤부터 후보 (일반 한 판 안에 한 번은 볼 수 있게)
   const SPECIAL_MIN_GAP = 40;     // 특수가 나온 뒤엔 이만큼 지나야 다음 후보 (재등장은 더 드물게)
   const SPECIAL_CHANCE = 0.03;    // 게이트 통과 후 매 드롭 3% → 첫 특수 평균 ~drop 55, 이후 ~70드롭당 1회
-  const SPECIAL_R = 0.10;         // 통 폭 대비 반지름
+  const SPECIAL_R = 0.088;        // 통 폭 대비 반지름 (동물 축소에 맞춰 살짝 줄임)
   // ── 콤보(연쇄) ──
   const COMBO_WINDOW = 520;       // ms 안에 다음 합체가 나면 콤보 유지
   // ── 잭팟(최상위 티어) 보너스 ──
@@ -422,7 +423,7 @@
     }
     if (danger) {
       if (!overflowSince) overflowSince = now;
-      else if (now - overflowSince > 1000) endGame();
+      else if (now - overflowSince > 1500) endGame();
     } else {
       overflowSince = 0;
     }
