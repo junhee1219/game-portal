@@ -66,9 +66,10 @@
 
   // ───────────────────────── 오디오 (Web Audio 합성, 버스 구조) ─────────────────────────
   const A = (() => {
-    let ac = null, master, comp, busMerge, busUi, busFan;
+    let ac = null, master, comp, busMerge, busUi, busFan, busAmb;
     let muted = localStorage.getItem('twosMuted') === '1';
     let lastMove = 0, voices = 0;
+    let ambOsc = [], ambStarted = false, ambChord = [146.83, 220, 293.66], stg = 0;
     function ensure() {
       if (ac) return;
       ac = new (window.AudioContext || window.webkitAudioContext)();
@@ -79,9 +80,29 @@
       busMerge = ac.createGain(); busMerge.gain.value = 0.22;
       busUi = ac.createGain(); busUi.gain.value = 0.08;
       busFan = ac.createGain(); busFan.gain.value = 0.16;
-      [busMerge, busUi, busFan].forEach(b => b.connect(comp));
+      busAmb = ac.createGain(); busAmb.gain.value = 0;     // 진행 단계 앰비언트 패드
+      [busMerge, busUi, busFan, busAmb].forEach(b => b.connect(comp));
     }
-    function init() { ensure(); if (ac.state !== 'running') ac.resume(); }
+    function init() { ensure(); if (ac.state !== 'running') ac.resume(); startAmbient(); }
+    // 단계 앰비언트: 코드(3음) 부드러운 패드. 단계가 오르면 코드가 바뀐다(배경음 진화).
+    function startAmbient() {
+      if (ambStarted || !ac) return; ambStarted = true;
+      ambChord.forEach((f, i) => {
+        const o = ac.createOscillator(); o.type = i === 0 ? 'sine' : 'triangle'; o.frequency.value = f;
+        const g = ac.createGain(); g.gain.value = i === 0 ? 0.5 : 0.26;
+        const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 720;
+        o.connect(lp); lp.connect(g); g.connect(busAmb); o.start();
+        ambOsc.push(o);
+      });
+      busAmb.gain.setTargetAtTime(0.045, ac.currentTime, 2.0);
+    }
+    function ambientChord(ch) {
+      ambChord = ch.slice(0, 3);
+      if (!ac) return; startAmbient();
+      const t = ac.currentTime;
+      ambOsc.forEach((o, i) => { if (ambChord[i]) o.frequency.setTargetAtTime(ambChord[i], t, 1.0); });
+      busAmb.gain.setTargetAtTime(0.045, t, 1.5);
+    }
     function setMuted(m) { muted = m; localStorage.setItem('twosMuted', m ? '1' : '0'); if (ac) master.gain.setTargetAtTime(m ? 0 : 1, ac.currentTime, 0.02); }
     const isMuted = () => muted;
     // 한 음
@@ -104,12 +125,20 @@
       voices++; o.onended = () => { voices--; };
     }
     return {
-      init, setMuted, isMuted,
+      init, setMuted, isMuted, ambientChord,
+      setStage(i) { stg = i | 0; },
+      // 단계 상승 팡파레 — 현재 단계 코드를 한 옥타브 위로 펼친다
+      stageUp(ch) {
+        if (!ac || muted) return; const t = ac.currentTime; const notes = (ch || ambChord).slice();
+        notes.forEach((f, i) => tone(busFan, f * 2, t + i * 0.085, 0.5, 'triangle', 0.13, { bus: busFan, atk: 8 }));
+        tone(busFan, (notes[notes.length - 1] || 440) * 4, t + 0.18, 0.45, 'sine', 0.05, { bus: busFan, atk: 6, slideTo: 9000, slideMs: 420 });
+      },
       move() { if (!ac || muted) return; const t = ac.currentTime; if (t - lastMove < 0.08) return; lastMove = t; tone(busUi, 174, t, 0.06, 'triangle', 0.06, { bus: busUi, lp: 1200, atk: 4, slideTo: 150, slideMs: 50 }); },
       merge(v) {
         if (!ac || muted) return; const t = ac.currentTime; const f = pentaFor(v);
         if (v <= 64) { tone(busMerge, f, t, 0.11, 'triangle', 0.16, { atk: 5, lp: 2500 }); tone(busMerge, f * 2, t, 0.09, 'sine', 0.05 * 0.16 / 0.16, { atk: 5 }); }
         else { tone(busMerge, f, t, 0.16, 'triangle', 0.22, { atk: 4, lp: 5000 }); tone(busMerge, f * 2, t, 0.12, 'sine', 0.10, { atk: 4 }); tone(busMerge, f * 3, t, 0.10, 'sine', 0.07, { atk: 4 }); tone(busMerge, 8000, t + 0.04, 0.03, 'sine', 0.04, { atk: 3 }); }
+        if (stg > 0) tone(busMerge, f * (1 + stg * 0.5), t + 0.012, 0.07, 'sine', 0.028 + stg * 0.004, { atk: 3 }); // 단계별 음색 변화
       },
       combo(values) {
         if (!ac || muted) return; const t = ac.currentTime; const vs = values.slice().sort((a, b) => a - b).slice(0, 6);
@@ -135,6 +164,39 @@
     };
   })();
   const vibrate = (p) => { if (!A.isMuted() && navigator.vibrate) try { navigator.vibrate(p); } catch (e) {} };
+
+  // ───────────────────────── 진행 단계 (최고 보석 기준) ─────────────────────────
+  // 최고 숫자가 오를수록 배경·배경음(코드)·효과음이 함께 진화 → "다음 단계엔 뭐가?" 기대감.
+  const STAGES = [
+    { min: 2,    name: '광맥',         bg: '#101014', soft: '#15151c', panel: '#191920', well: '#22232b', rimT: '#2c2d37', rimB: '#101015', glow: '#9aa0b0', chord: [146.83, 220.00, 293.66] },
+    { min: 32,   name: '에메랄드 동굴', bg: '#0b1410', soft: '#0f201a', panel: '#12241c', well: '#1b3328', rimT: '#27463a', rimB: '#0b1812', glow: '#62b87c', chord: [164.81, 246.94, 329.63] },
+    { min: 128,  name: '호박빛 노을',   bg: '#15100a', soft: '#221610', panel: '#241a12', well: '#3a2a1b', rimT: '#4a3725', rimB: '#171008', glow: '#e2b257', chord: [174.61, 261.63, 349.23] },
+    { min: 512,  name: '루비 심장',     bg: '#180a0c', soft: '#241014', panel: '#2a1216', well: '#3a1b22', rimT: '#4a2730', rimB: '#170a0c', glow: '#ec8d63', chord: [196.00, 293.66, 392.00] },
+    { min: 2048, name: '다이아 성좌',   bg: '#0e1117', soft: '#141b24', panel: '#1a2331', well: '#23314c', rimT: '#34507a', rimB: '#0e1622', glow: '#cde2ff', chord: [261.63, 392.00, 523.25] },
+  ];
+  let theme = STAGES[0];
+  let stageIdx = 0;
+  let stageBanner = null;   // {start, name, nextMin}
+  let stageFlash = null;    // {start, color}
+  function stageForMax(v) { let i = 0; for (let k = 0; k < STAGES.length; k++) if (v >= STAGES[k].min) i = k; return i; }
+  function applyStageCss() {
+    const root = document.documentElement.style;
+    root.setProperty('--bg', theme.bg); root.setProperty('--bg-soft', theme.soft);
+    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', theme.bg);
+  }
+  function setStage(i, celebrate) {
+    i = Math.max(0, Math.min(STAGES.length - 1, i));
+    const changed = i !== stageIdx;
+    stageIdx = i; theme = STAGES[i];
+    applyStageCss(); if (W) buildBg();
+    A.setStage(i); A.ambientChord(theme.chord);
+    if (celebrate && changed) {
+      const nx = STAGES[i + 1];
+      stageBanner = { start: now(), name: theme.name, nextMin: nx ? nx.min : 0 };
+      stageFlash = { start: now(), color: theme.glow };
+      A.stageUp(theme.chord); doShake(5, null, true); kick();
+    }
+  }
 
   // ───────────────────────── 레이아웃 / 보석 스프라이트 캐시 ─────────────────────────
   let W = 0, cell = 80, gap = 12, pad = 12, dpr = 1;
@@ -166,13 +228,13 @@
     bgCanvas = document.createElement('canvas');
     bgCanvas.width = cv.width; bgCanvas.height = cv.height;
     const g = bgCanvas.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    rr(g, 0, 0, W, W, W * 0.045); g.fillStyle = '#191920'; g.fill();
+    rr(g, 0, 0, W, W, W * 0.045); g.fillStyle = theme.panel; g.fill();
     for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
       const x = cellX(c), y = cellY(r);
-      rr(g, x, y, cell, cell, cell * 0.18); g.fillStyle = '#22232b'; g.fill();
+      rr(g, x, y, cell, cell, cell * 0.18); g.fillStyle = theme.well; g.fill();
       g.save(); rr(g, x, y, cell, cell, cell * 0.18); g.clip();
-      g.strokeStyle = '#2c2d37'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x + cell * 0.18, y + 1); g.lineTo(x + cell - cell * 0.18, y + 1); g.stroke();
-      g.strokeStyle = '#101015'; g.beginPath(); g.moveTo(x + cell * 0.18, y + cell - 1); g.lineTo(x + cell - cell * 0.18, y + cell - 1); g.stroke();
+      g.strokeStyle = theme.rimT; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x + cell * 0.18, y + 1); g.lineTo(x + cell - cell * 0.18, y + 1); g.stroke();
+      g.strokeStyle = theme.rimB; g.beginPath(); g.moveTo(x + cell * 0.18, y + cell - 1); g.lineTo(x + cell - cell * 0.18, y + cell - 1); g.stroke();
       g.restore();
     }
   }
@@ -284,12 +346,13 @@
   // ───────────────────────── 새 게임 / 이어하기 / 저장 ─────────────────────────
   function newGame() {
     over = false; animating = false; queuedDir = null; score = 0; scoreShown = 0; curMax = 0; recordCelebrated = false; startBest = best;
-    shards = []; rings = []; floats = []; sparks = []; shake = null; comboFx = null; signature = null; recordToast = null;
+    shards = []; rings = []; floats = []; sparks = []; shake = null; comboFx = null; signature = null; recordToast = null; stageBanner = null; stageFlash = null;
     events.length = 0;
     overEl.classList.remove('show');
     clearGrid(); layout();
     spawnRandom('spawn'); spawnRandom('spawn');
     curMax = topGem();
+    setStage(stageForMax(curMax), false);
     updateHud(true);
     hintEl.classList.remove('hide');
     save(); kick();
@@ -304,6 +367,7 @@
     for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) { const v = data.grid[r] && data.grid[r][c]; if (v) { makeTile(r, c, v); any = true; } }
     if (!any) { newGame(); return; }
     score = +data.score || 0; scoreShown = score; curMax = topGem();
+    setStage(stageForMax(curMax), false);
     startBest = best; recordCelebrated = false;
     hintEl.classList.add('hide'); updateHud(true);
     if (!Core.hasMoves(toValues())) setTimeout(endGame, 300);
@@ -369,6 +433,7 @@
       const mergedCount = merges.length;
       const tierUps = merges.filter(a => a.newValue > prevMax && a.newValue >= 128);
       curMax = Math.max(curMax, mx);
+      const ns = stageForMax(curMax); if (ns > stageIdx) setStage(ns, true);   // 새 단계 진입 → 배경/배경음/효과음 진화 + 배너
 
       // 셰이크 에너지
       let E = 0; merges.forEach(a => E += Math.log2(a.newValue));
@@ -578,6 +643,29 @@
     if (comboFx) { const e = T - comboFx.start; if (e > 760) comboFx = null; else { const p = clamp01(e / 120); const fade = e > 560 ? 1 - (e - 560) / 200 : 1; ctx.save(); ctx.globalAlpha = fade; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const sc = easeOutBack(p) * comboFx.mult; ctx.font = '900 ' + Math.round(cell * 0.5 * sc) + 'px "Pretendard Variable",sans-serif'; ctx.lineJoin = 'round'; ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(16,16,20,.7)'; ctx.strokeText(comboFx.text, W / 2, W * 0.42); ctx.fillStyle = comboFx.color; ctx.fillText(comboFx.text, W / 2, W * 0.42); if (comboFx.sub) { ctx.font = '800 ' + Math.round(cell * 0.28) + 'px "Pretendard Variable",sans-serif'; ctx.strokeText(comboFx.sub, W / 2, W * 0.42 + cell * 0.42); ctx.fillText(comboFx.sub, W / 2, W * 0.42 + cell * 0.42); } ctx.restore(); } }
     // 신기록 마이크로 토스트
     if (recordToast) { const e = T - recordToast.start; if (e > 900) recordToast = null; else { const p = clamp01(e / 100); const fade = e > 650 ? 1 - (e - 650) / 250 : 1; ctx.save(); ctx.globalAlpha = fade; ctx.textAlign = 'center'; ctx.font = '800 ' + Math.round(cell * 0.26) + 'px "Pretendard Variable",sans-serif'; ctx.fillStyle = '#e7b24b'; ctx.fillText('신기록 갱신', W / 2, W * 0.14 * p); ctx.restore(); } }
+    // 단계 진입 — 화면 색 플래시(세상이 바뀌는 느낌)
+    if (stageFlash) {
+      const e = T - stageFlash.start;
+      if (e > 640) stageFlash = null;
+      else { const k = e / 640; ctx.save(); ctx.globalAlpha = (1 - k) * 0.55; const gg = ctx.createRadialGradient(W / 2, W / 2, 0, W / 2, W / 2, W * 0.72); gg.addColorStop(0, stageFlash.color); gg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gg; ctx.fillRect(0, 0, W, W); ctx.restore(); }
+    }
+    // 단계 진입 배너 — "새 단계 · {이름}" + 다음 목표 티저(기대감)
+    if (stageBanner) {
+      const e = T - stageBanner.start;
+      if (e > 2300) stageBanner = null;
+      else {
+        const p = clamp01(e / 220); const fade = e > 1750 ? 1 - (e - 1750) / 550 : 1;
+        ctx.save(); ctx.globalAlpha = fade; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        const yy = W * 0.34;
+        ctx.font = '900 ' + Math.round(cell * 0.42) + 'px "Pretendard Variable",sans-serif'; ctx.lineJoin = 'round'; ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(8,8,12,.72)';
+        const s2 = easeOutBack(p);
+        ctx.save(); ctx.translate(W / 2, yy); ctx.scale(s2, s2);
+        ctx.strokeText('새 단계 · ' + stageBanner.name, 0, 0); ctx.fillStyle = theme.glow; ctx.fillText('새 단계 · ' + stageBanner.name, 0, 0); ctx.restore();
+        if (stageBanner.nextMin) { ctx.font = '700 ' + Math.round(cell * 0.2) + 'px "Pretendard Variable",sans-serif'; ctx.fillStyle = 'rgba(220,224,235,.85)'; ctx.fillText(stageBanner.nextMin + ' 을(를) 만들면 또 바뀌어요', W / 2, yy + cell * 0.5); }
+        else { ctx.font = '700 ' + Math.round(cell * 0.2) + 'px "Pretendard Variable",sans-serif'; ctx.fillStyle = 'rgba(220,224,235,.85)'; ctx.fillText('마지막 단계 — 최고의 경지!', W / 2, yy + cell * 0.5); }
+        ctx.restore();
+      }
+    }
     // 다이아 시그니처 한 줄
     if (signature && signature.showText) { const e = T - signature.start - 900; const a = clamp01(e / 900); ctx.save(); ctx.globalAlpha = a; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '900 ' + Math.round(cell * 0.34) + 'px "Pretendard Variable",sans-serif'; ctx.fillStyle = '#eef2f6'; ctx.fillText('다이아몬드', W / 2, W * 0.5); ctx.font = '700 ' + Math.round(cell * 0.2) + 'px "Pretendard Variable",sans-serif'; ctx.fillStyle = '#c9d2dc'; ctx.fillText('여기까지 온 사람은 드뭅니다', W / 2, W * 0.5 + cell * 0.4); ctx.restore(); if (e > 2000) signature = null; }
   }
@@ -586,7 +674,7 @@
   let raf = 0, idleTimer = 0, lastT = 0, looping = false;
   // 진짜 애니메이션(60fps 필요) — slide/pop/particle/score 카운트업 등
   function anim(T) {
-    if (animating || events.length || shards.length || rings.length || floats.length || shake || comboFx || recordToast || signature) return true;
+    if (animating || events.length || shards.length || rings.length || floats.length || shake || comboFx || recordToast || signature || stageBanner || stageFlash) return true;
     if (scoreShown !== score) return true;
     for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) { const t = grid[r][c]; if (t && (t.pop || t.spawn || t.slide || t.flash || t.sweep)) return true; }
     return false;

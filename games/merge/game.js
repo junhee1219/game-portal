@@ -127,6 +127,9 @@
   let nextSpecial = false;       // 다음이 특수인가
   // 화면 흔들림 (canvas translate — 레이아웃 건드리지 않음)
   let shakeAmt = 0;              // 남은 흔들림 강도(px, 가상)
+  // 진행 단계 (최고 동물 티어 기준) — 배경/배경음/효과음이 함께 진화 → "다음엔 뭐가?" 기대감
+  let maxTierEver = 0;
+  let stageBanner = null, stageFlash = null;
 
   function rndSpawn() { return Math.floor(Math.random() * SPAWN_MAX); }
   // 다음 손패가 특수가 될지 결정 (게이트 통과 + 낮은 확률)
@@ -136,6 +139,35 @@
     return Math.random() < SPECIAL_CHANCE;
   }
   function addShake(px) { shakeAmt = Math.min(26, shakeAmt + px); }
+
+  // ── 진행 단계: 최고 동물이 오를수록 풍경(배경)·배경음(코드)·효과음이 진화 ──
+  const STAGES = [
+    { tier: 0, name: '아침 들판',   base: '#fff3e6', deep: '#ffe7d2', vig: '#fcdcc1', glow: '#ffcf9a', chord: [174.61, 261.63, 349.23] },
+    { tier: 4, name: '한낮 과수원', base: '#fff0e2', deep: '#ffe0c2', vig: '#ffd2a8', glow: '#ffba7a', chord: [196.00, 293.66, 392.00] },
+    { tier: 6, name: '노을 언덕',   base: '#fff0ec', deep: '#ffdcc6', vig: '#ffc6a8', glow: '#ff9a6b', chord: [220.00, 329.63, 440.00] },
+    { tier: 8, name: '황혼 정원',   base: '#fdedf0', deep: '#ffd6cf', vig: '#ffc2b0', glow: '#ff7aae', chord: [233.08, 349.23, 466.16] },
+    { tier: 9, name: '별빛 정원',   base: '#f3eefc', deep: '#e9dcf6', vig: '#dccaf0', glow: '#b79bff', chord: [261.63, 392.00, 523.25] },
+  ];
+  let theme = STAGES[0];
+  let stageIdx = 0;
+  function stageForTier(t) { let i = 0; for (let k = 0; k < STAGES.length; k++) if (t >= STAGES[k].tier) i = k; return i; }
+  function applyStageCss() {
+    const r = document.documentElement.style;
+    r.setProperty('--base', theme.base); r.setProperty('--deep', theme.deep); r.setProperty('--vig', theme.vig);
+    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', theme.deep);
+  }
+  function setStage(i, celebrate) {
+    i = Math.max(0, Math.min(STAGES.length - 1, i));
+    const changed = i !== stageIdx;
+    stageIdx = i; theme = STAGES[i];
+    applyStageCss(); ambientChord(theme.chord);
+    if (celebrate && changed) {
+      const nx = STAGES[i + 1];
+      stageBanner = { t: 0, name: theme.name, nextTier: nx ? nx.tier : -1 };
+      stageFlash = { t: 0, c: theme.glow };
+      stageUpSfx(theme.chord); addShake(9);
+    }
+  }
 
   // 물리 벽 두께 (가상 단위). 좌/우/바닥 정적 바디.
   const WALL_T = 60;
@@ -263,6 +295,9 @@
       const base = TIER_SCORE[nt];
       const gain = base * mult;
       addScore(gain);
+
+      // 최고 동물 갱신 → 새 단계면 풍경/배경음/효과음 진화 + 배너
+      if (nt > maxTierEver) { maxTierEver = nt; const ns = stageForTier(nt); if (ns > stageIdx) setStage(ns, true); }
 
       // 이펙트 — 티어 클수록 화려: 파티클·링·흔들림 비례
       burst(mx, my, LADDER[nt].c, nt);
@@ -462,6 +497,8 @@
     shakeAmt = 0; clearCombo();
     dropsSinceStart = 0; dropsSinceSpecial = 999;
     curSpecial = false; nextSpecial = false;
+    maxTierEver = 0; stageBanner = null; stageFlash = null;
+    setStage(0, false);
     curTier = rndSpawn(); nextTier = rndSpawn();
     setNextGlyph(nextSpecial ? null : nextTier);
     buildWorld();
@@ -600,6 +637,30 @@
       const ty = f.y - p * (f.big ? 46 : 30);
       ctx.strokeText(f.txt, f.x, ty); ctx.fillText(f.txt, f.x, ty);
       ctx.restore();
+    }
+
+    // 단계 진입 — 풍경이 바뀌는 색 플래시
+    if (stageFlash) {
+      stageFlash.t += dt / 16.666; const p = stageFlash.t / 42;
+      if (p >= 1) stageFlash = null;
+      else { ctx.save(); ctx.globalAlpha = (1 - p) * 0.5; const gr = ctx.createRadialGradient(W/2, H*0.42, 0, W/2, H*0.42, W*0.85); gr.addColorStop(0, stageFlash.c); gr.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H); ctx.restore(); }
+    }
+    // 단계 진입 배너 — "새 풍경 · {이름}" + 다음 티저(기대감)
+    if (stageBanner) {
+      stageBanner.t += dt / 16.666; const p = stageBanner.t / 150;
+      if (p >= 1) stageBanner = null;
+      else {
+        const ap = p < 0.12 ? p / 0.12 : 1, fade = p > 0.78 ? 1 - (p - 0.78) / 0.22 : 1;
+        ctx.save(); ctx.globalAlpha = fade; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        const yy = H * 0.30, sc = 0.62 + ap * 0.48;
+        ctx.lineJoin = 'round'; ctx.lineWidth = 4.5; ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+        ctx.font = `800 ${(26 * sc).toFixed(1)}px "Pretendard Variable",-apple-system,sans-serif`;
+        ctx.strokeText('새 풍경 · ' + stageBanner.name, W / 2, yy); ctx.fillStyle = '#6a4a36'; ctx.fillText('새 풍경 · ' + stageBanner.name, W / 2, yy);
+        const sub = stageBanner.nextTier >= 0 ? '더 큰 동물을 만들면 또 바뀌어요' : '마지막 풍경 — 최고예요!';
+        ctx.font = `700 14px "Pretendard Variable",sans-serif`; ctx.lineWidth = 3.5;
+        ctx.strokeText(sub, W / 2, yy + 26); ctx.fillStyle = 'rgba(106,74,54,0.85)'; ctx.fillText(sub, W / 2, yy + 26);
+        ctx.restore();
+      }
     }
 
     ctx.restore();
@@ -806,6 +867,32 @@
     }
     if (actx.state === 'suspended' || actx.state === 'interrupted') actx.resume();
     if (amaster) amaster.gain.value = muted ? 0 : 0.9;
+    startAmbient();
+  }
+  // 단계 앰비언트 패드 — 3음 코드, 단계 오르면 코드가 바뀐다(배경음 진화). amaster가 음소거 게이트.
+  let aamb = null, ambOsc = [], ambStarted = false, ambChord = [174.61, 261.63, 349.23];
+  function startAmbient() {
+    if (ambStarted || !actx) return; ambStarted = true;
+    aamb = actx.createGain(); aamb.gain.value = 0; aamb.connect(amaster);
+    ambChord.forEach((f, i) => {
+      const o = actx.createOscillator(); o.type = i === 0 ? 'sine' : 'triangle'; o.frequency.value = f;
+      const g = actx.createGain(); g.gain.value = i === 0 ? 0.5 : 0.24;
+      const lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900;
+      o.connect(lp); lp.connect(g); g.connect(aamb); o.start(); ambOsc.push(o);
+    });
+    aamb.gain.setTargetAtTime(0.05, actx.currentTime, 2.0);
+  }
+  function ambientChord(ch) {
+    ambChord = ch.slice(0, 3);
+    if (!actx) return; startAmbient();
+    const t = actx.currentTime;
+    ambOsc.forEach((o, i) => { if (ambChord[i]) o.frequency.setTargetAtTime(ambChord[i], t, 1.0); });
+    if (aamb) aamb.gain.setTargetAtTime(0.05, t, 1.5);
+  }
+  function stageUpSfx(ch) {
+    if (!actx || muted) return; const notes = ch || ambChord;
+    notes.forEach((f, i) => setTimeout(() => tone(f * 2, 0.5, 'triangle', 0.13), i * 90));
+    setTimeout(() => tone(notes[notes.length - 1] * 4, 0.4, 'sine', 0.05, notes[notes.length - 1] * 6), 220);
   }
   function tone(freq, dur, type = 'sine', peak = 0.2, slideTo = null) {
     if (!actx || muted) return;
@@ -827,6 +914,7 @@
     const base = 60 + tier * 2.5;
     tone(mtof(base), 0.14, 'triangle', 0.22, mtof(base + 7));
     tone(mtof(base + 12), 0.12, 'sine', 0.1);
+    if (stageIdx > 0) tone(mtof(base + 12 + stageIdx * 2), 0.10, 'sine', 0.05); // 단계별 음색 변화
   }
   function sfxBig() {
     if (!actx || muted) return;
