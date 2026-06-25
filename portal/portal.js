@@ -362,6 +362,8 @@
 
   function numOf(v) { var n = parseInt(v, 10); return isNaN(n) ? 0 : n; }
   function objOf(v) { try { var o = JSON.parse(v); return (o && typeof o === 'object') ? o : {}; } catch (e) { return {}; } }
+  // progress merge blob의 누적값(total) — 비교용. 없으면 -Infinity.
+  function gpProgTotal(v) { try { var o = (typeof v === 'string') ? JSON.parse(v) : v; var t = o && o.total; return (typeof t === 'number' && isFinite(t)) ? t : -Infinity; } catch (e) { return -Infinity; } }
 
   // 유저 첫 입력 시각 — init_cache 게임 reload는 입력 전(grace window)에만 (플레이 중 판 파괴 방지)
   function markInteracted() { window.__gpInteracted = true; }
@@ -494,6 +496,13 @@
                 }
               } else if (sk.merge === 'union' || sk.merge === 'union_min') {
                 localStorage.setItem(k, JSON.stringify(sv));
+              } else if (sk.merge === 'progress') {
+                // 방치형 진행 blob: 서버가 더 진행됐을 때만 로컬 채택(덜 진행한 쪽이 안 덮음).
+                // 채택 시 실행 중 게임이 stale 상태를 들고 있으므로 입력 전 1회 reload로 재로딩.
+                if (gpProgTotal(sv) > gpProgTotal(localStorage.getItem(k))) {
+                  localStorage.setItem(k, typeof sv === 'string' ? sv : JSON.stringify(sv));
+                  if (sk.init_cache) needReload = true;
+                }
               } else {  // lww
                 localStorage.setItem(k, typeof sv === 'string' ? sv : JSON.stringify(sv));
               }

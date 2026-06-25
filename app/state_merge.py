@@ -32,6 +32,13 @@ def _as_obj(v) -> dict:
     return {}
 
 
+def _as_num(v) -> float:
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return float("-inf")
+
+
 def merge_max(server, client):
     return max(_as_int(server), _as_int(client))
 
@@ -56,7 +63,22 @@ def merge_union_min(server, client):
     return out
 
 
-REDUCERS = {"max": merge_max, "union": merge_union, "union_min": merge_union_min}
+def merge_progress(server, client):
+    """방치형 진행 blob — 누적(total)이 큰 세이브가 이긴다.
+
+    값은 {life,total,owned,lastSeen,...} 같은 opaque JSON. lww처럼 마지막 쓰기가 이기면
+    다른 기기에서 잠깐 열거나 캐시가 빈 상태가 더 키운 농장을 덮어쓸 수 있어 위험하다.
+    total은 단조 증가(소비해도 안 줆)이므로 total 기준 비교가 곧 '더 진행한 쪽'이고,
+    max처럼 순서 무관·멱등이라 동시 push에도 수렴한다. 동률이면 client(최신).
+    """
+    s, c = _as_obj(server), _as_obj(client)
+    return c if _as_num(c.get("total")) >= _as_num(s.get("total")) else s
+
+
+REDUCERS = {
+    "max": merge_max, "union": merge_union, "union_min": merge_union_min,
+    "progress": merge_progress,
+}
 
 
 def merge_value(merge_type: str, server, client):
