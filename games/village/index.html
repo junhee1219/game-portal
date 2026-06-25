@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#dceedf">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="오순도순 마을">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="오순도순 마을 — 코지 마을 가꾸기">
+  <meta property="og:description" content="빈 칸을 톡 — 집·숲·꽃밭을 어울리게 놓아요. 아늑한 집엔 동물 주민이 이사 와요. 시간제한 없이 마을을 가꿔 가장 행복한 동네를 만들어요.">
+  <title>오순도순 마을</title>
+  <style>
+    @font-face{font-family:"Pretendard Variable";font-weight:45 920;font-style:normal;font-display:swap;src:url("/fonts/PretendardVariable.woff2") format("woff2-variations");}
+    :root{
+      --ink:#34433a; --ink-soft:#6f8473; --accent:#3aa655; --gold:#ff9d2e;
+      --card:#ffffff; --line:rgba(90,120,90,.18);
+      --fs-1:clamp(30px,8vw,42px); --fs-2:16px; --fs-3:13px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    html,body{height:100%;background:#dceedf;}
+    body{font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;color:var(--ink);overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none;}
+    button{font:inherit;}
+    #cv{position:fixed;left:0;right:0;top:0;display:block;z-index:0;touch-action:manipulation;}
+
+    /* ── 상단 HUD ── */
+    #hud{position:fixed;left:0;right:0;top:calc(8px + env(safe-area-inset-top));z-index:4;text-align:center;pointer-events:none;}
+    #score{font-size:var(--fs-1);font-weight:900;line-height:1.02;font-variant-numeric:tabular-nums;color:var(--ink);text-shadow:0 2px 0 rgba(255,255,255,.6);}
+    #score small{font-size:.4em;font-weight:800;color:var(--ink-soft);margin-left:5px;}
+    #stat{margin-top:2px;font-size:var(--fs-3);font-weight:800;color:var(--ink-soft);font-variant-numeric:tabular-nums;display:flex;gap:14px;justify-content:center;}
+    #stat b{color:var(--accent);}
+    #stat .tl b{color:var(--gold);}
+    #stat .tl b.low{color:#e5484d;}
+
+    .icon-btn{position:fixed;z-index:6;width:40px;height:40px;border:1px solid var(--line);border-radius:12px;
+      background:rgba(255,255,255,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+      color:#4a5d4e;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .1s ease;
+      top:calc(10px + env(safe-area-inset-top));right:calc(10px + env(safe-area-inset-right));}
+    .icon-btn:active{transform:scale(.92);}
+    .ki{width:22px;height:22px;fill:currentColor;display:block;}
+
+    /* ── 첫 안내 ── */
+    #hint{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:5;text-align:center;pointer-events:none;transition:opacity .4s ease;width:88%;}
+    #hint .big{font-size:16px;font-weight:900;color:var(--ink);background:rgba(255,255,255,.8);display:inline-block;padding:7px 14px;border-radius:13px;box-shadow:0 4px 14px rgba(60,90,60,.14);}
+
+    /* ── 하단 타일 트레이 ── */
+    #tray{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom));z-index:3;
+      display:flex;align-items:flex-end;gap:10px;}
+    .tslot{width:54px;height:54px;border-radius:15px;background:var(--g,#f0eada);border:1px solid var(--line);
+      display:flex;align-items:center;justify-content:center;position:relative;box-shadow:0 3px 0 rgba(70,90,60,.12);opacity:.7;transform:scale(.86);transition:transform .15s ease;}
+    .tslot img{width:78%;height:78%;object-fit:contain;}
+    .tslot .tname{position:absolute;bottom:-17px;left:0;right:0;text-align:center;font-size:10.5px;font-weight:800;color:var(--ink-soft);}
+    .tslot.cur{width:72px;height:72px;opacity:1;transform:scale(1);box-shadow:0 5px 0 rgba(70,90,60,.18),0 10px 22px rgba(60,90,60,.18);border-color:var(--accent);}
+    .tslot.cur::before{content:"";position:absolute;top:-9px;left:50%;transform:translateX(-50%);border:6px solid transparent;border-bottom-color:var(--accent);}
+    .tslot.cur .tname{bottom:-19px;font-size:12px;color:var(--accent);}
+
+    /* ── 토스트(마일스톤) ── */
+    #toast{position:fixed;left:50%;top:30%;transform:translate(-50%,-10px);z-index:30;
+      background:rgba(58,166,85,.96);color:#fff;font-weight:900;font-size:16px;padding:10px 20px;border-radius:15px;
+      box-shadow:0 10px 30px rgba(40,120,60,.35);opacity:0;pointer-events:none;transition:opacity .25s ease,transform .25s ease;}
+    #toast.show{opacity:1;transform:translate(-50%,0);}
+
+    /* ── 게임오버 ── */
+    .pop{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:24px;
+      background:rgba(40,60,45,.4);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
+      opacity:0;pointer-events:none;transition:opacity .3s ease;}
+    .pop.show{opacity:1;pointer-events:auto;}
+    .pop-card{width:min(330px,90vw);border-radius:26px;background:linear-gradient(180deg,#ffffff,#f3f8f1);border:1px solid var(--line);
+      padding:26px 22px 18px;text-align:center;box-shadow:0 30px 70px rgba(40,70,45,.3);
+      transform:translateY(14px) scale(.96);transition:transform .35s cubic-bezier(.2,1.2,.4,1);}
+    .pop.show .pop-card{transform:none;}
+    .pop-card .cap{font-size:var(--fs-3);font-weight:800;letter-spacing:1px;color:var(--ink-soft);}
+    #ov-rec{font-size:13px;font-weight:900;letter-spacing:1px;color:var(--gold);}
+    .pop-card .big{margin:10px 0 0;font-size:46px;font-weight:900;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums;}
+    .pop-card .biglbl{font-size:12px;color:var(--ink-soft);font-weight:800;letter-spacing:.5px;margin-top:2px;}
+    .pop-card .sub{margin-top:10px;font-size:14px;font-weight:800;color:var(--ink);}
+    .pop-card .sub b{color:var(--accent);}
+    .pop-card #ov-best{display:block;margin-top:4px;font-size:12.5px;color:var(--ink-soft);font-weight:700;}
+    .pop-card .primary{margin-top:18px;width:100%;height:50px;border:none;border-radius:15px;background:linear-gradient(180deg,#54c873,#3aa655);
+      color:#fff;font-weight:900;font-size:16px;box-shadow:0 5px 0 #2c8244,0 12px 22px rgba(58,166,85,.3);cursor:pointer;transition:transform .1s ease,box-shadow .1s ease;}
+    .pop-card .primary:active{transform:translateY(3px);box-shadow:0 2px 0 #2c8244;}
+    .pop-card .mini{display:flex;justify-content:center;gap:18px;margin-top:14px;}
+    .pop-card .mini a,.pop-card .mini button{border:none;background:none;color:var(--ink-soft);font-size:13px;font-weight:800;text-decoration:none;cursor:pointer;}
+
+    .credit{position:fixed;left:0;right:0;bottom:calc(2px + env(safe-area-inset-bottom));z-index:1;text-align:center;font-size:10px;color:rgba(90,120,90,.4);pointer-events:none;}
+  </style>
+</head>
+<body>
+  <svg style="display:none" aria-hidden="true">
+    <symbol id="p-speaker-high" viewBox="0 0 256 256"><path d="M160,32.25V223.69a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.57-51A4,4,0,0,1,80,176.16V79.84a4,4,0,0,1,1.55-3.15l65.57-51a8,8,0,0,1,10,.16A8.27,8.27,0,0,1,160,32.25ZM60,80H32A16,16,0,0,0,16,96v64a16,16,0,0,0,16,16H60a4,4,0,0,0,4-4V84A4,4,0,0,0,60,80Zm126.77,20.84a8,8,0,0,0-.72,11.3,24,24,0,0,1,0,31.72,8,8,0,1,0,12,10.58,40,40,0,0,0,0-52.88A8,8,0,0,0,186.74,100.84Zm40.89-26.17a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66Z"/></symbol>
+    <symbol id="p-speaker-slash" viewBox="0 0 256 256"><path d="M213.92,210.62a8,8,0,1,1-11.84,10.76L160,175.09v48.6a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.55-51A4,4,0,0,1,80,176.18V87.09L42.08,45.38A8,8,0,1,1,53.92,34.62Zm-27.21-55.46a8,8,0,0,0,11.29-.7,40,40,0,0,0,0-52.88,8,8,0,1,0-12,10.57,24,24,0,0,1,0,31.72A8,8,0,0,0,186.71,155.16Zm40.92-80.49a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66ZM153,119.87a4,4,0,0,0,7-2.7V32.25a8.27,8.27,0,0,0-2.88-6.4,8,8,0,0,0-10-.16L103.83,59.33a4,4,0,0,0-.5,5.85Z"/></symbol>
+  </svg>
+
+  <canvas id="cv"></canvas>
+  <button class="icon-btn" id="mute" aria-label="소리 켜기/끄기"><svg class="ki"><use href="#p-speaker-high"/></svg></button>
+
+  <div id="hud">
+    <div id="score">0<small>행복</small></div>
+    <div id="stat">
+      <span>주민 <b id="res">0</b></span>
+      <span class="tl">남은 칸 <b id="tiles">0</b></span>
+    </div>
+  </div>
+
+  <div id="hint"><span class="big">빈 칸을 톡 — 집은 숲·꽃밭 곁에서 행복해요</span></div>
+  <!-- 격자가 다 차면 끝! 집을 자연으로 둘러싸면 동물 주민이 이사와요 -->
+
+
+  <div id="tray"></div>
+  <div id="toast"></div>
+
+  <!-- 게임오버 -->
+  <div class="pop" id="over">
+    <div class="pop-card">
+      <div class="cap">마을 가꾸기 끝!</div>
+      <div id="ov-rec">새 기록!</div>
+      <div class="big"><span id="ov-score">0</span></div>
+      <div class="biglbl">행복</div>
+      <div class="sub">동물 주민 <b id="ov-res">0</b>명이 모였어요<small id="ov-best"></small></div>
+      <button class="primary" id="ov-again">새 마을 시작</button>
+      <div class="mini"><a href="/rank">기록실</a><a href="/">다른 게임</a></div>
+    </div>
+  </div>
+
+  <script src="core.js"></script>
+  <script src="game.js"></script>
+  <script>
+    if ('serviceWorker' in navigator && location.protocol === 'https:') { navigator.serviceWorker.register('./sw.js'); }
+  </script>
+</body>
+</html>

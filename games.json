@@ -141,6 +141,26 @@
       "hot": true
     },
     {
+      "id": "village",
+      "shell_mode": "fullscreen",
+      "title": "오순도순 마을",
+      "tagline": "빈 칸을 톡 — 집·숲·꽃밭을 어울리게 놓아요. 아늑한 집엔 동물 주민이 이사 와요. 시간제한 없이 가장 행복한 마을을 가꿔요!",
+      "unit": "행복",
+      "score_key": "villageBest",
+      "score_metric": "score",
+      "defer_share": true,
+      "state_keys": [
+        {
+          "key": "villageBest",
+          "merge": "max"
+        },
+        {
+          "key": "villageMuted",
+          "merge": "lww"
+        }
+      ]
+    },
+    {
       "id": "hop",
       "shell_mode": "panel",
       "title": "삐약이 건널목",
