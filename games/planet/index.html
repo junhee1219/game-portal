@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#141a2b">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="행성 키우기">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="행성 키우기 — 먼지에서 빛나는 문명까지">
+  <meta property="og:description" content="톡톡 깨워 생명을 불어넣고, 생성기를 사 행성을 키워요. 자리를 비운 사이에도 무럭무럭 — 어디까지 진화시킬까?">
+  <title>행성 키우기</title>
+  <style>
+    @font-face{font-family:"Pretendard Variable";font-weight:45 920;font-style:normal;font-display:swap;src:url("/fonts/PretendardVariable.woff2") format("woff2-variations");}
+    :root{
+      --ink:#eaf0ff; --ink-soft:#9aa6c4; --accent:#8fd0ff; --accent-deep:#3f7fbf;
+      --card:#1c2336; --line:rgba(150,170,220,.16);
+      --fs-1:clamp(30px,8vw,42px); --fs-2:16px; --fs-3:13px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    html,body{height:100%;background:#141a2b;}
+    body{font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;color:var(--ink);overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none;}
+    button{font:inherit;}
+    #cv{position:fixed;left:0;right:0;top:0;display:block;z-index:0;touch-action:manipulation;}
+
+    /* ── 상단 HUD ── */
+    #hud{position:fixed;left:0;right:0;top:calc(8px + env(safe-area-inset-top));z-index:4;text-align:center;pointer-events:none;text-shadow:0 2px 12px rgba(0,0,0,.55);}
+    #stage-name{font-size:var(--fs-3);font-weight:800;letter-spacing:.4px;color:var(--accent);opacity:.95;}
+    #life{font-size:var(--fs-1);font-weight:900;line-height:1.05;font-variant-numeric:tabular-nums;margin-top:1px;}
+    #life small{font-size:.42em;font-weight:800;color:var(--ink-soft);margin-left:4px;letter-spacing:.3px;}
+    #rate{font-size:var(--fs-3);font-weight:700;color:var(--ink-soft);margin-top:1px;font-variant-numeric:tabular-nums;}
+    /* 다음 단계 진행바 */
+    #prog{margin:7px auto 0;width:min(220px,62vw);height:6px;border-radius:99px;background:rgba(150,170,220,.16);overflow:hidden;}
+    #prog i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#79c0ff,#b89bff);transition:width .25s ease;}
+    #prog-lbl{font-size:11px;color:var(--ink-soft);margin-top:4px;font-weight:700;}
+
+    .icon-btn{position:fixed;z-index:6;width:40px;height:40px;border:1px solid var(--line);border-radius:12px;
+      background:rgba(20,26,43,.6);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+      color:#cdd8f2;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .1s ease;
+      top:calc(10px + env(safe-area-inset-top));right:calc(10px + env(safe-area-inset-right));}
+    .icon-btn:active{transform:scale(.92);}
+    .ki{width:22px;height:22px;fill:currentColor;display:block;}
+
+    /* ── 첫 안내 ── */
+    #hint{position:fixed;left:50%;top:30%;transform:translate(-50%,-50%);z-index:5;text-align:center;pointer-events:none;transition:opacity .4s ease;text-shadow:0 2px 12px rgba(0,0,0,.6);}
+    #hint .big{font-size:19px;font-weight:900;color:#fff;}
+    #hint .sm{margin-top:6px;font-size:13.5px;font-weight:700;color:var(--ink-soft);}
+
+    /* ── 하단 생성기 패널 ── */
+    #panel{position:fixed;left:0;right:0;bottom:0;z-index:3;height:46vh;max-height:430px;
+      background:linear-gradient(180deg,rgba(20,26,43,0),rgba(18,23,38,.86) 16%,#11162600 100%),
+                 linear-gradient(180deg,rgba(24,30,50,.4),rgba(16,21,36,.96));
+      border-top:1px solid var(--line);border-radius:22px 22px 0 0;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+      padding:12px 12px calc(8px + env(safe-area-inset-bottom));display:flex;flex-direction:column;}
+    #panel-head{display:flex;align-items:baseline;justify-content:space-between;padding:2px 6px 8px;flex:0 0 auto;}
+    #panel-head .t{font-size:var(--fs-3);font-weight:900;color:var(--ink);letter-spacing:.3px;}
+    #panel-head .h{font-size:11.5px;font-weight:700;color:var(--ink-soft);}
+    #gens{flex:1 1 auto;overflow-y:auto;display:flex;flex-direction:column;gap:8px;-webkit-overflow-scrolling:touch;padding-bottom:2px;}
+    #gens::-webkit-scrollbar{width:0;}
+    .gen{display:flex;align-items:center;gap:11px;width:100%;text-align:left;cursor:pointer;
+      background:linear-gradient(180deg,#283150,#212942);border:1px solid var(--line);border-radius:16px;padding:9px 12px;
+      color:var(--ink);transition:transform .08s ease,filter .12s ease,opacity .12s ease;box-shadow:0 2px 0 rgba(0,0,0,.18);}
+    .gen:active{transform:translateY(2px);box-shadow:0 0 0 rgba(0,0,0,.18);}
+    .gen.locked{opacity:.5;}
+    .gen.poor{filter:saturate(.5) brightness(.82);}
+    .gen canvas{width:42px;height:42px;flex:0 0 auto;border-radius:11px;background:rgba(10,14,26,.5);}
+    .gen .mid{flex:1 1 auto;min-width:0;}
+    .gen .nm{font-size:14.5px;font-weight:900;display:flex;align-items:center;gap:7px;}
+    .gen .nm .own{font-size:11.5px;font-weight:800;color:#0e1426;background:#9fd0ff;border-radius:99px;padding:1px 7px;min-width:20px;text-align:center;}
+    .gen .sub{font-size:11.5px;font-weight:700;color:var(--ink-soft);margin-top:2px;font-variant-numeric:tabular-nums;}
+    .gen .buy{flex:0 0 auto;text-align:right;}
+    .gen .buy .c{font-size:13.5px;font-weight:900;color:#ffe08a;font-variant-numeric:tabular-nums;}
+    .gen .buy .c.ok{color:#9bf0b4;}
+    .gen .buy .lbl{font-size:10.5px;font-weight:800;color:var(--ink-soft);letter-spacing:.4px;}
+
+    /* ── 단계 진화 축하 / 오프라인 팝업 ── */
+    .pop{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:24px;
+      background:rgba(8,12,22,.6);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
+      opacity:0;pointer-events:none;transition:opacity .3s ease;}
+    .pop.show{opacity:1;pointer-events:auto;}
+    .pop-card{width:min(330px,90vw);border-radius:26px;background:linear-gradient(180deg,#26305a,var(--card));border:1px solid var(--line);
+      padding:24px 22px 18px;text-align:center;box-shadow:0 30px 70px rgba(0,0,0,.55);
+      transform:translateY(14px) scale(.96);transition:transform .35s cubic-bezier(.2,1.2,.4,1);}
+    .pop.show .pop-card{transform:none;}
+    .pop-card .cap{font-size:var(--fs-3);font-weight:800;letter-spacing:1px;color:var(--accent);}
+    .pop-card h2{font-size:26px;font-weight:900;margin:5px 0 2px;letter-spacing:-.01em;}
+    .pop-card .desc{font-size:13.5px;color:var(--ink-soft);line-height:1.55;margin-top:6px;}
+    .pop-card .big{margin:14px 0 2px;font-size:40px;font-weight:900;line-height:1;color:#ffe08a;font-variant-numeric:tabular-nums;}
+    .pop-card .biglbl{font-size:12px;color:var(--ink-soft);font-weight:800;letter-spacing:.5px;}
+    .pop-card .primary{margin-top:18px;width:100%;height:50px;border:none;border-radius:15px;background:linear-gradient(180deg,#8fd0ff,#5aa6ee);
+      color:#0e2238;font-weight:900;font-size:16px;box-shadow:0 5px 0 var(--accent-deep),0 12px 22px rgba(90,166,238,.3);cursor:pointer;transition:transform .1s ease,box-shadow .1s ease;}
+    .pop-card .primary:active{transform:translateY(3px);box-shadow:0 2px 0 var(--accent-deep);}
+    .pop-card .mini{display:flex;justify-content:center;gap:18px;margin-top:14px;}
+    .pop-card .mini a,.pop-card .mini button{border:none;background:none;color:var(--ink-soft);font-size:13px;font-weight:800;text-decoration:none;cursor:pointer;}
+
+    .credit{position:fixed;left:0;right:0;bottom:calc(2px + env(safe-area-inset-bottom));z-index:2;text-align:center;font-size:10px;color:rgba(154,166,196,.4);pointer-events:none;}
+    #panel + .credit{display:none;}
+  </style>
+</head>
+<body>
+  <svg style="display:none" aria-hidden="true">
+    <symbol id="p-speaker-high" viewBox="0 0 256 256"><path d="M160,32.25V223.69a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.57-51A4,4,0,0,1,80,176.16V79.84a4,4,0,0,1,1.55-3.15l65.57-51a8,8,0,0,1,10,.16A8.27,8.27,0,0,1,160,32.25ZM60,80H32A16,16,0,0,0,16,96v64a16,16,0,0,0,16,16H60a4,4,0,0,0,4-4V84A4,4,0,0,0,60,80Zm126.77,20.84a8,8,0,0,0-.72,11.3,24,24,0,0,1,0,31.72,8,8,0,1,0,12,10.58,40,40,0,0,0,0-52.88A8,8,0,0,0,186.74,100.84Zm40.89-26.17a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66Z"/></symbol>
+    <symbol id="p-speaker-slash" viewBox="0 0 256 256"><path d="M213.92,210.62a8,8,0,1,1-11.84,10.76L160,175.09v48.6a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.55-51A4,4,0,0,1,80,176.18V87.09L42.08,45.38A8,8,0,1,1,53.92,34.62Zm-27.21-55.46a8,8,0,0,0,11.29-.7,40,40,0,0,0,0-52.88,8,8,0,1,0-12,10.57,24,24,0,0,1,0,31.72A8,8,0,0,0,186.71,155.16Zm40.92-80.49a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66ZM153,119.87a4,4,0,0,0,7-2.7V32.25a8.27,8.27,0,0,0-2.88-6.4,8,8,0,0,0-10-.16L103.83,59.33a4,4,0,0,0-.5,5.85Z"/></symbol>
+  </svg>
+
+  <canvas id="cv"></canvas>
+  <button class="icon-btn" id="mute" aria-label="소리 켜기/끄기"><svg class="ki"><use href="#p-speaker-high"/></svg></button>
+
+  <div id="hud">
+    <div id="stage-name">먼지</div>
+    <div id="life">0<small>생명</small></div>
+    <div id="rate">초당 0</div>
+    <div id="prog"><i></i></div>
+    <div id="prog-lbl"></div>
+  </div>
+
+  <div id="hint">
+    <div class="big">행성을 톡톡 깨워보세요</div>
+    <div class="sm">생명이 모이면 아래에서 생성기를 사요<br>자리를 비워도 알아서 자라요</div>
+  </div>
+
+  <div id="panel">
+    <div id="panel-head"><span class="t">생성기</span><span class="h">사면 초당 생명이 늘어요</span></div>
+    <div id="gens"></div>
+  </div>
+
+  <!-- 단계 진화 축하 -->
+  <div class="pop" id="evolve">
+    <div class="pop-card">
+      <div class="cap">행성이 진화했어요</div>
+      <h2 id="ev-name">암석</h2>
+      <p class="desc" id="ev-desc"></p>
+      <div class="big" id="ev-stage">1</div>
+      <div class="biglbl">단계</div>
+      <button class="primary" id="ev-go">계속 키우기</button>
+      <div class="mini"><a href="/rank">기록실</a><button id="ev-sup">후원 · 의견</button></div>
+    </div>
+  </div>
+
+  <!-- 복귀(오프라인) 보상 -->
+  <div class="pop" id="away">
+    <div class="pop-card">
+      <div class="cap">다시 오셨네요</div>
+      <h2>자리를 비운 사이</h2>
+      <p class="desc" id="away-desc">행성이 알아서 자랐어요</p>
+      <div class="big"><span id="away-gain">0</span></div>
+      <div class="biglbl">생명을 모았어요</div>
+      <button class="primary" id="away-go">받기</button>
+    </div>
+  </div>
+
+  <div class="credit">Phosphor</div>
+
+  <script src="core.js"></script>
+  <script src="game.js"></script>
+  <script>
+    if ('serviceWorker' in navigator && location.protocol === 'https:') { navigator.serviceWorker.register('./sw.js'); }
+  </script>
+</body>
+</html>

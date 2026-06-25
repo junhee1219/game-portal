@@ -1,6 +1,26 @@
 {
   "games": [
     {
+      "id": "planet",
+      "shell_mode": "fullscreen",
+      "title": "행성 키우기",
+      "tagline": "톡톡 깨워 생명을 불어넣어요. 자리를 비운 사이에도 무럭무럭 — 먼지에서 빛나는 문명까지!",
+      "unit": "단계",
+      "score_key": "planetBest",
+      "score_metric": "best",
+      "state_keys": [
+        {
+          "key": "planetBest",
+          "merge": "max"
+        },
+        {
+          "key": "planetMuted",
+          "merge": "lww"
+        }
+      ],
+      "hot": true
+    },
+    {
       "id": "twos",
       "shell_mode": "panel",
       "title": "2048",
