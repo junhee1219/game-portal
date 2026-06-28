@@ -306,7 +306,7 @@
     if (navigator.vibrate) try { navigator.vibrate([20, 40, 30]); } catch (e) {}
     document.getElementById('rebirth').classList.remove('show');
     writeSave();                                  // 권위있게 즉시 저장(가드 우회)
-    refreshGens(); updateHud(); refreshRebirth();
+    refreshGens(); rebuildOrbiters(); updateHud(); refreshRebirth();
     document.getElementById('stage-name').textContent = C.stageInfo(0).name;
   }
   rebirthBtn.addEventListener('click', openRebirth);
@@ -315,6 +315,40 @@
 
   // ===== 생성기 패널 (DOM) =====
   var GEN_COL = ['#7fd6c0', '#7bbf6a', '#c7a86a', '#5fa06a', '#d09a5a', '#d97a5a', '#8fb0e0', '#b89bff', '#ffd76a', '#6ad0e0', '#a98fff', '#e07ac0'];
+  var genIcons = [], orbiters = [];   // 행성을 도는 생성기 아이콘(쿠키클리커식 시각화)
+  // 보유 생성기 → 궤도 오비터 재구성. 종당 보유 많을수록 개수↑(상한), 종류별로 다른 궤도층.
+  function rebuildOrbiters() {
+    orbiters = [];
+    for (var i = 0; i < N; i++) {
+      var ow = state.owned[i];
+      if (ow <= 0) continue;
+      var cnt = Math.min(5, 1 + Math.floor(Math.log(ow + 1) / Math.log(4)));   // 1·4·16·64·256 → 1~5개
+      for (var j = 0; j < cnt; j++) {
+        orbiters.push({
+          gi: i,
+          ang: (i * 1.7 + j * 2.39) % 6.283,
+          rad: 1.30 + i * 0.052 + (j % 2) * 0.05,
+          tilt: 0.28 + (i % 3) * 0.06,
+          spd: 0.16 + (i % 4) * 0.035,
+          sz: 0.30 - i * 0.008
+        });
+      }
+    }
+  }
+  function drawOrbiterSet(time, cx, cy, R, wantFront) {
+    for (var k = 0; k < orbiters.length; k++) {
+      var o = orbiters[k], a = o.ang + time * o.spd;
+      var front = Math.sin(a) > 0;
+      if (front !== wantFront) continue;
+      var rx = R * o.rad, ry = rx * o.tilt;
+      var px = cx + Math.cos(a) * rx, py = cy + Math.sin(a) * ry - R * 0.04;
+      var sz = R * o.sz * (front ? 1 : 0.78);
+      ctx.globalAlpha = front ? 1 : 0.5;
+      var ic = genIcons[o.gi];
+      if (ic) ctx.drawImage(ic, px - sz / 2, py - sz / 2, sz, sz);
+    }
+    ctx.globalAlpha = 1;
+  }
   var gensEl = document.getElementById('gens');
   var rows = [];
   (function buildGens() {
@@ -324,6 +358,9 @@
       el.className = 'gen locked'; el.type = 'button'; el.setAttribute('data-i', i);
       var ic = document.createElement('canvas'); ic.width = 84; ic.height = 84;
       drawEmblem(ic.getContext('2d'), g.key, 84, GEN_COL[i]);
+      // 오비터용 별도 아이콘 캔버스(패널 DOM과 분리 — 같은 캔버스를 양쪽에 쓰면 안 됨)
+      var oic = document.createElement('canvas'); oic.width = 64; oic.height = 64;
+      drawEmblem(oic.getContext('2d'), g.key, 64, GEN_COL[i]); genIcons[i] = oic;
       var mid = document.createElement('div'); mid.className = 'mid';
       mid.innerHTML = '<div class="nm">' + g.name + ' <span class="own">0</span></div><div class="sub"></div>';
       var buy = document.createElement('div'); buy.className = 'buy';
@@ -350,7 +387,7 @@
     Audio.buy();
     var r = cellOf(i);
     floatTxt(r.x, r.y, G[i].name + ' +1', '#9bf0b4', 16);
-    refreshGens(); save();
+    refreshGens(); rebuildOrbiters(); save();
   }
   function cellOf(i) { var b = rows[i].el.getBoundingClientRect(); return { x: b.left + 28, y: b.top + 18 }; }
 
@@ -487,19 +524,23 @@
       gl.addColorStop(0, gcol + (0.28 + supernovaFx * 0.45) + ')'); gl.addColorStop(1, gcol + '0)');
       ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(cx, cy, gr, 0, 6.28); ctx.fill();
     }
+    // 행성 뒤를 도는 생성기 오비터 (본체보다 먼저)
+    drawOrbiterSet(time, cx, cy, R, false);
     // 본체 이미지 (투명 여백 감안 약간 크게)
     var s = R * 2.5;
     ctx.drawImage(bodyImgs[key], cx - s / 2, cy - s / 2, s, s);
-    // 궤도를 도는 작은 별들 (단계가 오를수록 늘어 화려해짐)
-    var n = Math.min(2 + Math.floor(stage / 3), 7);
+    // 행성 앞을 도는 생성기 오비터 (본체 위)
+    drawOrbiterSet(time, cx, cy, R, true);
+    // 멀리 도는 작은 별 장식 (생성기 오비터보다 바깥)
+    var n = Math.min(2 + Math.floor(stage / 4), 6);
     for (var i = 0; i < n; i++) {
-      var a = time * (0.5 + i * 0.1) + i * 2.1;
-      var rx = R * (1.32 + i * 0.1), ry = rx * 0.3;
+      var a = time * (0.4 + i * 0.09) + i * 2.5;
+      var rx = R * (1.72 + i * 0.12), ry = rx * 0.28;
       var px = cx + Math.cos(a) * rx, py = cy + Math.sin(a) * ry;
       var front = Math.sin(a) > 0;
-      ctx.globalAlpha = front ? 0.95 : 0.4;
+      ctx.globalAlpha = front ? 0.8 : 0.3;
       ctx.fillStyle = '#dfe8ff';
-      ctx.beginPath(); ctx.arc(px, py, front ? 2.6 : 1.8, 0, 6.28); ctx.fill();
+      ctx.beginPath(); ctx.arc(px, py, front ? 2.1 : 1.5, 0, 6.28); ctx.fill();
     }
     ctx.globalAlpha = 1;
   }
@@ -687,7 +728,7 @@
   }
   state.stage = C.stageForTotal(state.total); commitBest();
   document.getElementById('stage-name').textContent = C.stageInfo(state.stage).name;
-  refreshGens(); updateHud(); refreshRebirth(); writeSave();
+  refreshGens(); rebuildOrbiters(); updateHud(); refreshRebirth(); writeSave();
   // 진입 직후 포털 크로스 디바이스 pull(fetch)이 끝날 즈음 한 번 더 채택 검사(빠른 반영)
   setTimeout(adoptExternalIfNewer, 1800);
   setTimeout(adoptExternalIfNewer, 4500);
