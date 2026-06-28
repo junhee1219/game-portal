@@ -157,6 +157,23 @@
     '#e8896a', '#ffe8a0', '#e8eef5', '#bcd0f0', '#8fe0e0', '#3a3450', '#d878c0', '#c89ad8', '#9fc0e8', '#e8d8a0', '#9a8fd0', '#8f9fe0', '#e0d6bc', '#a890d8', '#9080d0', '#8278c4', '#b0c0e0', '#e8d090'
   ];
   function bodyColor(stage) { return STAGE_COL[Math.min(stage, STAGE_COL.length - 1)]; }
+
+  // ===== 천체 본체 이미지 (단계별 finda-asset PNG) — 미로드/실패 시 캔버스 절차 렌더로 폴백 =====
+  var BODY_KEYS = ['rock', 'rock', 'ocean', 'ocean', 'forest', 'forest', 'civ', 'civ', 'civ', 'orbit', 'orbit',
+    'star', 'redgiant', 'supernova', 'whitedwarf', 'neutron', 'pulsar', 'blackhole', 'quasar', 'nebula',
+    'cluster', 'cluster', 'dwarfgalaxy', 'spiralgalaxy', 'spiralgalaxy', 'galaxycluster', 'galaxycluster', 'galaxycluster', 'cosmicweb', 'universe'];
+  function bodyKey(stage) { return BODY_KEYS[Math.min(stage, BODY_KEYS.length - 1)]; }
+  var bodyImgs = {}, bodyReady = {};
+  (function preloadBodies() {
+    var seen = {};
+    BODY_KEYS.forEach(function (k) {
+      if (seen[k]) return; seen[k] = 1;
+      var img = new Image();
+      img.onload = function () { bodyReady[k] = true; };
+      img.src = 'bodies/' + k + '.png';
+      bodyImgs[k] = img;
+    });
+  })();
   function hx(c) { c = c.replace('#', ''); return [parseInt(c.substr(0, 2), 16), parseInt(c.substr(2, 2), 16), parseInt(c.substr(4, 2), 16)]; }
   function shade(c, f) { var r = hx(c); function k(v) { return Math.max(0, Math.min(255, Math.round(v))); } return 'rgb(' + k(r[0] + f) + ',' + k(r[1] + f) + ',' + k(r[2] + f) + ')'; }
 
@@ -448,7 +465,45 @@
     }
   }
 
+  // 단계 천체 이미지가 준비됐으면 이미지 + 동적효과로, 아니면 캔버스 절차 렌더로.
   function drawPlanet(time) {
+    var key = bodyKey(state.stage);
+    if (bodyReady[key]) drawBodyImage(time, key);
+    else drawPlanetCanvas(time);
+  }
+  // finda-asset 천체 이미지 + 살아있는 동적효과(부유·숨쉬기·글로우 맥동·궤도 별·톡 출렁)
+  function drawBodyImage(time, key) {
+    var cx = planetCX;
+    var cy = planetCY + Math.sin(time * 0.8) * planetR * 0.03;                 // 둥실 부유
+    var breathe = 1 + Math.sin(time * 1.1) * 0.015;                            // 숨쉬기
+    var R = planetR * (1 + planetPulse * 0.07) * (1 - supernovaFx * 0.5) * breathe;
+    var stage = state.stage;
+    if (R < 1) return;
+    // 뒤 글로우 (혜성 버프 / 별 단계 이상 / 초신성 연출)
+    if (buffActive() || stage >= 11 || supernovaFx > 0) {
+      var gcol = buffActive() ? 'rgba(159,231,255,' : 'rgba(255,224,150,';
+      var gr = R * (1.55 + supernovaFx * 1.6 + Math.sin(time * 2) * 0.06);     // 맥동
+      var gl = ctx.createRadialGradient(cx, cy, R * 0.5, cx, cy, gr);
+      gl.addColorStop(0, gcol + (0.28 + supernovaFx * 0.45) + ')'); gl.addColorStop(1, gcol + '0)');
+      ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(cx, cy, gr, 0, 6.28); ctx.fill();
+    }
+    // 본체 이미지 (투명 여백 감안 약간 크게)
+    var s = R * 2.5;
+    ctx.drawImage(bodyImgs[key], cx - s / 2, cy - s / 2, s, s);
+    // 궤도를 도는 작은 별들 (단계가 오를수록 늘어 화려해짐)
+    var n = Math.min(2 + Math.floor(stage / 3), 7);
+    for (var i = 0; i < n; i++) {
+      var a = time * (0.5 + i * 0.1) + i * 2.1;
+      var rx = R * (1.32 + i * 0.1), ry = rx * 0.3;
+      var px = cx + Math.cos(a) * rx, py = cy + Math.sin(a) * ry;
+      var front = Math.sin(a) > 0;
+      ctx.globalAlpha = front ? 0.95 : 0.4;
+      ctx.fillStyle = '#dfe8ff';
+      ctx.beginPath(); ctx.arc(px, py, front ? 2.6 : 1.8, 0, 6.28); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+  function drawPlanetCanvas(time) {
     var cx = planetCX, cy = planetCY, R = planetR * (1 + planetPulse * 0.06) * (1 - supernovaFx * 0.5), stage = state.stage, col = bodyColor(stage);
     var spin = time * 0.25;
     if (R < 1) return;
