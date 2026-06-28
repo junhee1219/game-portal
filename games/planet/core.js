@@ -83,6 +83,24 @@
     return perSec * e;
   }
 
+  // ===== 초신성 환생(프레스티지) =====
+  // 충분히 키운 행성을 초신성으로 터뜨려 '성운 가루(stardust)'를 얻고 리셋한다.
+  // 가루는 영구 생산 배수를 줘서 다음 사이클이 훨씬 빨라진다 — 방치형 핵심 중독 루프.
+  var REBIRTH_MIN = 1000000;   // 첫 환생 가능: 이번 사이클 누적 생명 ≥ 100만('부족' 단계 근처)
+  var STARDUST_BONUS = 0.02;   // 가루 1개당 영구 생산 +2%
+
+  // 이번 사이클 누적(cycleTotal)으로 얻는 가루. 제곱근 스케일 →
+  // 오래 끌수록 한계효용이 줄어 '언제 터뜨릴까'를 고민하게 만든다.
+  function stardustGain(cycleTotal) {
+    if (cycleTotal < REBIRTH_MIN) return 0;
+    return Math.floor(Math.sqrt(cycleTotal / REBIRTH_MIN) * 3);
+  }
+  function canRebirth(cycleTotal) { return cycleTotal >= REBIRTH_MIN; }
+  // 보유 가루 → 생산 배수 (1.0 = 가루 없음)
+  function prestigeMult(stardust) { return 1 + (stardust > 0 ? stardust : 0) * STARDUST_BONUS; }
+  // 가루 배수까지 반영한 실효 초당 생산
+  function effPerSec(owned, stardust) { return prodPerSec(owned) * prestigeMult(stardust); }
+
   // 큰 숫자 축약 표기: 1.2K, 3.40M, 12B ...
   function formatNum(n) {
     n = Number(n) || 0;
@@ -97,9 +115,11 @@
 
   var api = {
     GENERATORS: GENERATORS, STAGES: STAGES, COST_MUL: COST_MUL, TAIL_MUL: TAIL_MUL,
+    REBIRTH_MIN: REBIRTH_MIN, STARDUST_BONUS: STARDUST_BONUS,
     cost: cost, prodPerSec: prodPerSec, tapGain: tapGain,
     stageForTotal: stageForTotal, stageInfo: stageInfo, nextStageMin: nextStageMin,
-    stageProgress: stageProgress, offlineGain: offlineGain, formatNum: formatNum
+    stageProgress: stageProgress, offlineGain: offlineGain, formatNum: formatNum,
+    stardustGain: stardustGain, canRebirth: canRebirth, prestigeMult: prestigeMult, effPerSec: effPerSec
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.PlanetCore = api;

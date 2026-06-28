@@ -1,6 +1,11 @@
 // 행성 키우기 — 방치형 성장 (캔버스 행성 + DOM 생성기 패널)
 // 게임 계약: 단계 갱신 시 localStorage.setItem('planetBest', String(stage)) → 서빙 후킹이 리더보드 캡처.
 //            음소거 키 planetMuted('1'/'0'). 진행 상태는 planetSave(JSON, 로컬). portal.js·후원은 서빙이 주입.
+//
+// planetSave 스키마(동기화 키):
+//   total      = 역대 누적 생명(lifetime) — 환생해도 줄지 않음. portal progress merge 비교 기준.
+//   cycleTotal = 이번 행성(환생 사이클) 누적 — 단계(stage) 계산용. 환생 시 0으로 리셋.
+//   life/owned = 현재 보유 생명/생성기. stardust/rebirths = 환생으로 번 영구 자산.
 (function () {
   'use strict';
   var C = window.PlanetCore;
@@ -11,10 +16,14 @@
   function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 
-  var state = { life: 0, total: 0, owned: [], stage: 0 };
+  // total=cycleTotal(현재 사이클), lifetime=역대 누적(환생 무관 단조증가)
+  var state = { life: 0, total: 0, lifetime: 0, owned: [], stage: 0, stardust: 0, rebirths: 0 };
   for (var i = 0; i < N; i++) state.owned.push(0);
   var bestStage = parseInt(lsGet(KEY.best) || '0', 10) || 0;
   var awayGain = 0, awaySec = 0;
+
+  // 생명 추가는 한 곳에서 — 현재 보유·사이클 누적·역대 누적을 함께 올린다.
+  function addLife(a) { if (a <= 0) return; state.life += a; state.total += a; state.lifetime += a; }
 
   (function load() {
     var raw = lsGet(KEY.save);
@@ -22,25 +31,51 @@
     try {
       var s = JSON.parse(raw);
       state.life = Math.max(0, +s.life || 0);
-      state.total = Math.max(state.life, +s.total || 0);
+      // cycleTotal: 신규 필드. 옛 세이브(필드 없음)는 total을 사이클 누적으로 간주(환생 이전이므로 동일).
+      var cyc = (s.cycleTotal != null) ? +s.cycleTotal : +s.total;
+      state.total = Math.max(state.life, cyc || 0);
+      state.lifetime = Math.max(state.total, +s.total || 0);   // 역대 ≥ 사이클
+      state.stardust = Math.max(0, Math.floor(+s.stardust || 0));
+      state.rebirths = Math.max(0, Math.floor(+s.rebirths || 0));
       if (Array.isArray(s.owned)) for (var i = 0; i < N; i++) state.owned[i] = Math.max(0, Math.floor(+s.owned[i] || 0));
-      // 오프라인 진행 — 자리를 비운 사이의 생산
+      // 오프라인 진행 — 자리를 비운 사이의 생산(가루 배수 반영)
       var now = Date.now();
       var last = +s.lastSeen || now;
       var elapsed = Math.max(0, (now - last) / 1000);
-      var per = C.prodPerSec(state.owned);
+      var per = C.effPerSec(state.owned, state.stardust);
       if (per > 0 && elapsed > 8) {
         awayGain = C.offlineGain(per, elapsed, 28800);
         awaySec = Math.min(elapsed, 28800);
-        state.life += awayGain; state.total += awayGain;
+        addLife(awayGain);
       }
     } catch (e) {}
     state.stage = C.stageForTotal(state.total);
   })();
 
   var lastSaveT = 0;
+  // 권위있는 저장 — 동기화 가드를 우회해 현재 메모리 상태를 그대로 쓴다(환생 직후 등).
+  function writeSave() {
+    lsSet(KEY.save, JSON.stringify({
+      life: state.life, total: state.lifetime, cycleTotal: state.total,
+      owned: state.owned, stardust: state.stardust, rebirths: state.rebirths,
+      lastSeen: Date.now()
+    }));
+  }
+  // 일반 저장 — 크로스 디바이스 동기화(portal pull)가 더 진행된 상태를 localStorage에 넣었으면
+  // 새로 시작한 이 세션이 그걸 덮어쓰지 않게 채택(재로딩)한다. lifetime은 환생해도 안 줄어
+  // 환생과 충돌하지 않는다. (예전 reload race: 새 게임 save(0)가 pull한 큰 값을 덮어쓰던 버그)
+  var reloading = false;            // adopt-reload 중엔 flush가 낡은 메모리로 외부값을 덮지 않게
   function save() {
-    lsSet(KEY.save, JSON.stringify({ life: state.life, total: state.total, owned: state.owned, lastSeen: Date.now() }));
+    if (adoptExternalIfNewer()) return;
+    writeSave();
+  }
+  function adoptExternalIfNewer() {
+    if (reloading) return true;
+    try {
+      var ext = JSON.parse(lsGet(KEY.save) || 'null');
+      if (ext && (+ext.total || 0) > state.lifetime + 1) { reloading = true; location.reload(); return true; }
+    } catch (e) {}
+    return false;
   }
   function commitBest() {
     if (state.stage > bestStage) { bestStage = state.stage; lsSet(KEY.best, String(bestStage)); }
@@ -61,12 +96,23 @@
       g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
       o.connect(g); g.connect(master); o.start(t0); o.stop(t0 + dur + .02);
     }
+    function slide(f0, f1, t0, dur, type, peak) {
+      if (!actx || muted) return;
+      var o = actx.createOscillator(), g = actx.createGain();
+      o.type = type || 'sawtooth'; o.frequency.setValueAtTime(f0, t0); o.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
+      g.gain.setValueAtTime(.0001, t0); g.gain.linearRampToValueAtTime(peak || .2, t0 + .02);
+      g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+      o.connect(g); g.connect(master); o.start(t0); o.stop(t0 + dur + .02);
+    }
     return {
       init: init, setMuted: setMuted, isMuted: isMuted,
       tap: function (n) { if (!actx) return; var t = actx.currentTime; var f = 440 * Math.pow(1.04, Math.min(n, 30)); tone(f, t, .08, 'sine', .12); tone(f * 1.5, t + .005, .05, 'sine', .05); },
+      crit: function () { if (!actx) return; var t = actx.currentTime;[784, 1047, 1319, 1760].forEach(function (f, i) { tone(f, t + i * .04, .14, 'triangle', .15); }); },
       buy: function () { if (!actx) return; var t = actx.currentTime; tone(523, t, .1, 'triangle', .16); tone(784, t + .04, .12, 'triangle', .12); },
+      comet: function () { if (!actx) return; var t = actx.currentTime; slide(1200, 2400, t, .25, 'triangle', .14); tone(1568, t + .12, .16, 'sine', .12); },
       evolve: function () { if (!actx) return; var t = actx.currentTime;[523, 659, 784, 1047].forEach(function (f, i) { tone(f, t + i * .09, .22, 'triangle', .16); }); },
-      record: function () { if (!actx) return; var t = actx.currentTime;[784, 988, 1319, 1568].forEach(function (f, i) { tone(f, t + .05 + i * .08, .18, 'triangle', .14); }); }
+      record: function () { if (!actx) return; var t = actx.currentTime;[784, 988, 1319, 1568].forEach(function (f, i) { tone(f, t + .05 + i * .08, .18, 'triangle', .14); }); },
+      supernova: function () { if (!actx) return; var t = actx.currentTime; slide(120, 40, t, .7, 'sawtooth', .2); slide(300, 1800, t + .15, .6, 'triangle', .16);[523, 784, 1047, 1568, 2093].forEach(function (f, i) { tone(f, t + .5 + i * .07, .3, 'triangle', .14); }); }
     };
   })();
   var hadBest = bestStage; // 진화 시 신기록 사운드 판단용
@@ -110,35 +156,81 @@
   function hx(c) { c = c.replace('#', ''); return [parseInt(c.substr(0, 2), 16), parseInt(c.substr(2, 2), 16), parseInt(c.substr(4, 2), 16)]; }
   function shade(c, f) { var r = hx(c); function k(v) { return Math.max(0, Math.min(255, Math.round(v))); } return 'rgb(' + k(r[0] + f) + ',' + k(r[1] + f) + ',' + k(r[2] + f) + ')'; }
 
-  // ===== 파티클 / 플로팅 텍스트 =====
-  var parts = [], floats = [], planetPulse = 0, ringFx = [];
+  // ===== 파티클 / 플로팅 텍스트 / 혜성 =====
+  var parts = [], floats = [], planetPulse = 0, ringFx = [], comets = [];
+  var gameT = 0, nextCometAt = 12, buffUntil = -1, supernovaFx = 0, flash = 0;
   function burst(x, y, col, n) { for (var i = 0; i < (n || 8); i++) { var a = Math.random() * 6.28, s = 40 + Math.random() * 150; parts.push({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, r: 2 + Math.random() * 3, col: col, life: 1 }); } }
+  function bigBurst(x, y, col, n, spd) { for (var i = 0; i < (n || 30); i++) { var a = Math.random() * 6.28, s = (spd || 220) * (0.4 + Math.random()); parts.push({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, r: 2 + Math.random() * 4, col: col, life: 1 }); } }
   function ring(x, y, col) { ringFx.push({ x: x, y: y, r: planetR * 0.6, col: col, life: 1 }); }
   function floatTxt(x, y, txt, col, sz) { floats.push({ x: x, y: y, txt: txt, col: col || '#fff', sz: sz || 18, life: 1 }); }
+  function buffActive() { return gameT < buffUntil; }
 
   // ===== 톡(생명 추가) =====
   var tapCount = 0, started = false;
   function firstStart() { if (started) return; started = true; document.getElementById('hint').style.opacity = '0'; Audio.init(); }
+  function curPerSec() { return C.effPerSec(state.owned, state.stardust) * (buffActive() ? 2 : 1); }
   function doTap(cx, cy) {
     firstStart();
-    var g = C.tapGain(C.prodPerSec(state.owned));
-    state.life += g; state.total += g;
+    var g = C.tapGain(C.effPerSec(state.owned, state.stardust));
+    var crit = Math.random() < 0.12;
+    if (crit) g *= 8;
+    addLife(g);
     tapCount++;
     planetPulse = 1;
-    Audio.tap(tapCount % 30);
-    floatTxt(cx, cy - planetR * 0.5, '+' + C.formatNum(g), '#dff0ff', 17);
-    burst(cx, cy - planetR * 0.2, '#bfe0ff', 5);
-    if (navigator.vibrate) try { navigator.vibrate(6); } catch (e) {}
+    if (crit) {
+      Audio.crit();
+      floatTxt(cx, cy - planetR * 0.5, '치명타 +' + C.formatNum(g), '#ffe08a', 23);
+      burst(cx, cy - planetR * 0.2, '#ffe08a', 14); ring(cx, cy, '#ffe08a');
+    } else {
+      Audio.tap(tapCount % 30);
+      floatTxt(cx, cy - planetR * 0.5, '+' + C.formatNum(g), '#dff0ff', 17);
+      burst(cx, cy - planetR * 0.2, '#bfe0ff', 5);
+    }
+    if (navigator.vibrate) try { navigator.vibrate(crit ? 14 : 6); } catch (e) {}
     checkStage();
     refreshGens();
   }
   cv.addEventListener('pointerdown', function (e) {
     var x = e.clientX, y = e.clientY;
+    // 혜성 우선 — 떠다니는 혜성을 탭하면 보너스
+    for (var i = 0; i < comets.length; i++) {
+      var c = comets[i];
+      if (!c.claimed && Math.hypot(x - c.x, y - c.y) < 38) { e.preventDefault(); claimComet(c); return; }
+    }
     if (y > H - panelH) return;                 // 패널 영역 제외
     var d = Math.hypot(x - planetCX, y - planetCY);
     if (d <= planetR * 1.35) { e.preventDefault(); doTap(x, y); }
     else { firstStart(); }                      // 첫 안내만 닫기
   }, { passive: false });
+
+  // ===== 혜성 이벤트 (가변 보상 + 능동성) =====
+  function spawnComet() {
+    var fromLeft = Math.random() < 0.5;
+    var y = (H - panelH) * (0.14 + Math.random() * 0.42);
+    var speed = W / (6 + Math.random() * 3);     // px/s — 화면을 6~9초에 횡단
+    comets.push({ x: fromLeft ? -50 : W + 50, y: y, vx: (fromLeft ? speed : -speed), vy: (Math.random() - 0.5) * 26, t: 0, claimed: false });
+  }
+  function claimComet(c) {
+    c.claimed = true; firstStart();
+    var per = C.effPerSec(state.owned, state.stardust);
+    var bonus = Math.max(per * 30, C.tapGain(per) * 12, 8);
+    addLife(bonus);
+    buffUntil = gameT + 12;                       // 12초간 생산 ×2
+    burst(c.x, c.y, '#ffe08a', 26); ring(c.x, c.y, '#ffe08a');
+    floatTxt(c.x, c.y, '혜성! +' + C.formatNum(bonus), '#ffe08a', 21);
+    floatTxt(planetCX, planetCY - planetR - 24, '12초 생산 ×2', '#9fe7ff', 16);
+    Audio.comet();
+    if (navigator.vibrate) try { navigator.vibrate(18); } catch (e) {}
+    checkStage(); refreshGens();
+  }
+  function updateComets(dt) {
+    gameT += dt;
+    if (gameT > nextCometAt) { spawnComet(); nextCometAt = gameT + (24 + Math.random() * 30); }
+    for (var i = comets.length - 1; i >= 0; i--) {
+      var c = comets[i]; c.x += c.vx * dt; c.y += c.vy * dt; c.t += dt;
+      if (c.t > 14 || c.x < -80 || c.x > W + 80) comets.splice(i, 1);
+    }
+  }
 
   // ===== 단계 진화 =====
   function checkStage() {
@@ -154,7 +246,51 @@
       showEvolve(info, ns);
       document.getElementById('stage-name').textContent = info.name;
     }
+    refreshRebirth();
   }
+
+  // ===== 초신성 환생(프레스티지) =====
+  var rebirthBtn = document.getElementById('rebirth-btn');
+  function refreshRebirth() {
+    var can = C.canRebirth(state.total);
+    rebirthBtn.classList.toggle('ready', can);
+    if (can) {
+      var gain = C.stardustGain(state.total);
+      rebirthBtn.textContent = '초신성 환생  +' + gain + ' 가루';
+    } else {
+      rebirthBtn.textContent = '초신성 환생  (생명 ' + C.formatNum(C.REBIRTH_MIN) + ')';
+    }
+  }
+  function openRebirth() {
+    if (!C.canRebirth(state.total)) return;
+    var gain = C.stardustGain(state.total);
+    var after = C.prestigeMult(state.stardust + gain);
+    document.getElementById('rb-gain').textContent = gain;
+    document.getElementById('rb-pct').textContent = Math.round((after - 1) * 100);
+    document.getElementById('rebirth').classList.add('show');
+  }
+  function doRebirth() {
+    var gain = C.stardustGain(state.total);
+    if (gain <= 0) return;
+    state.stardust += gain; state.rebirths++;
+    // 사이클 리셋 — lifetime(역대 누적)은 유지(환생해도 안 줄어듦)
+    state.life = 0; state.total = 0; state.stage = 0;
+    for (var i = 0; i < N; i++) state.owned[i] = 0;
+    buffUntil = -1;
+    supernovaFx = 1; flash = 1;
+    bigBurst(planetCX, planetCY, '#ffe08a', 46, 300); bigBurst(planetCX, planetCY, '#fff3c8', 30, 180);
+    ring(planetCX, planetCY, '#ffe08a');
+    floatTxt(planetCX, planetCY, '+' + gain + ' 가루', '#ffe08a', 26);
+    Audio.supernova();
+    if (navigator.vibrate) try { navigator.vibrate([20, 40, 30]); } catch (e) {}
+    document.getElementById('rebirth').classList.remove('show');
+    writeSave();                                  // 권위있게 즉시 저장(가드 우회)
+    refreshGens(); updateHud(); refreshRebirth();
+    document.getElementById('stage-name').textContent = C.stageInfo(0).name;
+  }
+  rebirthBtn.addEventListener('click', openRebirth);
+  document.getElementById('rb-go').addEventListener('click', doRebirth);
+  document.getElementById('rb-cancel').addEventListener('click', function () { document.getElementById('rebirth').classList.remove('show'); });
 
   // ===== 생성기 패널 (DOM) =====
   var GEN_COL = ['#7fd6c0', '#7bbf6a', '#c7a86a', '#5fa06a', '#d09a5a', '#d97a5a', '#8fb0e0', '#b89bff'];
@@ -207,7 +343,8 @@
       var poor = state.life < c;
       r.el.classList.toggle('poor', poor);
       r.own.textContent = state.owned[i];
-      r.sub.textContent = '초당 +' + C.formatNum(g.rate) + (state.owned[i] ? '  ·  합계 +' + C.formatNum(state.owned[i] * g.rate) : '');
+      var mult = C.prestigeMult(state.stardust) * (buffActive() ? 2 : 1);
+      r.sub.textContent = '초당 +' + C.formatNum(g.rate * mult) + (state.owned[i] ? '  ·  합계 +' + C.formatNum(state.owned[i] * g.rate * mult) : '');
       r.cost.textContent = C.formatNum(c);
       r.cost.classList.toggle('ok', !poor);
     }
@@ -216,16 +353,25 @@
   // ===== HUD =====
   var lifeEl = document.getElementById('life'), rateEl = document.getElementById('rate'),
     stageNameEl = document.getElementById('stage-name'), progEl = document.querySelector('#prog i'),
-    progLbl = document.getElementById('prog-lbl');
+    progLbl = document.getElementById('prog-lbl'), dustEl = document.getElementById('dust-line');
   function updateHud() {
     lifeEl.innerHTML = C.formatNum(state.life) + '<small>생명</small>';
-    rateEl.textContent = '초당 ' + C.formatNum(C.prodPerSec(state.owned));
+    var perTxt = '초당 ' + C.formatNum(curPerSec());
+    if (buffActive()) perTxt += ' (가속 ×2)';
+    rateEl.textContent = perTxt;
+    rateEl.classList.toggle('boost', buffActive());
     var info = C.stageInfo(state.stage);
     stageNameEl.textContent = info.name;
     var p = C.stageProgress(state.total, state.stage);
     progEl.style.width = (p * 100).toFixed(1) + '%';
     var nxt = C.nextStageMin(state.stage);
     progLbl.textContent = '다음 단계까지 ' + C.formatNum(Math.max(0, nxt - state.total));
+    if (state.stardust > 0) {
+      dustEl.style.display = 'block';
+      dustEl.textContent = '성운 가루 ' + state.stardust + '  ·  생산 ×' + C.prestigeMult(state.stardust).toFixed(2) + (state.rebirths ? '  ·  환생 ' + state.rebirths : '');
+    } else {
+      dustEl.style.display = 'none';
+    }
   }
 
   // ===== 루프 =====
@@ -233,9 +379,12 @@
   function loop(t) {
     requestAnimationFrame(loop);
     var dt = last ? Math.min((t - last) / 1000, 0.25) : 0.016; last = t;
-    var per = C.prodPerSec(state.owned);
-    if (per > 0) { var add = per * dt; state.life += add; state.total += add; checkStage(); }
+    var per = curPerSec();
+    if (per > 0) { addLife(per * dt); checkStage(); }
     if (planetPulse > 0) planetPulse = Math.max(0, planetPulse - dt * 3.2);
+    if (supernovaFx > 0) supernovaFx = Math.max(0, supernovaFx - dt * 0.8);
+    if (flash > 0) flash = Math.max(0, flash - dt * 1.6);
+    updateComets(dt);
     ageFx(dt);
     updateHud();
     if (per > 0) refreshGensThrottle(dt);
@@ -259,6 +408,7 @@
     for (var i = 0; i < stars.length; i++) { var s = stars[i]; var a = s.a * (0.6 + 0.4 * Math.sin(time * 1.5 + s.tw)); ctx.globalAlpha = a; ctx.fillStyle = '#cdd8f2'; ctx.beginPath(); ctx.arc(s.x * W, s.y * (H - panelH) * 0.92, s.r, 0, 6.28); ctx.fill(); }
     ctx.globalAlpha = 1;
 
+    drawComets();
     drawPlanet(time);
 
     // 확산 링
@@ -271,14 +421,40 @@
     ctx.textAlign = 'center';
     for (var f = 0; f < floats.length; f++) { var fl = floats[f]; ctx.globalAlpha = Math.min(1, fl.life * 1.5); ctx.font = '900 ' + fl.sz + 'px "Pretendard Variable",sans-serif'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.strokeText(fl.txt, fl.x, fl.y); ctx.fillStyle = fl.col; ctx.fillText(fl.txt, fl.x, fl.y); }
     ctx.globalAlpha = 1; ctx.textAlign = 'left';
+
+    // 초신성 화면 플래시
+    if (flash > 0) { ctx.globalAlpha = flash * 0.7; ctx.fillStyle = '#fff6da'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+  }
+
+  function drawComets() {
+    for (var i = 0; i < comets.length; i++) {
+      var c = comets[i]; if (c.claimed) continue;
+      var ang = Math.atan2(c.vy, c.vx);
+      // 꼬리
+      var tx = c.x - Math.cos(ang) * 64, ty = c.y - Math.sin(ang) * 64;
+      var tg = ctx.createLinearGradient(c.x, c.y, tx, ty);
+      tg.addColorStop(0, 'rgba(255,232,160,.85)'); tg.addColorStop(1, 'rgba(159,231,255,0)');
+      ctx.strokeStyle = tg; ctx.lineWidth = 7; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(c.x, c.y); ctx.lineTo(tx, ty); ctx.stroke();
+      // 머리 글로우
+      var gg = ctx.createRadialGradient(c.x, c.y, 1, c.x, c.y, 18);
+      gg.addColorStop(0, 'rgba(255,247,214,1)'); gg.addColorStop(0.5, 'rgba(255,224,138,.8)'); gg.addColorStop(1, 'rgba(255,224,138,0)');
+      ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(c.x, c.y, 18, 0, 6.28); ctx.fill();
+      ctx.fillStyle = '#fffaf0'; ctx.beginPath(); ctx.arc(c.x, c.y, 5, 0, 6.28); ctx.fill();
+    }
   }
 
   function drawPlanet(time) {
-    var cx = planetCX, cy = planetCY, R = planetR * (1 + planetPulse * 0.06), stage = state.stage, col = bodyColor(stage);
+    var cx = planetCX, cy = planetCY, R = planetR * (1 + planetPulse * 0.06) * (1 - supernovaFx * 0.5), stage = state.stage, col = bodyColor(stage);
     var spin = time * 0.25;
+    if (R < 1) return;
 
-    // 고단계 글로우
-    if (stage >= 10) { var gl = ctx.createRadialGradient(cx, cy, R * 0.8, cx, cy, R * 1.9); gl.addColorStop(0, 'rgba(255,224,150,.35)'); gl.addColorStop(1, 'rgba(255,224,150,0)'); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(cx, cy, R * 1.9, 0, 6.28); ctx.fill(); }
+    // 버프(혜성) 또는 고단계 글로우
+    if (buffActive() || stage >= 10 || supernovaFx > 0) {
+      var gcol = buffActive() ? 'rgba(159,231,255,' : 'rgba(255,224,150,';
+      var gr = R * (1.9 + supernovaFx * 1.5);
+      var gl = ctx.createRadialGradient(cx, cy, R * 0.8, cx, cy, gr); gl.addColorStop(0, gcol + (0.35 + supernovaFx * 0.4) + ')'); gl.addColorStop(1, gcol + '0)'); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(cx, cy, gr, 0, 6.28); ctx.fill();
+    }
     // 대기 림(바다 단계부터)
     if (stage >= 2) { ctx.strokeStyle = stage >= 10 ? 'rgba(255,236,180,.5)' : 'rgba(150,200,255,.4)'; ctx.lineWidth = Math.max(2, R * 0.06); ctx.beginPath(); ctx.arc(cx, cy, R * 1.04, 0, 6.28); ctx.stroke(); }
 
@@ -400,10 +576,25 @@
   function syncMute() { muteUse.setAttribute('href', Audio.isMuted() ? '#p-speaker-slash' : '#p-speaker-high'); }
   muteBtn.addEventListener('click', function () { Audio.setMuted(!Audio.isMuted()); syncMute(); }); syncMute();
 
-  // ===== 저장 안전망 =====
-  function flush() { save(); }
+  // ===== 저장 안전망 + 백그라운드 정산 =====
+  var hiddenAt = 0;
+  function flush() { if (reloading) return; writeSave(); }
   window.addEventListener('pagehide', flush);
-  document.addEventListener('visibilitychange', function () { if (document.hidden) flush(); });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) { flush(); hiddenAt = Date.now(); }
+    else if (hiddenAt) {
+      // 백그라운드(탭 비활성)에선 rAF가 멈춰 생산이 안 쌓인다 — 복귀 시 흐른 시간만큼 정산.
+      var elapsed = (Date.now() - hiddenAt) / 1000; hiddenAt = 0;
+      var per = C.effPerSec(state.owned, state.stardust);
+      if (per > 0 && elapsed > 8) {
+        var g = C.offlineGain(per, elapsed, 28800);
+        addLife(g); checkStage();
+        floatTxt(planetCX, planetCY - planetR * 0.2, '+' + C.formatNum(g), '#9bf0b4', 20);
+      }
+      last = 0;                 // dt 리셋 — 복귀 첫 프레임 dt 폭주 방지
+      adoptExternalIfNewer();   // 그 사이 다른 기기 동기화가 들어왔으면 채택
+    }
+  });
 
   // ===== 시작 =====
   if (awayGain > 0) {
@@ -414,6 +605,9 @@
   }
   state.stage = C.stageForTotal(state.total); commitBest();
   document.getElementById('stage-name').textContent = C.stageInfo(state.stage).name;
-  refreshGens(); updateHud(); save();
+  refreshGens(); updateHud(); refreshRebirth(); writeSave();
+  // 진입 직후 포털 크로스 디바이스 pull(fetch)이 끝날 즈음 한 번 더 채택 검사(빠른 반영)
+  setTimeout(adoptExternalIfNewer, 1800);
+  setTimeout(adoptExternalIfNewer, 4500);
   requestAnimationFrame(loop);
 })();

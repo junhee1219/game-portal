@@ -54,5 +54,25 @@ ok('fmt 1.2K', C.formatNum(1200) === '1.20K');
 ok('fmt M', /M$/.test(C.formatNum(2500000)));
 ok('fmt B', /B$/.test(C.formatNum(3.4e9)));
 
+// ===== 초신성 환생(프레스티지) =====
+ok('no stardust below min', C.stardustGain(C.REBIRTH_MIN - 1) === 0);
+ok('cannot rebirth below min', C.canRebirth(C.REBIRTH_MIN - 1) === false);
+ok('can rebirth at min', C.canRebirth(C.REBIRTH_MIN) === true);
+ok('stardust at min = 3', C.stardustGain(C.REBIRTH_MIN) === 3);
+ok('stardust sqrt scale (x4 total = x2 gain)', C.stardustGain(C.REBIRTH_MIN * 4) === 6);
+ok('stardust monotonic', C.stardustGain(C.REBIRTH_MIN * 100) > C.stardustGain(C.REBIRTH_MIN * 10));
+ok('big total big stardust', C.stardustGain(2.76e9) > 150);
+
+ok('prestige mult base = 1', approx(C.prestigeMult(0), 1));
+ok('prestige mult +2% per dust', approx(C.prestigeMult(10), 1.2));
+ok('prestige mult guards negative', approx(C.prestigeMult(-5), 1));
+
+ok('effPerSec = prod x mult', approx(
+  C.effPerSec([2, 1, 0, 0, 0, 0, 0, 0], 10),
+  C.prodPerSec([2, 1, 0, 0, 0, 0, 0, 0]) * 1.2));
+ok('effPerSec no dust = prod', approx(
+  C.effPerSec([5, 0, 0, 0, 0, 0, 0, 0], 0),
+  C.prodPerSec([5, 0, 0, 0, 0, 0, 0, 0])));
+
 if (fail) { console.error('\n' + fail + ' test(s) failed'); process.exit(1); }
 console.log('\nall passed');

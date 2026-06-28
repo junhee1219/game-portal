@@ -33,7 +33,9 @@
     #stage-name{font-size:var(--fs-3);font-weight:800;letter-spacing:.4px;color:var(--accent);opacity:.95;}
     #life{font-size:var(--fs-1);font-weight:900;line-height:1.05;font-variant-numeric:tabular-nums;margin-top:1px;}
     #life small{font-size:.42em;font-weight:800;color:var(--ink-soft);margin-left:4px;letter-spacing:.3px;}
-    #rate{font-size:var(--fs-3);font-weight:700;color:var(--ink-soft);margin-top:1px;font-variant-numeric:tabular-nums;}
+    #rate{font-size:var(--fs-3);font-weight:700;color:var(--ink-soft);margin-top:1px;font-variant-numeric:tabular-nums;transition:color .2s ease;}
+    #rate.boost{color:#9fe7ff;}
+    #dust-line{display:none;font-size:11.5px;font-weight:800;color:#ffd76a;margin-top:3px;letter-spacing:.2px;font-variant-numeric:tabular-nums;}
     /* 다음 단계 진행바 */
     #prog{margin:7px auto 0;width:min(220px,62vw);height:6px;border-radius:99px;background:rgba(150,170,220,.16);overflow:hidden;}
     #prog i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#79c0ff,#b89bff);transition:width .25s ease;}
@@ -60,6 +62,13 @@
     #panel-head{display:flex;align-items:baseline;justify-content:space-between;padding:2px 6px 8px;flex:0 0 auto;}
     #panel-head .t{font-size:var(--fs-3);font-weight:900;color:var(--ink);letter-spacing:.3px;}
     #panel-head .h{font-size:11.5px;font-weight:700;color:var(--ink-soft);}
+    /* 초신성 환생 버튼 — 비활성(흐림) → 가능 시 골드 펄스로 유도 */
+    #rebirth-btn{border:1px solid var(--line);border-radius:99px;padding:6px 13px;font-size:12px;font-weight:900;
+      background:rgba(40,49,80,.6);color:var(--ink-soft);cursor:pointer;transition:transform .1s ease,filter .12s ease;white-space:nowrap;}
+    #rebirth-btn:active{transform:scale(.94);}
+    #rebirth-btn.ready{background:linear-gradient(180deg,#ffd76a,#f0a93f);color:#3a2406;border-color:transparent;
+      box-shadow:0 3px 0 #c8801f,0 7px 16px rgba(240,169,63,.4);animation:rbpulse 1.7s ease-in-out infinite;}
+    @keyframes rbpulse{0%,100%{transform:scale(1);}50%{transform:scale(1.05);}}
     #gens{flex:1 1 auto;overflow-y:auto;display:flex;flex-direction:column;gap:8px;-webkit-overflow-scrolling:touch;padding-bottom:2px;}
     #gens::-webkit-scrollbar{width:0;}
     .gen{display:flex;align-items:center;gap:11px;width:100%;text-align:left;cursor:pointer;
@@ -115,6 +124,7 @@
     <div id="stage-name">먼지</div>
     <div id="life">0<small>생명</small></div>
     <div id="rate">초당 0</div>
+    <div id="dust-line"></div>
     <div id="prog"><i></i></div>
     <div id="prog-lbl"></div>
   </div>
@@ -125,7 +135,7 @@
   </div>
 
   <div id="panel">
-    <div id="panel-head"><span class="t">생성기</span><span class="h">사면 초당 생명이 늘어요</span></div>
+    <div id="panel-head"><span class="t">생성기</span><button id="rebirth-btn" type="button">초신성 환생</button></div>
     <div id="gens"></div>
   </div>
 
@@ -151,6 +161,19 @@
       <div class="big"><span id="away-gain">0</span></div>
       <div class="biglbl">생명을 모았어요</div>
       <button class="primary" id="away-go">받기</button>
+    </div>
+  </div>
+
+  <!-- 초신성 환생 확인 -->
+  <div class="pop" id="rebirth">
+    <div class="pop-card">
+      <div class="cap">초신성 환생</div>
+      <h2>행성을 터뜨릴까요?</h2>
+      <p class="desc">지금 행성을 초신성으로 터뜨려 <b>성운 가루</b>를 얻고<br>처음부터 다시 시작해요. 가루는 영구히 생산을 높여<br>다음 행성을 훨씬 빠르게 키울 수 있어요.</p>
+      <div class="big">+<span id="rb-gain">0</span></div>
+      <div class="biglbl">성운 가루 · 영구 생산 +<span id="rb-pct">0</span>%</div>
+      <button class="primary" id="rb-go">터뜨리기</button>
+      <div class="mini"><button id="rb-cancel">아직 키울래요</button></div>
     </div>
   </div>
 
