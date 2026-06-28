@@ -361,6 +361,12 @@
       // 오비터용 별도 아이콘 캔버스(패널 DOM과 분리 — 같은 캔버스를 양쪽에 쓰면 안 됨)
       var oic = document.createElement('canvas'); oic.width = 64; oic.height = 64;
       drawEmblem(oic.getContext('2d'), g.key, 64, GEN_COL[i]); genIcons[i] = oic;
+      // finda-asset 생성기 일러스트 로드 → 패널 아이콘 + 오비터를 이미지로 교체(미로드/실패 시 절차 엠블럼 폴백)
+      (function (idx, key, panel) {
+        var im = new Image();
+        im.onload = function () { genIcons[idx] = im; var c = panel.getContext('2d'); c.clearRect(0, 0, 84, 84); c.drawImage(im, 3, 3, 78, 78); };
+        im.src = 'gens/' + key + '.png';
+      })(i, g.key, ic);
       var mid = document.createElement('div'); mid.className = 'mid';
       mid.innerHTML = '<div class="nm">' + g.name + ' <span class="own">0</span></div><div class="sub"></div>';
       var buy = document.createElement('div'); buy.className = 'buy';
