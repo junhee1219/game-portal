@@ -151,7 +151,11 @@
   };
 
   // 단계별 행성 본체 색 (단일 색조, 차분 — 네온/검보라 금지)
-  var STAGE_COL = ['#b7a98f', '#8d8475', '#5b86b0', '#6f9e6a', '#4e8f5c', '#6a9d4f', '#7d8a5a', '#5e7088', '#6b6f9a', '#7a86c2', '#d8c98e', '#e8b46a'];
+  var STAGE_COL = [
+    '#b7a98f', '#8d8475', '#5b86b0', '#6f9e6a', '#4e8f5c', '#6a9d4f', '#7d8a5a', '#5e7088', '#6b6f9a', '#7a86c2', '#d8c98e', '#e8b46a',
+    // 천체 단계 — 적색거성 ~ 관측 가능한 우주
+    '#e8896a', '#ffe8a0', '#e8eef5', '#bcd0f0', '#8fe0e0', '#3a3450', '#d878c0', '#c89ad8', '#9fc0e8', '#e8d8a0', '#9a8fd0', '#8f9fe0', '#e0d6bc', '#a890d8', '#9080d0', '#8278c4', '#b0c0e0', '#e8d090'
+  ];
   function bodyColor(stage) { return STAGE_COL[Math.min(stage, STAGE_COL.length - 1)]; }
   function hx(c) { c = c.replace('#', ''); return [parseInt(c.substr(0, 2), 16), parseInt(c.substr(2, 2), 16), parseInt(c.substr(4, 2), 16)]; }
   function shade(c, f) { var r = hx(c); function k(v) { return Math.max(0, Math.min(255, Math.round(v))); } return 'rgb(' + k(r[0] + f) + ',' + k(r[1] + f) + ',' + k(r[2] + f) + ')'; }
@@ -293,7 +297,7 @@
   document.getElementById('rb-cancel').addEventListener('click', function () { document.getElementById('rebirth').classList.remove('show'); });
 
   // ===== 생성기 패널 (DOM) =====
-  var GEN_COL = ['#7fd6c0', '#7bbf6a', '#c7a86a', '#5fa06a', '#d09a5a', '#d97a5a', '#8fb0e0', '#b89bff'];
+  var GEN_COL = ['#7fd6c0', '#7bbf6a', '#c7a86a', '#5fa06a', '#d09a5a', '#d97a5a', '#8fb0e0', '#b89bff', '#ffd76a', '#6ad0e0', '#a98fff', '#e07ac0'];
   var gensEl = document.getElementById('gens');
   var rows = [];
   (function buildGens() {
@@ -557,6 +561,29 @@
       disc(42, 44, 15, mid); disc(36, 38, 5, light);
       x.save(); x.translate(42 * u, 44 * u); x.rotate(-0.5); x.scale(1, 0.34); x.strokeStyle = light; x.lineWidth = 4 * u; x.beginPath(); x.arc(0, 0, 26 * u, 0, 6.28); x.stroke(); x.restore();
       disc(64, 30, 3.4, '#fff');
+    } else if (key === 'star') {
+      // 항성로 — 빛나는 별 + 광선
+      for (var si = 0; si < 8; si++) { var sa = si / 8 * 6.28; line(42 + Math.cos(sa) * 16, 44 + Math.sin(sa) * 16, 42 + Math.cos(sa) * 30, 44 + Math.sin(sa) * 30, 3.4, light); }
+      disc(42, 44, 17, mid); disc(42, 44, 11, light); disc(38, 40, 4, '#fff');
+    } else if (key === 'dyson') {
+      // 다이슨 구체 — 별을 감싼 격자 껍질
+      disc(42, 44, 11, light);
+      x.save(); x.translate(42 * u, 44 * u); x.strokeStyle = mid; x.lineWidth = 3 * u;
+      for (var di = 0; di < 3; di++) { x.save(); x.rotate(di * 1.05); x.scale(1, 0.4); x.beginPath(); x.arc(0, 0, 24 * u, 0, 6.28); x.stroke(); x.restore(); }
+      x.beginPath(); x.arc(0, 0, 24 * u, 0, 6.28); x.stroke(); x.restore();
+    } else if (key === 'galaxy') {
+      // 은하 문명 — 나선팔
+      disc(42, 44, 6, light);
+      x.save(); x.translate(42 * u, 44 * u); x.strokeStyle = mid; x.lineWidth = 5 * u; x.lineCap = 'round';
+      for (var gi = 0; gi < 2; gi++) { x.save(); x.rotate(gi * Math.PI); x.beginPath(); for (var a2 = 0; a2 < 3.4; a2 += 0.3) { var rr2 = 6 + a2 * 7; var xx = Math.cos(a2) * rr2 * u, yy = Math.sin(a2) * rr2 * u; if (a2 === 0) x.moveTo(xx, yy); else x.lineTo(xx, yy); } x.stroke(); x.restore(); }
+      x.restore();
+    } else if (key === 'rift') {
+      // 차원 균열 — 갈라진 빛의 틈
+      x.save(); x.translate(42 * u, 44 * u);
+      var rg = x.createRadialGradient(0, 0, 2 * u, 0, 0, 30 * u); rg.addColorStop(0, light); rg.addColorStop(1, dark);
+      x.fillStyle = rg; x.beginPath(); x.ellipse(0, 0, 12 * u, 30 * u, 0.4, 0, 6.28); x.fill();
+      x.fillStyle = '#fff'; x.beginPath(); x.ellipse(0, 0, 4 * u, 22 * u, 0.4, 0, 6.28); x.fill();
+      x.restore();
     }
   }
 

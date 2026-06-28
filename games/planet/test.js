@@ -34,7 +34,7 @@ ok('tail stage advances x2', C.stageForTotal(C.STAGES[lastNamed].min * C.TAIL_MU
 
 // stageInfo / next
 ok('stageInfo named', C.stageInfo(0).name === '먼지');
-ok('stageInfo tail name', C.stageInfo(lastNamed + 1).name === '항성계 +1');
+ok('stageInfo tail name', C.stageInfo(lastNamed + 1).name === '다중우주 +1');
 ok('nextStageMin > cur', C.nextStageMin(0) > C.stageInfo(0).min);
 
 // 진행률
@@ -58,18 +58,19 @@ ok('fmt B', /B$/.test(C.formatNum(3.4e9)));
 ok('no stardust below min', C.stardustGain(C.REBIRTH_MIN - 1) === 0);
 ok('cannot rebirth below min', C.canRebirth(C.REBIRTH_MIN - 1) === false);
 ok('can rebirth at min', C.canRebirth(C.REBIRTH_MIN) === true);
-ok('stardust at min = 3', C.stardustGain(C.REBIRTH_MIN) === 3);
-ok('stardust sqrt scale (x4 total = x2 gain)', C.stardustGain(C.REBIRTH_MIN * 4) === 6);
+ok('stardust at min = 2', C.stardustGain(C.REBIRTH_MIN) === 2);
+ok('stardust sqrt scale (x4 total = x2 gain)', C.stardustGain(C.REBIRTH_MIN * 4) === 4);
 ok('stardust monotonic', C.stardustGain(C.REBIRTH_MIN * 100) > C.stardustGain(C.REBIRTH_MIN * 10));
-ok('big total big stardust', C.stardustGain(2.76e9) > 150);
+ok('big total big stardust', C.stardustGain(2.76e9) > 100);
 
 ok('prestige mult base = 1', approx(C.prestigeMult(0), 1));
-ok('prestige mult +2% per dust', approx(C.prestigeMult(10), 1.2));
+ok('prestige mult = 1 + B*dust^1.5', approx(C.prestigeMult(100), 1 + 0.0015 * Math.pow(100, 1.5)));
+ok('prestige mult grows superlinear', (C.prestigeMult(200) - 1) > 2 * (C.prestigeMult(100) - 1));
 ok('prestige mult guards negative', approx(C.prestigeMult(-5), 1));
 
 ok('effPerSec = prod x mult', approx(
-  C.effPerSec([2, 1, 0, 0, 0, 0, 0, 0], 10),
-  C.prodPerSec([2, 1, 0, 0, 0, 0, 0, 0]) * 1.2));
+  C.effPerSec([2, 1, 0, 0, 0, 0, 0, 0], 50),
+  C.prodPerSec([2, 1, 0, 0, 0, 0, 0, 0]) * C.prestigeMult(50)));
 ok('effPerSec no dust = prod', approx(
   C.effPerSec([5, 0, 0, 0, 0, 0, 0, 0], 0),
   C.prodPerSec([5, 0, 0, 0, 0, 0, 0, 0])));
