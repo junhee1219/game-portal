@@ -89,6 +89,10 @@
     .track{fill:none;stroke:var(--rail);stroke-width:13;stroke-linecap:round;}
     .sleeper{stroke:rgba(245,200,109,.95);stroke-width:5;stroke-linecap:round;}
     .station{fill:#fff;stroke:var(--rail);stroke-width:7;}
+    .station.st-start{fill:#dff1e6;stroke:#2f9b83;}
+    .station.st-end{fill:#fdeede;stroke:#d98a3d;}
+    .cell.lit .track{stroke:#2f9b83;}
+    .cell.lit{box-shadow:inset 0 1px 0 rgba(255,255,255,.72),inset 0 -2px 0 rgba(61,78,88,.08),0 0 0 2px rgba(47,155,131,.30);}
     .cell.good{animation:good .34s ease;}
     .cell.bad{animation:bad .36s ease;background:#f7d9d6;}
     @keyframes good{0%{transform:scale(1);}45%{transform:scale(1.08);}100%{transform:scale(1);}}
@@ -264,8 +268,8 @@
       var kind=cell.type, body='';
       if(kind==='straight') body='<path class="track-base" d="M50 4 V96"/><path class="sleeper" d="M35 24 H65 M35 50 H65 M35 76 H65"/><path class="track" d="M50 4 V96"/>';
       if(kind==='curve') body='<path class="track-base" d="M50 4 Q50 50 96 50"/><path class="sleeper" d="M47 24 L69 28 M62 44 L80 62"/><path class="track" d="M50 4 Q50 50 96 50"/>';
-      if(kind==='start') body='<path class="track-base" d="M50 50 H96"/><path class="track" d="M50 50 H96"/><rect class="station" x="12" y="28" width="38" height="44" rx="10"/><path class="sleeper" d="M65 36 V64 M84 36 V64"/>';
-      if(kind==='end') body='<path class="track-base" d="M4 50 H50"/><path class="track" d="M4 50 H50"/><rect class="station" x="50" y="25" width="40" height="50" rx="11"/><path class="sleeper" d="M18 36 V64 M34 36 V64"/>';
+      if(kind==='start') body='<path class="track-base" d="M50 50 H96"/><path class="track" d="M50 50 H96"/><rect class="station st-start" x="12" y="28" width="38" height="44" rx="10"/><path class="sleeper" d="M65 36 V64 M84 36 V64"/>';
+      if(kind==='end') body='<path class="track-base" d="M4 50 H50"/><path class="track" d="M4 50 H50"/><rect class="station st-end" x="50" y="25" width="40" height="50" rx="11"/><path class="sleeper" d="M18 36 V64 M34 36 V64"/>';
       return '<svg viewBox="0 0 100 100" style="transform:rotate('+(cell.rot*90)+'deg)">'+body+'</svg>';
     }
     function buildLevel(idx){
@@ -278,7 +282,8 @@
       });
       render();
       updateHud();
-      note.textContent=LEVELS[idx].name+' · 천천히 맞춘 뒤 보내세요';
+      refreshTrace();
+      note.textContent=LEVELS[idx].name+' · 철로를 톡톡 돌려 초록 길을 도착역까지';
     }
     function render(){
       board.innerHTML=''; cells=[];
@@ -297,13 +302,21 @@
       triesEl.textContent=String(tries);
       document.getElementById('mute-ic').innerHTML='<use href="'+(muted?'#p-speaker-slash':'#p-speaker-high')+'"/>';
     }
+    function refreshTrace(){
+      cells.forEach(function(el){el.classList.remove('lit');});
+      var res=checkPath();
+      var upto=res.ok?res.path.length:res.path.length-1; // 끊긴 마지막 칸은 제외
+      for(var k=0;k<upto;k++){var rc=res.path[k];cells[rc[0]*N+rc[1]].classList.add('lit');}
+      return res;
+    }
     function rotateCell(e){
       if(running)return;
       var el=e.currentTarget, r=+el.dataset.r, c=+el.dataset.c, cell=grid[r][c];
       cell.rot=(cell.rot+1)%modOf(cell.type);
       el.innerHTML=svgFor(cell);
       el.classList.remove('good'); void el.offsetWidth; el.classList.add('good');
-      note.textContent='준비되면 화물차를 보내세요';
+      var res=refreshTrace();
+      note.textContent=res.ok?'길이 이어졌어요! 화물차를 보내세요':'초록 길을 도착역까지 이어보세요';
       sTurn();
     }
     function startCell(){
