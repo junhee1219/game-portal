@@ -1,0 +1,15 @@
+{
+  "name": "기억 실험실 — 카드 속 기억을 짝짓는 집중 퍼즐",
+  "short_name": "기억 실험실",
+  "description": "카드 두 장을 톡. 같은 기억을 찾아 실험 단계를 올려요. 시간제한 없이 천천히 외우고 신기록에 도전하세요.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e6eee8",
+  "theme_color": "#e6eee8",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

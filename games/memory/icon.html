@@ -1,0 +1,43 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#fff;}</style></head>
+<body>
+<canvas id="c" width="512" height="512"></canvas>
+<script>
+const cv=document.getElementById('c'),x=cv.getContext('2d');
+function rr(ctx,X,Y,W,H,R){R=Math.min(R,W/2,H/2);ctx.beginPath();ctx.moveTo(X+R,Y);ctx.arcTo(X+W,Y,X+W,Y+H,R);ctx.arcTo(X+W,Y+H,X,Y+H,R);ctx.arcTo(X,Y+H,X,Y,R);ctx.arcTo(X,Y,X+W,Y,R);ctx.closePath();}
+const bg=x.createLinearGradient(0,0,0,512);
+bg.addColorStop(0,'#f2f8ef');bg.addColorStop(1,'#d9e5df');
+rr(x,0,0,512,512,112);x.fillStyle=bg;x.fill();
+x.fillStyle='rgba(47,155,131,.10)';x.beginPath();x.arc(420,92,58,0,7);x.fill();
+x.fillStyle='rgba(214,95,85,.12)';x.beginPath();x.arc(88,418,70,0,7);x.fill();
+function card(px,py,open,color,shape){
+  rr(x,px,py,142,142,30);
+  if(!open){
+    const g=x.createLinearGradient(0,py,0,py+142);g.addColorStop(0,'#3d8374');g.addColorStop(1,'#2e6e64');
+    x.fillStyle=g;x.fill();x.fillStyle='rgba(255,255,255,.72)';x.lineWidth=8;x.strokeStyle='rgba(255,255,255,.70)';
+    x.beginPath();x.ellipse(px+71,py+71,34,22,Math.PI/4,0,7);x.stroke();
+  }else{
+    const g=x.createLinearGradient(0,py,0,py+142);g.addColorStop(0,'#fffdf7');g.addColorStop(1,'#edf7ef');
+    x.fillStyle=g;x.fill();x.fillStyle=color;
+    if(shape==='star'){
+      x.beginPath();
+      for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,r=i%2?23:48;x[i?'lineTo':'moveTo'](px+71+Math.cos(a)*r,py+71+Math.sin(a)*r);}
+      x.closePath();x.fill();
+    }else{
+      x.save();x.translate(px+71,py+71);x.rotate(-.45);x.beginPath();x.ellipse(0,0,42,28,0,0,7);x.fill();x.restore();
+    }
+  }
+  x.save();rr(x,px,py,142,142,30);x.clip();
+  const hi=x.createLinearGradient(0,py,0,py+142);hi.addColorStop(0,'rgba(255,255,255,.42)');hi.addColorStop(.35,'rgba(255,255,255,0)');hi.addColorStop(1,'rgba(30,60,52,.15)');
+  x.fillStyle=hi;x.fillRect(px,py,142,142);x.restore();
+  x.strokeStyle='rgba(38,49,45,.12)';x.lineWidth=2;rr(x,px,py,142,142,30);x.stroke();
+}
+card(86,92,true,'#d65f55','seed');
+card(284,92,false,'#d65f55','seed');
+card(86,290,false,'#2f9b83','seed');
+card(284,290,true,'#e5b84d','star');
+x.fillStyle='rgba(38,49,45,.18)';rr(x,140,250,232,24,12);x.fill();
+x.fillStyle='#26312d';x.font='900 46px "Pretendard Variable",-apple-system,sans-serif';x.textAlign='center';x.textBaseline='middle';
+x.fillText('MEM',256,262);
+window.__png=()=>cv.toDataURL('image/png');
+</script>
+</body></html>

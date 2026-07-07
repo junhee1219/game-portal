@@ -411,6 +411,37 @@
       ]
     },
     {
+      "id": "memory",
+      "shell_mode": "panel",
+      "title": "기억 실험실",
+      "tagline": "카드 두 장을 톡 — 같은 기억을 찾아 실험 단계를 올려요. 시간제한 없이 천천히 외우고, 집중 힌트로 회복하세요.",
+      "unit": "레벨",
+      "score_key": "memoryBest",
+      "score_metric": "level",
+      "state_keys": [
+        {
+          "key": "memoryBest",
+          "merge": "max"
+        },
+        {
+          "key": "memoryLevel",
+          "merge": "max"
+        },
+        {
+          "key": "memoryStars",
+          "merge": "union"
+        },
+        {
+          "key": "memoryMoves",
+          "merge": "union_min"
+        },
+        {
+          "key": "memoryMuted",
+          "merge": "lww"
+        }
+      ]
+    },
+    {
       "id": "flip",
       "shell_mode": "panel",
       "title": "냥멍 땅따먹기",
