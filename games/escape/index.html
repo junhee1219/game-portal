@@ -91,6 +91,10 @@
       touch-action:none;
     }
     .car.grab{transition:none;cursor:grabbing;z-index:5;}
+    .car.stuck{animation:stuck .3s ease;}
+    @keyframes stuck{0%,100%{margin-left:0;}30%{margin-left:-4px;}70%{margin-left:4px;}}
+    #lane-hint{position:absolute;z-index:1;border-radius:12px;background:rgba(47,155,131,.16);box-shadow:inset 0 0 0 2px rgba(47,155,131,.22);opacity:0;transition:opacity .14s ease;pointer-events:none;}
+    #lane-hint.show{opacity:1;}
     .car .body{
       width:100%;height:100%;border-radius:13px;position:relative;
       box-shadow:inset 0 2px 0 rgba(255,255,255,.45), 0 3px 0 rgba(0,0,0,.16);
@@ -332,6 +336,23 @@
       exitEl.style.top=(EXIT_ROW/N*100)+'%';
       exitEl.style.height=(1/N*100)+'%';
     }
+    var laneHint=null;
+    function ensureLaneHint(){
+      if(!laneHint||!laneHint.parentNode){ laneHint=document.createElement('div'); laneHint.id='lane-hint'; board.appendChild(laneHint); }
+      return laneHint;
+    }
+    function showLane(i,range){
+      var c=cars[i], el=ensureLaneHint();
+      if(c.dir==='h'){
+        el.style.left=(range[0]/N*100)+'%'; el.style.top=(c.r/N*100)+'%';
+        el.style.width=((range[1]-range[0]+c.len)/N*100)+'%'; el.style.height=(1/N*100)+'%';
+      }else{
+        el.style.left=(c.c/N*100)+'%'; el.style.top=(range[0]/N*100)+'%';
+        el.style.width=(1/N*100)+'%'; el.style.height=((range[1]-range[0]+c.len)/N*100)+'%';
+      }
+      el.classList.add('show');
+    }
+    function hideLane(){ if(laneHint)laneHint.classList.remove('show'); }
     function freeRange(i){
       var c=cars[i], g=occGrid(); var lo=c.dir==='h'?c.c:c.r, hi=lo;
       var f=c.dir==='h'?c.r:c.c, L=c.len;
@@ -350,6 +371,14 @@
         axis = cars[i].dir;
         range = freeRange(i);
         cur = axis==='h'?cars[i].c:cars[i].r;
+        if(range[0]===range[1]){ // 꽉 막힌 차 — 흔들어서 알려줌
+          dragging=false; el.classList.remove('grab');
+          el.classList.remove('stuck'); void el.offsetWidth; el.classList.add('stuck');
+          sBad();
+          ev.preventDefault();
+          return;
+        }
+        showLane(i,range);
         startPos = axis==='h'?ev.clientX:ev.clientY;
         ev.preventDefault();
       });
@@ -364,6 +393,7 @@
       });
       function end(ev){
         if(!dragging) return; dragging=false; el.classList.remove('grab');
+        hideLane();
         var px=cellPx();
         var delta=(axis==='h'?ev.clientX:ev.clientY)-startPos;
         var maxNeg=(range[0]-cur)*px, maxPos=(range[1]-cur)*px;
