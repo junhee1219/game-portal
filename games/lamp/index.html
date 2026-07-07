@@ -35,7 +35,7 @@
     .icon-btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(70,90,64,.15);}
     .ki{width:23px;height:23px;fill:currentColor;display:block;}
     #stage{flex:1 1 auto;width:100%;max-width:500px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;min-height:0;}
-    #board{position:relative;width:min(92vw,430px);aspect-ratio:1;display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(5,1fr);gap:7px;padding:9px;border-radius:24px;background:var(--board);box-shadow:inset 0 2px 7px rgba(61,82,58,.20),0 8px 0 #b9c8b8,0 18px 34px var(--shadow);touch-action:manipulation;overflow:hidden;}
+    #board{position:relative;width:min(92vw,430px);aspect-ratio:1;display:grid;grid-template-columns:repeat(var(--n,5),1fr);grid-template-rows:repeat(var(--n,5),1fr);gap:7px;padding:9px;border-radius:24px;background:var(--board);box-shadow:inset 0 2px 7px rgba(61,82,58,.20),0 8px 0 #b9c8b8,0 18px 34px var(--shadow);touch-action:manipulation;overflow:hidden;}
     #board.shake{animation:shake .28s ease;}@keyframes shake{0%,100%{transform:translate(0,0);}25%{transform:translate(-3px,1px);}50%{transform:translate(3px,-1px);}75%{transform:translate(-2px,-1px);}}
     .lamp{position:relative;border:none;border-radius:15px;background:linear-gradient(180deg,#f5faf1,var(--cell));box-shadow:inset 0 1px 0 rgba(255,255,255,.72),inset 0 -2px 0 rgba(61,82,58,.08);cursor:pointer;overflow:hidden;color:var(--off);transition:transform .1s ease,filter .16s ease;}
     .lamp:active{transform:scale(.96);}
@@ -130,9 +130,17 @@
     function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;var t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};}
     function idx(r,c){return r*N+c;}
     function toggleAt(arr,i){var r=Math.floor(i/N),c=i%N;[[r,c],[r-1,c],[r+1,c],[r,c-1],[r,c+1]].forEach(function(p){if(p[0]>=0&&p[0]<N&&p[1]>=0&&p[1]<N){var k=idx(p[0],p[1]);arr[k]=!arr[k];}});}
-    function makeLevel(lv){var r=rng(4100+lv*97),count=Math.min(6+Math.floor(lv/2),13),chosen={},sol=[];while(sol.length<count){var k=Math.floor(r()*25);if(!chosen[k]){chosen[k]=1;sol.push(k);}}var arr=Array(25).fill(true);sol.forEach(function(k){toggleAt(arr,k);});return{state:arr,solution:sol};}
-    function build(lv){completed=false;clear.classList.remove('show');moves=0;var made=makeLevel(lv);state=made.state.slice();startState=made.state.slice();solution=made.solution.slice();render();updateHud();note.textContent='천천히 눌러 모든 전등을 켜세요';}
-    function render(){board.innerHTML='';cells=[];for(var i=0;i<25;i++){var b=document.createElement('button');b.className='lamp'+(state[i]?' on':'');b.dataset.i=i;b.setAttribute('aria-label','전등');b.addEventListener('click',tapLamp);board.appendChild(b);cells.push(b);}}
+    // 점진 커브: 3×3 1탭부터 시작 → 4×4 → 5×5 (첫판이 규칙을 스스로 가르친다)
+    function planFor(lv){
+      if(lv<3)return{n:3,count:lv+1};          // 3×3: 1·2·3탭
+      if(lv<7)return{n:4,count:lv};            // 4×4: 3~6탭
+      return{n:5,count:Math.min(5+Math.floor((lv-7)/2),13)}; // 5×5: 5탭~
+    }
+    function makeLevel(lv){var p=planFor(lv);N=p.n;var total=N*N,r=rng(4100+lv*97),count=p.count,chosen={},sol=[];while(sol.length<count){var k=Math.floor(r()*total);if(!chosen[k]){chosen[k]=1;sol.push(k);}}var arr=Array(total).fill(true);sol.forEach(function(k){toggleAt(arr,k);});return{state:arr,solution:sol};}
+    function build(lv){completed=false;clear.classList.remove('show');moves=0;var made=makeLevel(lv);state=made.state.slice();startState=made.state.slice();solution=made.solution.slice();render();updateHud();
+      note.textContent=lv===0?'어두운 곳의 가운데를 톡 — 十자로 함께 바뀌어요':'천천히 눌러 모든 전등을 켜세요';
+      if(lv===0)setTimeout(function(){if(moves===0&&!completed)pulseHint();},3600);}
+    function render(){board.style.setProperty('--n',String(N));board.innerHTML='';cells=[];var total=N*N;for(var i=0;i<total;i++){var b=document.createElement('button');b.className='lamp'+(state[i]?' on':'');b.dataset.i=i;b.setAttribute('aria-label','전등');b.addEventListener('click',tapLamp);board.appendChild(b);cells.push(b);}}
     function updateHud(){levelEl.textContent=String(levelIdx+1);bestEl.textContent=String(best);movesEl.textContent=String(moves);parEl.textContent='/'+solution.length;document.getElementById('mute-ic').innerHTML='<use href="'+(muted?'#p-speaker-slash':'#p-speaker-high')+'"/>';}
     function centerOf(i){var br=board.getBoundingClientRect(),cr=cells[i].getBoundingClientRect();return{x:cr.left-br.left+cr.width/2,y:cr.top-br.top+cr.height/2,w:cr.width};}
     function fx(i,on){var p=centerOf(i),ring=document.createElement('i');ring.className='ring';ring.style.left=p.x+'px';ring.style.top=p.y+'px';ring.style.width=p.w+'px';ring.style.height=p.w+'px';board.appendChild(ring);setTimeout(function(){ring.remove();},460);for(var n=0;n<6;n++){var s=document.createElement('i');s.className='spark';s.style.left=(p.x-4)+'px';s.style.top=(p.y-4)+'px';var a=(Math.PI*2/6)*n,d=p.w*(on?.45:.28);s.style.setProperty('--dx',Math.cos(a)*d+'px');s.style.setProperty('--dy',Math.sin(a)*d+'px');board.appendChild(s);setTimeout(function(el){return function(){el.remove();};}(s),500);}var f=document.createElement('b');f.className='float';f.textContent=on?'+빛':'전환';f.style.left=(p.x-14)+'px';f.style.top=(p.y-8)+'px';board.appendChild(f);setTimeout(function(){f.remove();},760);}
@@ -143,7 +151,8 @@
     function stars(){return moves<=solution.length?3:(moves<=solution.length+3?2:1);}
     function finish(){completed=true;sClear();var cleared=levelIdx+1,old=best,st=stars();best=Math.max(best,cleared);starMap[String(cleared)]=Math.max(starMap[String(cleared)]||0,st);set(KEY.best,best);set(KEY.level,Math.min(levelIdx+1,999));setJson(KEY.stars,starMap);if(best>old)sRecord();document.getElementById('stars').innerHTML=[1,2,3].map(function(n){return '<svg class="'+(n<=st?'on':'')+'" viewBox="0 0 256 256"><use href="#p-star"/></svg>';}).join('');document.getElementById('clear-sub').textContent=best>old?'신기록! 더 밝은 공방까지 열었어요.':'전등이 모두 켜졌습니다.';document.getElementById('clear-moves').textContent=String(moves);document.getElementById('clear-par').textContent=String(solution.length);clear.classList.add('show');updateHud();}
     document.getElementById('check').addEventListener('click',function(){if(allOn())finish();else{board.classList.remove('shake');void board.offsetWidth;board.classList.add('shake');sBad();note.textContent=darkCount()+'개가 어두워요. 시간은 충분합니다.';}});
-    document.getElementById('hint').addEventListener('click',function(){if(completed)return;var target=solution.find(function(k){return state[k]===startState[k];});if(target==null)target=solution[0];cells[target].classList.remove('pulse');void cells[target].offsetWidth;cells[target].classList.add('pulse');note.textContent='반짝인 주변을 한번 의심해보세요';});
+    function pulseHint(){if(completed)return;var target=solution.find(function(k){return state[k]===startState[k];});if(target==null)target=solution[0];var r=Math.floor(target/N),c=target%N;[[r,c],[r-1,c],[r+1,c],[r,c-1],[r,c+1]].forEach(function(pp){if(pp[0]>=0&&pp[0]<N&&pp[1]>=0&&pp[1]<N){var el=cells[idx(pp[0],pp[1])];el.classList.remove('pulse');void el.offsetWidth;el.classList.add('pulse');}});note.textContent='반짝인 十자의 가운데를 눌러보세요';}
+    document.getElementById('hint').addEventListener('click',pulseHint);
     document.getElementById('reset').addEventListener('click',function(){build(levelIdx);});
     document.getElementById('mute').addEventListener('click',function(){muted=!muted;set(KEY.muted,muted?'1':'0');updateHud();if(!muted)sTap(true);});
     document.getElementById('next').addEventListener('click',function(){levelIdx++;build(levelIdx);});
