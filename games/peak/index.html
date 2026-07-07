@@ -1,0 +1,822 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#16202e">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="달빛 봉우리">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="달빛 봉우리 — 차고 기우는 달을 잇는 카드 퍼즐">
+  <meta property="og:description" content="세 봉우리에 걸린 달을 위상 순서대로 톡톡 이어 밤하늘을 걷어내요. 시간제한 없이, 항상 풀 수 있는 판만.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>달빛 봉우리</title>
+  <style>
+    @font-face{font-family:"Pretendard Variable";font-weight:45 920;font-style:normal;font-display:swap;src:url("/fonts/PretendardVariable.woff2") format("woff2-variations");}
+    :root{
+      --ink:#eaf1ff; --ink-soft:#9db0cc; --accent:#ffd98a; --accent-deep:#d69a3a;
+      --card:#1b2740; --line:rgba(150,175,220,.16);
+      --fs-1:clamp(28px,8vw,40px); --fs-2:16px; --fs-3:13px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    html,body{height:100%;background:#16202e;}
+    body{font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
+      color:var(--ink);overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none;}
+    button{font:inherit;}
+    #cv{position:fixed;inset:0;display:block;z-index:0;touch-action:none;}
+
+    /* ── 상단 HUD ── */
+    #hud{position:fixed;left:0;right:0;top:calc(8px + env(safe-area-inset-top));z-index:4;
+      display:flex;justify-content:center;gap:7px;pointer-events:none;padding:0 56px;flex-wrap:wrap;}
+    .pill{display:flex;align-items:center;gap:5px;white-space:nowrap;
+      border:1px solid var(--line);background:rgba(20,28,45,.66);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+      border-radius:999px;padding:6px 12px;color:var(--ink-soft);font-size:var(--fs-3);font-weight:700;text-shadow:0 1px 6px rgba(0,0,0,.4);}
+    .pill b{color:var(--ink);font-size:var(--fs-2);font-variant-numeric:tabular-nums;}
+    .pill.warm b{color:var(--accent);}
+
+    .icon-btn{position:fixed;z-index:6;width:40px;height:40px;border:1px solid var(--line);border-radius:12px;
+      background:rgba(20,28,45,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+      color:#cdd8f2;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .1s ease;}
+    .icon-btn:active{transform:scale(.92);}
+    #mute{top:calc(10px + env(safe-area-inset-top));right:calc(10px + env(safe-area-inset-right));}
+    #reset{top:calc(10px + env(safe-area-inset-top));left:calc(10px + env(safe-area-inset-left));}
+    .ki{width:22px;height:22px;fill:currentColor;display:block;}
+
+    /* ── 되돌리기(엄지존) ── */
+    #undo{position:fixed;z-index:6;left:calc(14px + env(safe-area-inset-left));bottom:calc(16px + env(safe-area-inset-bottom));
+      width:58px;height:58px;border-radius:18px;border:1px solid var(--line);
+      background:linear-gradient(180deg,#243450,#1a2740);color:#cdd8f2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+      box-shadow:0 4px 0 rgba(0,0,0,.3);cursor:pointer;transition:transform .09s ease,box-shadow .09s ease,opacity .15s ease;}
+    #undo:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.3);}
+    #undo:disabled{opacity:.38;cursor:default;}
+    #undo .ki{width:24px;height:24px;transform:scaleX(-1);}
+    #undo span{font-size:10px;font-weight:800;color:var(--ink-soft);}
+    #undo.pulse{animation:undoPulse 1.1s ease-in-out infinite;}
+    @keyframes undoPulse{0%,100%{box-shadow:0 4px 0 rgba(0,0,0,.3);}50%{box-shadow:0 4px 0 rgba(0,0,0,.3),0 0 0 4px rgba(255,217,138,.35);}}
+
+    /* ── 첫 안내 ── */
+    #hint{position:fixed;left:50%;top:20%;transform:translate(-50%,-50%);z-index:5;text-align:center;pointer-events:none;
+      transition:opacity .5s ease;text-shadow:0 2px 12px rgba(0,0,0,.7);width:86vw;}
+    #hint .big{font-size:18px;font-weight:900;color:#fff;}
+    #hint .sm{margin-top:6px;font-size:13px;font-weight:700;color:var(--ink-soft);line-height:1.5;}
+
+    /* ── 하단 상태 알림 ── */
+    #note{position:fixed;left:50%;bottom:calc(154px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:5;
+      font-size:var(--fs-3);font-weight:800;color:var(--ink-soft);text-align:center;pointer-events:none;text-shadow:0 1px 8px rgba(0,0,0,.6);width:80vw;transition:opacity .3s;}
+
+    /* ── 결과 모달 ── */
+    .pop{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:24px;
+      background:rgba(8,13,22,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+      opacity:0;pointer-events:none;transition:opacity .28s ease;}
+    .pop.show{opacity:1;pointer-events:auto;}
+    .pop-card{width:min(330px,88vw);border-radius:26px;background:linear-gradient(180deg,#233457,var(--card));border:1px solid var(--line);
+      padding:24px 22px 18px;text-align:center;box-shadow:0 28px 66px rgba(0,0,0,.55);
+      transform:translateY(14px) scale(.97);transition:transform .32s cubic-bezier(.2,1.15,.4,1);}
+    .pop.show .pop-card{transform:none;}
+    .pop-card .cap{font-size:var(--fs-3);font-weight:800;letter-spacing:1px;color:var(--accent);}
+    .pop-card h2{font-size:25px;font-weight:900;margin:5px 0 2px;letter-spacing:-.01em;}
+    .pop-card .desc{font-size:13.5px;color:var(--ink-soft);line-height:1.5;margin-top:6px;}
+    .stars{display:flex;justify-content:center;gap:9px;margin:16px 0 6px;}
+    .stars svg{width:38px;height:38px;fill:#33425e;transition:fill .25s ease,transform .25s ease;transform:scale(.8);}
+    .stars svg.on{fill:#ffcf5f;transform:scale(1);filter:drop-shadow(0 3px 8px rgba(255,190,70,.4));}
+    .result{font-size:13.5px;color:var(--ink-soft);margin:12px 0 4px;}
+    .result b{color:var(--ink);}
+    .pop-card .primary{margin-top:16px;width:100%;height:50px;border:none;border-radius:15px;background:linear-gradient(180deg,#ffd98a,#eaa93f);
+      color:#3a2606;font-weight:900;font-size:16px;box-shadow:0 5px 0 var(--accent-deep),0 12px 22px rgba(234,169,63,.28);cursor:pointer;transition:transform .1s ease,box-shadow .1s ease;}
+    .pop-card .primary:active{transform:translateY(3px);box-shadow:0 2px 0 var(--accent-deep);}
+    .pop-card .secondary{width:100%;height:46px;margin-top:9px;border:none;border-radius:14px;background:rgba(150,175,220,.14);color:var(--ink);font-weight:850;cursor:pointer;}
+    .pop-card .mini{display:flex;justify-content:center;gap:18px;margin-top:14px;}
+    .pop-card .mini a,.pop-card .mini button{border:none;background:none;color:var(--ink-soft);font-size:13px;font-weight:800;text-decoration:none;cursor:pointer;}
+
+    .credit{position:fixed;left:0;right:0;bottom:calc(2px + env(safe-area-inset-bottom));z-index:2;text-align:center;font-size:10px;color:rgba(157,176,204,.4);pointer-events:none;}
+  </style>
+</head>
+<body>
+  <svg style="display:none" aria-hidden="true">
+    <symbol id="p-speaker-high" viewBox="0 0 256 256"><path d="M160,32.25V223.69a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.57-51A4,4,0,0,1,80,176.16V79.84a4,4,0,0,1,1.55-3.15l65.57-51a8,8,0,0,1,10,.16A8.27,8.27,0,0,1,160,32.25ZM60,80H32A16,16,0,0,0,16,96v64a16,16,0,0,0,16,16H60a4,4,0,0,0,4-4V84A4,4,0,0,0,60,80Zm126.77,20.84a8,8,0,0,0-.72,11.3,24,24,0,0,1,0,31.72,8,8,0,1,0,12,10.58,40,40,0,0,0,0-52.88A8,8,0,0,0,186.74,100.84Zm40.89-26.17a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66Z"/></symbol>
+    <symbol id="p-speaker-slash" viewBox="0 0 256 256"><path d="M213.92,210.62a8,8,0,1,1-11.84,10.76L160,175.09v48.6a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.55-51A4,4,0,0,1,80,176.18V87.09L42.08,45.38A8,8,0,1,1,53.92,34.62Zm-27.21-55.46a8,8,0,0,0,11.29-.7,40,40,0,0,0,0-52.88,8,8,0,1,0-12,10.57,24,24,0,0,1,0,31.72A8,8,0,0,0,186.71,155.16Zm40.92-80.49a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66ZM153,119.87a4,4,0,0,0,7-2.7V32.25a8.27,8.27,0,0,0-2.88-6.4,8,8,0,0,0-10-.16L103.83,59.33a4,4,0,0,0-.5,5.85Z"/></symbol>
+    <symbol id="p-arrow-clockwise" viewBox="0 0 256 256"><path d="M240,56v48a8,8,0,0,1-8,8H184a8,8,0,0,1-5.66-13.66L197.77,78.9A88,88,0,1,0,216,128a8,8,0,0,1,16,0A104,104,0,1,1,186.9,42.23L226.34,2.34A8,8,0,0,1,240,8Z"/></symbol>
+    <symbol id="p-arrow-back" viewBox="0 0 256 256"><path d="M228,128a12,12,0,0,1-12,12H69l51.52,51.51a12,12,0,0,1-17,17l-72-72a12,12,0,0,1,0-17l72-72a12,12,0,0,1,17,17L69,116H216A12,12,0,0,1,228,128Z"/></symbol>
+    <symbol id="p-star" viewBox="0 0 256 256"><path d="M234.5,114.38l-45.1,39.36,13.51,58.6a16,16,0,0,1-23.84,17.34l-51.11-31-51,31a16,16,0,0,1-23.84-17.34L66.6,153.74,21.5,114.38a16,16,0,0,1,9.11-28.06l59.46-5.15,23.21-55.36a15.95,15.95,0,0,1,29.44,0L166,81.17l59.44,5.15a16,16,0,0,1,9.11,28.06Z"/></symbol>
+  </svg>
+
+  <canvas id="cv"></canvas>
+
+  <button class="icon-btn" id="reset" aria-label="이 봉우리 새로 섞기"><svg class="ki"><use href="#p-arrow-clockwise"/></svg></button>
+  <button class="icon-btn" id="mute" aria-label="소리 켜기/끄기"><svg class="ki"><use href="#p-speaker-high"/></svg></button>
+
+  <div id="hud">
+    <div class="pill">레벨 <b id="hud-level">1</b></div>
+    <div class="pill">최고 <b id="hud-best">0</b></div>
+    <div class="pill warm">남은 달 <b id="hud-left">0</b></div>
+  </div>
+
+  <div id="hint">
+    <div class="big">이어지는 달을 톡</div>
+    <div class="sm">지금 달과 한 칸 차거나 찬 달이면 이어져요<br>이을 게 없으면 아래 <b>달무리</b>에서 한 장 뽑아요</div>
+  </div>
+
+  <div id="note"></div>
+
+  <button id="undo" aria-label="한 수 되돌리기" disabled><svg class="ki"><use href="#p-arrow-back"/></svg><span>되돌리기</span></button>
+
+  <div class="pop" id="over">
+    <div class="pop-card">
+      <div class="cap" id="over-cap">봉우리를 걷어냈어요</div>
+      <h2 id="over-title">클리어!</h2>
+      <p class="desc" id="over-desc"></p>
+      <div class="stars" id="stars"></div>
+      <p class="result" id="over-result"></p>
+      <button class="primary" id="over-next">다음 봉우리</button>
+      <button class="secondary" id="over-again">이 봉우리 다시</button>
+      <div class="mini"><a href="/rank">기록실</a><button id="over-sup">후원 · 의견</button></div>
+    </div>
+  </div>
+
+  <div class="credit">Illustrations: finda-asset · Icons: Phosphor</div>
+
+  <script>
+  /* ========================================================================
+     달빛 봉우리 (peak) — 코어 로직 (scratch에서 node로 검증한 것과 동일)
+     TriPeaks 솔리테어를 달의 위상(8단계 순환)으로 재해석.
+     랭크 = 위상 0..7. ±1(mod 8)이면 이을 수 있다(랩어라운드: 그믐↔삭).
+     덱은 "해답을 먼저 만들고 랭크를 역으로 배정" → 항상 풀 수 있는 판만 출제.
+     ===================================================================== */
+  var PeakCore = (function () {
+    'use strict';
+    function mulberry32(seed) {
+      var s = seed >>> 0;
+      return function () {
+        s |= 0; s = (s + 0x6D2B79F5) | 0;
+        var t = Math.imul(s ^ (s >>> 15), 1 | s);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    function adjacent(a, b, N) { var d = ((a - b) % N + N) % N; return d === 1 || d === N - 1; }
+    function spec(n) {
+      n = Math.max(1, n | 0);
+      var P, D;
+      if (n <= 1) { P = 1; D = 2; }
+      else if (n <= 2) { P = 1; D = 3; }
+      else if (n <= 4) { P = 2; D = 3; }
+      else if (n <= 9) { P = 3; D = 3; }
+      else { P = 3; D = 4; }
+      var pDraw = Math.min(0.32, 0.14 + n * 0.012);
+      var slackRatio = Math.max(0.15, 0.55 - n * 0.018);
+      return { P: P, D: D, spacing: 6, ranks: 8, pDraw: pDraw, slackRatio: slackRatio, level: n };
+    }
+    function buildLayout(P, D, spacing) {
+      var slots = [], byRC = {};
+      function rc(r, c) { return r + ',' + c; }
+      for (var p = 0; p < P; p++) {
+        var cx = spacing * p + 3;
+        for (var i = 0; i < D; i++) for (var k = 0; k <= i; k++) {
+          var X = cx - i + 2 * k, id = slots.length;
+          byRC[rc(i, X)] = id;
+          slots.push({ id: id, peak: p, row: i, col: X, kind: 'peak', above: [] });
+        }
+      }
+      var baseColsSet = {};
+      slots.forEach(function (s) { if (s.row === D - 1) { baseColsSet[s.col - 1] = 1; baseColsSet[s.col + 1] = 1; } });
+      Object.keys(baseColsSet).map(Number).sort(function (a, b) { return a - b; }).forEach(function (X) {
+        var id = slots.length; byRC[rc(D, X)] = id;
+        slots.push({ id: id, peak: -1, row: D, col: X, kind: 'base', above: [] });
+      });
+      slots.forEach(function (s) {
+        [-1, 1].forEach(function (dc) { var b = byRC[rc(s.row + 1, s.col + dc)]; if (b !== undefined) s.above.push(b); });
+      });
+      var belowOf = slots.map(function () { return []; });
+      slots.forEach(function (s) { s.above.forEach(function (bid) { belowOf[bid].push(s.id); }); });
+      return { slots: slots, belowOf: belowOf };
+    }
+    function generateBoard(sp, rng) {
+      rng = rng || Math.random;
+      var lay = buildLayout(sp.P, sp.D, sp.spacing);
+      var slots = lay.slots, belowOf = lay.belowOf, n = slots.length, N = sp.ranks;
+      var remAbove = slots.map(function (s) { return s.above.length; });
+      var removed = new Array(n).fill(false), open = {};
+      for (var i = 0; i < n; i++) if (remAbove[i] === 0) open[i] = true;
+      var rank = new Array(n).fill(0), stock = [], order = [];
+      var H = (rng() * N) | 0; stock.push(H);
+      var played = 0, guard = 0;
+      while (played < n) {
+        if (++guard > 1000000) break;
+        var openIds = Object.keys(open);
+        var doDraw = openIds.length === 0 ? true : (rng() < sp.pDraw);
+        if (doDraw) { var kd = (rng() * N) | 0; stock.push(kd); H = kd; order.push({ t: 'd' }); }
+        else {
+          var pick = openIds[(rng() * openIds.length) | 0] | 0;
+          var dir = rng() < 0.5 ? 1 : -1, r = ((H + dir) % N + N) % N;
+          rank[pick] = r; removed[pick] = true; delete open[pick];
+          var bel = belowOf[pick];
+          for (var b = 0; b < bel.length; b++) { var t = bel[b]; if (--remAbove[t] === 0 && !removed[t]) open[t] = true; }
+          H = r; played++; order.push({ t: 'p', id: pick });
+        }
+      }
+      var drawsNeeded = stock.length - 1;
+      var slack = Math.max(1, Math.round(drawsNeeded * sp.slackRatio) + 1);
+      var fullStock = stock.slice();
+      for (var s2 = 0; s2 < slack; s2++) fullStock.push((rng() * N) | 0);
+      return {
+        slots: slots.map(function (s) { return { id: s.id, peak: s.peak, row: s.row, col: s.col, kind: s.kind, above: s.above.slice(), rank: rank[s.id] }; }),
+        belowOf: belowOf, N: N, stock: fullStock, stockSize: fullStock.length - 1, drawsNeeded: drawsNeeded, solution: order
+      };
+    }
+    function starsFor(stockSize, drawsUsed) {
+      if (stockSize <= 0) return 3;
+      var ratio = (stockSize - drawsUsed) / stockSize;
+      if (ratio >= 0.5) return 3; if (ratio >= 0.2) return 2; return 1;
+    }
+    return { mulberry32: mulberry32, adjacent: adjacent, spec: spec, buildLayout: buildLayout, generateBoard: generateBoard, starsFor: starsFor };
+  })();
+
+  /* ========================================================================
+     게임 (canvas 렌더 + 입력 + 주스 + 사운드 + 저장)
+     ===================================================================== */
+  (function () {
+    var KEY = { best: 'peakBest', level: 'peakLevel', stars: 'peakStars', muted: 'peakMuted', save: 'peakSave' };
+    var N = 8;
+    var PHASE_NAME = ['삭', '초승달', '상현달', '상현망', '보름달', '하현망', '하현달', '그믐달'];
+
+    function gi(k) { try { return parseInt(localStorage.getItem(k) || '0', 10) || 0; } catch (e) { return 0; } }
+    function gj(k) { try { return JSON.parse(localStorage.getItem(k) || '{}') || {}; } catch (e) { return {}; } }
+    function setI(k, v) { try { localStorage.setItem(k, String(v)); } catch (e) { } }
+    function setJ(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } }
+    function del(k) { try { localStorage.removeItem(k); } catch (e) { } }
+
+    var best = gi(KEY.best), level = Math.max(1, gi(KEY.level) || 1);
+    var starMap = gj(KEY.stars), muted = false; try { muted = localStorage.getItem(KEY.muted) === '1'; } catch (e) { }
+
+    var cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+    var W = 0, H = 0, DPR = 1;
+    var noteEl = document.getElementById('note'), hintEl = document.getElementById('hint');
+    var undoBtn = document.getElementById('undo'), over = document.getElementById('over');
+
+    // ── 에셋 ──
+    var moonImg = new Image(), starImg = new Image(), owlImg = new Image();
+    var moonReady = false, starReady = false, owlReady = false;
+    var phase = null; // 위상별 프리렌더 캔버스 8장
+    moonImg.onload = function () { moonReady = true; buildPhases(); };
+    starImg.onload = function () { starReady = true; };
+    owlImg.onload = function () { owlReady = true; };
+    moonImg.src = 'assets/moon.png'; starImg.src = 'assets/star.png'; owlImg.src = 'assets/owl.png';
+
+    // 절차적 폴백 달(이미지가 tainted라 getImageData가 막힐 때만 사용 — 게임이 죽지 않게)
+    function drawMoonInto(g, S) {
+      var mg = g.createRadialGradient(S * 0.35, S * 0.32, S * 0.1, S * 0.5, S * 0.5, S * 0.5);
+      mg.addColorStop(0, '#fbf8f0'); mg.addColorStop(.7, '#efeadd'); mg.addColorStop(1, '#d9d1c1');
+      g.fillStyle = mg; g.beginPath(); g.arc(S / 2, S / 2, S / 2 - 2, 0, 6.28); g.fill();
+      [[.35, .4, .09], [.62, .38, .11], [.5, .66, .12], [.3, .62, .06], [.68, .62, .05]].forEach(function (c) {
+        g.fillStyle = 'rgba(150,142,126,.38)'; g.beginPath(); g.arc(S * c[0], S * c[1], S * c[2], 0, 6.28); g.fill();
+      });
+    }
+    // 위상 프리렌더: 보름달 이미지에서 조명 마스크로 8단계를 정확히 만든다(그림자 = 안 비친 부분).
+    function buildPhases() {
+      var S = 200; phase = []; var useImage = true;
+      for (var r = 0; r < 8; r++) {
+        var c = document.createElement('canvas'); c.width = c.height = S;
+        var g = c.getContext('2d');
+        if (useImage) g.drawImage(moonImg, 0, 0, S, S); else drawMoonInto(g, S);
+        var id;
+        try { id = g.getImageData(0, 0, S, S); }
+        catch (e) { if (useImage) { useImage = false; r = -1; phase = []; continue; } phase = null; return; }
+        var d = id.data, R = S / 2 - 2, cx = S / 2, cy = S / 2;
+        var a = r * Math.PI / 4, waxing = a <= Math.PI, m = Math.cos(a);
+        for (var y = 0; y < S; y++) for (var x = 0; x < S; x++) {
+          var i4 = (y * S + x) * 4; if (d[i4 + 3] < 8) continue;
+          var dx = x - cx, dy = y - cy; if (dx * dx + dy * dy > R * R) continue;
+          var w = Math.sqrt(Math.max(0, R * R - dy * dy));
+          var lit = waxing ? (dx >= m * w) : (dx <= -m * w);
+          if (!lit) { d[i4] = d[i4] * 0.22 + 20; d[i4 + 1] = d[i4 + 1] * 0.22 + 28; d[i4 + 2] = d[i4 + 2] * 0.22 + 44; }
+          else if (r === 4) { d[i4] = Math.min(255, d[i4] + 8); d[i4 + 2] = d[i4 + 2] * 0.94; } // 보름달 살짝 따뜻하게
+        }
+        g.putImageData(id, 0, 0); phase.push(c);
+      }
+    }
+
+    // ── 사운드 ──
+    var ac = null;
+    function actx() { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { } } return ac; }
+    function tone(f, t, d, type, vol) { if (muted) return; var c = actx(); if (!c) return; var o = c.createOscillator(), g = c.createGain(); o.type = type || 'sine'; o.frequency.value = f; o.connect(g); g.connect(c.destination); var x = c.currentTime + (t || 0); g.gain.setValueAtTime(.0001, x); g.gain.exponentialRampToValueAtTime(vol || .13, x + .01); g.gain.exponentialRampToValueAtTime(.0001, x + (d || .12)); o.start(x); o.stop(x + (d || .12) + .03); }
+    function sTap(cb) { var base = 440 + Math.min(cb, 12) * 42; tone(base, 0, .09, 'triangle', .12); tone(base * 1.5, .03, .08, 'sine', .07); }
+    function sDraw() { tone(250, 0, .08, 'sine', .09); tone(180, .05, .1, 'triangle', .07); }
+    function sDeny() { tone(150, 0, .12, 'sawtooth', .07); }
+    function sChain(cb) { tone(600 + cb * 55, 0, .12, 'sine', .1); }
+    function sClear() { [523, 659, 784, 1047].forEach(function (f, i) { tone(f, i * .09, .16, 'triangle', .15); }); }
+    function sRecord() { [784, 988, 1319, 1568].forEach(function (f, i) { tone(f, .5 + i * .09, .14, 'sine', .13); }); }
+
+    // ── 게임 상태 ──
+    var seed = 0, board = null, removed = null, hand = 0, sp = 1;
+    var moves = 0, combo = 0, maxCombo = 0, won = false, history = [];
+    // 레이아웃(화면 좌표) 캐시
+    var geo = { cw: 60, ch: 80, ox: 0, oy: 0, rowGap: 40, minCol: 0 };
+    // 이펙트
+    var parts = [], floaters = [], shooters = [], shakeT = 0, shakeMag = 0;
+    var handPulse = 0, drawPulse = 0, cardAnim = {}, tState = 0;
+    var stuckShown = false;
+
+    function rngFor(s) { return PeakCore.mulberry32(s); }
+
+    function newBoard(lv, freshSeed) {
+      level = lv;
+      seed = freshSeed != null ? freshSeed : ((Date.now() ^ (lv * 2654435761)) >>> 0);
+      board = PeakCore.generateBoard(PeakCore.spec(lv), rngFor(seed));
+      removed = new Array(board.slots.length).fill(false);
+      hand = board.stock[0]; sp = 1; moves = 0; combo = 0; maxCombo = 0; won = false; history = [];
+      parts = []; floaters = []; shooters = []; cardAnim = {}; stuckShown = false;
+      over.classList.remove('show');
+      layout(); updateHud(); saveState();
+    }
+
+    function restore() {
+      var d = null; try { d = JSON.parse(localStorage.getItem(KEY.save) || 'null'); } catch (e) { }
+      if (!d || d.v !== 2 || !d.seed) return false;
+      level = d.lv; seed = d.seed >>> 0;
+      board = PeakCore.generateBoard(PeakCore.spec(level), rngFor(seed));
+      if (!d.rem || d.rem.length !== board.slots.length) return false;
+      removed = d.rem.split('').map(function (c) { return c === '1'; });
+      hand = d.hand; sp = d.sp; moves = d.moves || 0; combo = d.combo || 0; maxCombo = d.mc || 0;
+      won = false; history = (d.hist || []).slice(-260);
+      parts = []; floaters = []; shooters = []; cardAnim = {}; stuckShown = false;
+      over.classList.remove('show');
+      layout(); updateHud();
+      // 이미 다 걷었으면(복원 직후 클리어 상태) 그냥 클리어 처리
+      if (allCleared()) { finishWin(false); }
+      return true;
+    }
+
+    function saveState() {
+      if (won) { del(KEY.save); return; }
+      try {
+        localStorage.setItem(KEY.save, JSON.stringify({
+          v: 2, lv: level, seed: seed, rem: removed.map(function (b) { return b ? '1' : '0'; }).join(''),
+          hand: hand, sp: sp, moves: moves, combo: combo, mc: maxCombo, hist: history.slice(-260)
+        }));
+      } catch (e) { }
+    }
+
+    // ── 규칙 ──
+    function isOpen(id) { var ab = board.slots[id].above; for (var i = 0; i < ab.length; i++) if (!removed[ab[i]]) return false; return true; }
+    function isMatch(id) { return !removed[id] && isOpen(id) && PeakCore.adjacent(board.slots[id].rank, hand, N); }
+    function stockLeft() { return board.stock.length - sp; }
+    function drawsUsed() { return sp - 1; }
+    function allCleared() { for (var i = 0; i < removed.length; i++) if (!removed[i]) return false; return true; }
+    function matchExists() { for (var i = 0; i < board.slots.length; i++) if (isMatch(i)) return true; return false; }
+    function remainingCount() { var n = 0; for (var i = 0; i < removed.length; i++) if (!removed[i]) n++; return n; }
+
+    function snapshot() { return { rem: removed.map(function (b) { return b ? '1' : '0'; }).join(''), hand: hand, sp: sp, moves: moves, combo: combo }; }
+    function pushHistory() { history.push(snapshot()); if (history.length > 260) history.shift(); }
+
+    function playCard(id) {
+      if (won) return;
+      if (!isOpen(id)) return;
+      if (!PeakCore.adjacent(board.slots[id].rank, hand, N)) { denyCard(id); return; }
+      pushHistory();
+      var s = board.slots[id];
+      var p = cardXY(s);
+      removed[id] = true; hand = s.rank; moves++; combo++; maxCombo = Math.max(maxCombo, combo);
+      handPulse = 1;
+      // 주스: 카드가 손패로 날아가는 연출 + 파편 + 링 + 콤보팝
+      flyCardToHand(p.x, p.y, s.rank);
+      burst(p.x, p.y, combo);
+      if (combo >= 2) { comboFloater(p.x, p.y, combo); sChain(combo); }
+      sTap(combo);
+      if (combo >= 3) { shake(Math.min(2 + combo * 0.8, 7)); }
+      if (combo >= 4) spawnShooter(false);
+      if (combo >= 6 && combo % 3 === 0) spawnShooter(false);
+      if (navigator.vibrate) navigator.vibrate(combo >= 4 ? 22 : 12);
+      fadeHint();
+      updateHud(); saveState();
+      if (allCleared()) { finishWin(true); }
+      else afterMove();
+    }
+    function drawStock() {
+      if (won) return;
+      if (stockLeft() <= 0) { sDeny(); flashNote('달무리가 비었어요 — 되돌리거나 새로 섞어요'); return; }
+      pushHistory();
+      hand = board.stock[sp]; sp++; combo = 0; drawPulse = 1; handPulse = 1;
+      sDraw(); if (navigator.vibrate) navigator.vibrate(8);
+      fadeHint();
+      updateHud(); saveState();
+      afterMove();
+    }
+    function denyCard(id) {
+      sDeny(); var p = cardXY(board.slots[id]);
+      cardAnim[id] = { deny: 1 };
+      flashNote('그 달은 지금 달과 이어지지 않아요');
+    }
+    function afterMove() {
+      if (won) return;
+      if (!matchExists() && stockLeft() <= 0) {
+        stuckShown = true;
+        undoBtn.classList.add('pulse');
+        flashNote('막다른 길 — 되돌리기로 다른 길을 찾아봐요', 4200);
+      } else {
+        stuckShown = false; undoBtn.classList.remove('pulse');
+      }
+      var rc = remainingCount();
+      if (!stuckShown && rc > 0 && rc <= 3) flashNote(rc === 1 ? '한 장 남았어요!' : '거의 다 걷었어요 · ' + rc + '장');
+    }
+    function undo() {
+      if (won || !history.length) return;
+      var st = history.pop();
+      removed = st.rem.split('').map(function (c) { return c === '1'; });
+      hand = st.hand; sp = st.sp; moves = st.moves; combo = st.combo;
+      stuckShown = false; undoBtn.classList.remove('pulse');
+      handPulse = 1; tone(430, 0, .06, 'sine', .08); tone(320, .05, .07, 'sine', .06);
+      updateHud(); saveState(); flashNote('한 수 되돌렸어요');
+    }
+
+    function finishWin(celebrate) {
+      won = true; del(KEY.save);
+      var cleared = level, stars = PeakCore.starsFor(board.stockSize, drawsUsed());
+      var oldBest = best; best = Math.max(best, cleared);
+      starMap[String(cleared)] = Math.max(starMap[String(cleared)] || 0, stars);
+      setI(KEY.best, best); setI(KEY.level, level + 1); setJ(KEY.stars, starMap);
+      var record = best > oldBest;
+      if (celebrate) {
+        sClear();
+        for (var i = 0; i < 5; i++) setTimeout(function () { spawnShooter(true); }, i * 130);
+        burstBig();
+        if (record) { setTimeout(sRecord, 400); for (var j = 0; j < 6; j++) setTimeout(function () { spawnShooter(true); }, 500 + j * 120); }
+        if (navigator.vibrate) navigator.vibrate(record ? [30, 40, 60] : 40);
+      }
+      updateHud();
+      setTimeout(function () { showOver(stars, cleared, record); }, celebrate ? 720 : 60);
+    }
+
+    function showOver(stars, cleared, record) {
+      document.getElementById('over-cap').textContent = record ? '새로운 밤 기록' : '봉우리를 걷어냈어요';
+      document.getElementById('over-title').textContent = record ? '신기록!' : '봉우리 클리어';
+      var next = level + 1, ns = PeakCore.spec(next);
+      document.getElementById('over-desc').textContent = record
+        ? (cleared + '번째 봉우리까지 달을 모두 이었어요.')
+        : ('달을 모두 이어 밤하늘을 걷어냈어요.');
+      document.getElementById('over-result').innerHTML = '이번 판 최고 콤보 <b>×' + maxCombo + '</b> · 남긴 달무리 <b>' + stockLeft() + '</b> · 최고 <b>' + best + '</b>레벨';
+      var box = document.getElementById('stars'); box.innerHTML = '';
+      for (var i = 1; i <= 3; i++) box.innerHTML += '<svg viewBox="0 0 256 256"><use href="#p-star"/></svg>';
+      var svgs = box.querySelectorAll('svg');
+      document.getElementById('over-next').textContent = '다음 봉우리 (' + next + ')';
+      over.classList.add('show');
+      svgs.forEach(function (s, i) { setTimeout(function () { if (i < stars) s.classList.add('on'); }, 260 + i * 180); });
+    }
+
+    // ── 화면 레이아웃 ──
+    function layout() {
+      DPR = Math.min(window.devicePixelRatio || 1, 2.5);
+      W = window.innerWidth; H = window.innerHeight;
+      cv.width = W * DPR; cv.height = H * DPR; cv.style.width = W + 'px'; cv.style.height = H + 'px';
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      if (!board) return;
+      var cols = board.slots.map(function (s) { return s.col; });
+      var minCol = Math.min.apply(null, cols), maxCol = Math.max.apply(null, cols);
+      var maxRow = 0; board.slots.forEach(function (s) { if (s.row > maxRow) maxRow = s.row; });
+      var hudH = 92, dockH = 168;
+      var availW = W * 0.94, availH = H - hudH - dockH;
+      // cw 후보: 폭 기준 / 높이 기준
+      var colUnits = (maxCol - minCol) / 2 + 1;         // cw 단위 폭
+      var cwW = availW / colUnits;
+      var rowFactor = 1.34 * (0.5 * maxRow + 1);        // ch=1.34cw, rowGap=0.5ch
+      var cwH = availH / rowFactor;
+      var cw = Math.min(cwW, cwH, 76); cw = Math.max(cw, 30);
+      var ch = cw * 1.34, rowGap = ch * 0.5;
+      var boardW = (maxCol - minCol) * (cw / 2) + cw;
+      var boardH = maxRow * rowGap + ch;
+      var ox = (W - boardW) / 2 + cw / 2;
+      var oy = hudH + (availH - boardH) / 2 + ch / 2;
+      geo = { cw: cw, ch: ch, rowGap: rowGap, ox: ox, oy: oy, minCol: minCol, hudH: hudH, dockH: dockH };
+    }
+    function cardXY(s) { return { x: geo.ox + (s.col - geo.minCol) * (geo.cw / 2), y: geo.oy + s.row * geo.rowGap }; }
+    function dockGeo() {
+      var cy = H - geo.dockH * 0.52;
+      return { handX: W * 0.5, handY: cy, stockX: W * 0.78, stockY: cy, owlX: W * 0.20, owlY: cy };
+    }
+
+    // ── 그리기 ──
+    function rr(x, y, w, h, r) { r = Math.min(r, w / 2, h / 2); ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+
+    function drawBg(t) {
+      var g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, '#141d2b'); g.addColorStop(0.55, '#1a2536'); g.addColorStop(1, '#20304a');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      // 잔잔한 별
+      ctx.save();
+      for (var i = 0; i < 46; i++) {
+        var sx = ((i * 97.13) % W), sy = ((i * 53.7) % (H * 0.72));
+        var tw = 0.35 + 0.35 * Math.sin(t * 1.3 + i * 1.7);
+        ctx.globalAlpha = 0.2 + tw * 0.5;
+        ctx.fillStyle = i % 7 === 0 ? '#ffe6b0' : '#cdd9f0';
+        var r = i % 9 === 0 ? 1.7 : 1.0;
+        ctx.beginPath(); ctx.arc(sx, sy, r, 0, 6.28); ctx.fill();
+      }
+      ctx.restore();
+      // 봉우리 실루엣 (뒤 → 앞)
+      drawPeaks();
+    }
+    function drawPeaks() {
+      var base = H - geo.dockH * 0.72;
+      var layers = [
+        { c: '#111925', o: 1, h: 0.24, off: 0.0 },
+        { c: '#0e141f', o: 1, h: 0.34, off: 0.5 }
+      ];
+      layers.forEach(function (L) {
+        ctx.fillStyle = L.c;
+        ctx.beginPath(); ctx.moveTo(0, base);
+        var peaks = 4, span = W / peaks;
+        ctx.lineTo(0, base - H * L.h * 0.5);
+        for (var p = 0; p <= peaks; p++) {
+          var px = span * p + span * L.off * 0.5;
+          var ph = base - H * L.h * (0.7 + 0.3 * ((p * 37 % 10) / 10));
+          ctx.lineTo(px - span * 0.5, base - H * L.h * 0.35);
+          ctx.lineTo(px, ph);
+        }
+        ctx.lineTo(W, base - H * L.h * 0.4); ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
+      });
+    }
+
+    function drawMoonSprite(r, x, y, size, glow, glowA) {
+      if (glow) {
+        var gr = size * (0.62 + glow * 0.12);
+        var gg = ctx.createRadialGradient(x, y, size * 0.3, x, y, gr);
+        gg.addColorStop(0, 'rgba(255,224,150,' + (0.32 * (glowA == null ? 1 : glowA)) + ')');
+        gg.addColorStop(1, 'rgba(255,224,150,0)');
+        ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(x, y, gr, 0, 6.28); ctx.fill();
+      }
+      if (phase && phase[r]) ctx.drawImage(phase[r], x - size / 2, y - size / 2, size, size);
+      else { ctx.fillStyle = '#e9e6dc'; ctx.beginPath(); ctx.arc(x, y, size / 2, 0, 6.28); ctx.fill(); }
+    }
+
+    function drawCard(s, t) {
+      var id = s.id; if (removed[id]) return;
+      var p = cardXY(s), cw = geo.cw, ch = geo.ch, x = p.x, y = p.y;
+      var open = isOpen(id), match = open && PeakCore.adjacent(s.rank, hand, N);
+      var an = cardAnim[id], denyDx = 0;
+      if (an && an.deny > 0) { denyDx = Math.sin(an.deny * 30) * 5 * an.deny; an.deny -= 0.05; if (an.deny <= 0) delete cardAnim[id]; }
+      var bob = open ? Math.sin(t * 1.6 + s.col * 0.5) * (ch * 0.012) : 0;
+      var cx = x + denyDx, cy = y + bob;
+      ctx.save();
+      // 카드 타일
+      var tl = cx - cw / 2, tp = cy - ch / 2;
+      ctx.shadowColor = 'rgba(0,0,0,.32)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 3;
+      rr(tl, tp, cw, ch, cw * 0.16);
+      var cg = ctx.createLinearGradient(0, tp, 0, tp + ch);
+      cg.addColorStop(0, match ? '#fbf4de' : '#efe9db'); cg.addColorStop(1, match ? '#ecdfba' : '#ddd3c0');
+      ctx.fillStyle = cg; ctx.fill();
+      ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+      // 테두리
+      rr(tl, tp, cw, ch, cw * 0.16);
+      ctx.lineWidth = Math.max(1, cw * 0.03); ctx.strokeStyle = match ? 'rgba(214,154,58,.7)' : 'rgba(90,74,44,.28)'; ctx.stroke();
+      // 달
+      var pulse = match ? (0.6 + 0.4 * Math.sin(t * 3.2 + s.col)) : 0;
+      drawMoonSprite(s.rank, cx, cy - ch * 0.12, cw * 0.72, match ? pulse : 0, pulse);
+      // 랭크 표시(보조): 위상 인덱스 1..8
+      ctx.fillStyle = 'rgba(58,48,32,.7)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = '800 ' + (cw * 0.26) + 'px "Pretendard Variable",sans-serif';
+      ctx.fillText(String(s.rank + 1), cx, cy + ch * 0.34);
+      // 덮인 카드: 밤 베일
+      if (!open) { rr(tl, tp, cw, ch, cw * 0.16); ctx.fillStyle = 'rgba(16,22,34,.42)'; ctx.fill(); }
+      ctx.restore();
+    }
+
+    function drawDock(t) {
+      var d = dockGeo();
+      // 손패(지금 달)
+      var hs = 1 + handPulse * 0.14;
+      ctx.save(); ctx.translate(d.handX, d.handY); ctx.scale(hs, hs);
+      // 받침 원
+      var pg = ctx.createRadialGradient(0, 0, 6, 0, 0, geo.cw * 0.9);
+      pg.addColorStop(0, 'rgba(255,224,150,.14)'); pg.addColorStop(1, 'rgba(255,224,150,0)');
+      ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(0, 0, geo.cw * 0.9, 0, 6.28); ctx.fill();
+      drawMoonSprite(hand, 0, 0, geo.cw * 1.02, 0.5, 0.5);
+      ctx.restore();
+      ctx.fillStyle = 'rgba(157,176,204,.85)'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.font = '800 12px "Pretendard Variable",sans-serif';
+      ctx.fillText('지금 · ' + PHASE_NAME[hand], d.handX, d.handY + geo.cw * 0.72);
+
+      // 달무리(스톡) — 뒤집힌 카드 더미
+      var left = stockLeft(), cw = geo.cw * 0.82, ch = cw * 1.34;
+      var stackN = Math.min(4, left);
+      for (var i = stackN - 1; i >= 0; i--) {
+        var off = i * 3;
+        var sx = d.stockX - off, sy = d.stockY - off;
+        rr(sx - cw / 2, sy - ch / 2, cw, ch, cw * 0.16);
+        var sg = ctx.createLinearGradient(0, sy - ch / 2, 0, sy + ch / 2);
+        sg.addColorStop(0, '#2b3c5c'); sg.addColorStop(1, '#1d2c46');
+        ctx.fillStyle = sg; ctx.fill();
+        rr(sx - cw / 2, sy - ch / 2, cw, ch, cw * 0.16);
+        ctx.lineWidth = 1.4; ctx.strokeStyle = 'rgba(150,175,220,.22)'; ctx.stroke();
+        if (i === 0) {
+          // 앞면 더미에 초승 문양 (덮개 원으로 초승 카빙 — 구멍 안 뚫리게)
+          ctx.save();
+          var gp = 1 + drawPulse * 0.1;
+          ctx.translate(sx, sy - ch * 0.05); ctx.scale(gp, gp);
+          ctx.fillStyle = 'rgba(255,224,150,.92)';
+          ctx.beginPath(); ctx.arc(0, 0, cw * 0.25, 0, 6.28); ctx.fill();
+          ctx.fillStyle = '#213150';
+          ctx.beginPath(); ctx.arc(cw * 0.12, -cw * 0.02, cw * 0.23, 0, 6.28); ctx.fill();
+          ctx.restore();
+        }
+      }
+      ctx.fillStyle = left > 0 ? 'rgba(255,217,138,.95)' : 'rgba(157,176,204,.6)';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.font = '800 12px "Pretendard Variable",sans-serif';
+      ctx.fillText(left > 0 ? '달무리 ' + left + '장 · 톡 뽑기' : '달무리 없음', d.stockX, d.stockY + ch * 0.62);
+
+      // 부엉이 동무 — 뒤 능선 위에 앉아 콤보 때 폴짝 (되돌리기 버튼과 안 겹치게 위쪽)
+      if (owlReady) {
+        var os = geo.cw * 1.35;
+        var ridgeY = (H - geo.dockH * 0.72) - os * 0.42;
+        var owlX = W * 0.19;
+        var jump = combo >= 2 ? Math.abs(Math.sin(t * 6)) * 7 * Math.min(combo / 4, 1) : 0;
+        var breathe = 1 + Math.sin(t * 1.4) * 0.02;
+        ctx.save(); ctx.translate(owlX, ridgeY - jump); ctx.scale(breathe, breathe);
+        ctx.drawImage(owlImg, -os / 2, -os / 2, os, os);
+        ctx.restore();
+      }
+    }
+
+    // ── 이펙트 ──
+    function shake(m) { shakeT = 0.32; shakeMag = m; }
+    function burst(x, y, cb) {
+      var n = 6 + Math.min(cb, 8) * 2;
+      for (var i = 0; i < n; i++) {
+        var a = Math.random() * 6.28, sp2 = 40 + Math.random() * 110;
+        parts.push({ x: x, y: y, vx: Math.cos(a) * sp2, vy: Math.sin(a) * sp2 - 30, life: 1, r: 1.5 + Math.random() * 2.5, star: Math.random() < 0.4, hue: cb >= 3 });
+      }
+      floaters.push({ x: x, y: y, ring: 1, cb: cb >= 3 });
+    }
+    function burstBig() {
+      var cx = W / 2, cy = H * 0.4;
+      for (var i = 0; i < 60; i++) {
+        var a = Math.random() * 6.28, sp2 = 60 + Math.random() * 220;
+        parts.push({ x: cx, y: cy, vx: Math.cos(a) * sp2, vy: Math.sin(a) * sp2, life: 1.2, r: 2 + Math.random() * 3, star: Math.random() < 0.6, hue: true });
+      }
+    }
+    function comboFloater(x, y, cb) { floaters.push({ x: x, y: y - geo.ch * 0.4, text: '×' + cb, life: 1, vy: -46, big: cb >= 4 }); }
+    function flyCardToHand(x, y, r) {
+      var d = dockGeo();
+      floaters.push({ fly: 1, x: x, y: y, tx: d.handX, ty: d.handY, r: r, life: 1, sz0: geo.cw * 0.72 });
+    }
+    function spawnShooter(gold) {
+      var y = 40 + Math.random() * (H * 0.34);
+      var dir = Math.random() < 0.5 ? 1 : -1;
+      shooters.push({ x: dir > 0 ? -40 : W + 40, y: y, vx: dir * (420 + Math.random() * 260), vy: 60 + Math.random() * 60, life: 1, gold: gold });
+    }
+
+    function updateEffects(dt, t) {
+      if (handPulse > 0) handPulse = Math.max(0, handPulse - dt * 4);
+      if (drawPulse > 0) drawPulse = Math.max(0, drawPulse - dt * 4);
+      if (shakeT > 0) shakeT = Math.max(0, shakeT - dt);
+      for (var i = parts.length - 1; i >= 0; i--) {
+        var p = parts[i]; p.life -= dt * 1.5; p.vy += 220 * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+        if (p.life <= 0) parts.splice(i, 1);
+      }
+      for (var j = floaters.length - 1; j >= 0; j--) {
+        var f = floaters[j];
+        if (f.ring != null) { f.ring += dt * 3.4; if (f.ring > 2.2) floaters.splice(j, 1); continue; }
+        if (f.fly) { f.life -= dt * 3.6; if (f.life <= 0) { floaters.splice(j, 1); continue; } continue; }
+        f.life -= dt * 1.4; f.y += (f.vy || -40) * dt; if (f.life <= 0) floaters.splice(j, 1);
+      }
+      for (var k = shooters.length - 1; k >= 0; k--) {
+        var s = shooters[k]; s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt * 0.5;
+        if (s.x < -80 || s.x > W + 80 || s.life <= 0) shooters.splice(k, 1);
+      }
+    }
+    function drawEffects() {
+      // 슈팅스타
+      shooters.forEach(function (s) {
+        ctx.save();
+        var tailLen = 70;
+        var ang = Math.atan2(s.vy, s.vx);
+        var tx = s.x - Math.cos(ang) * tailLen, ty = s.y - Math.sin(ang) * tailLen;
+        var g = ctx.createLinearGradient(s.x, s.y, tx, ty);
+        var col = s.gold ? '255,224,150' : '205,217,240';
+        g.addColorStop(0, 'rgba(' + col + ',.9)'); g.addColorStop(1, 'rgba(' + col + ',0)');
+        ctx.strokeStyle = g; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(s.x, s.y); ctx.stroke();
+        if (starReady) { var ss = s.gold ? 16 : 11; ctx.globalAlpha = 0.95; ctx.drawImage(starImg, s.x - ss / 2, s.y - ss / 2, ss, ss); }
+        ctx.restore();
+      });
+      // 파편
+      parts.forEach(function (p) {
+        ctx.globalAlpha = Math.max(0, p.life);
+        if (p.star && starReady) { var sz = p.r * 3.2; ctx.drawImage(starImg, p.x - sz / 2, p.y - sz / 2, sz, sz); }
+        else { ctx.fillStyle = p.hue ? '#ffe08a' : '#dfe8ff'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.28); ctx.fill(); }
+      });
+      ctx.globalAlpha = 1;
+      // 플로터: 링 / 콤보텍스트 / 날아가는 카드
+      floaters.forEach(function (f) {
+        if (f.ring != null) {
+          ctx.globalAlpha = Math.max(0, 1 - f.ring / 2.2);
+          ctx.strokeStyle = f.cb ? 'rgba(255,224,150,.8)' : 'rgba(220,230,250,.7)';
+          ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(f.x, f.y, geo.cw * 0.4 * f.ring, 0, 6.28); ctx.stroke();
+          ctx.globalAlpha = 1; return;
+        }
+        if (f.fly) {
+          var k = 1 - f.life; var d = dockGeo();
+          var fx = f.x + (f.tx - f.x) * k, fy = f.y + (f.ty - f.y) * k;
+          var sz = f.sz0 * (1 - 0.5 * k);
+          ctx.globalAlpha = Math.max(0, f.life);
+          drawMoonSprite(f.r, fx, fy, sz, 0, 0);
+          ctx.globalAlpha = 1; return;
+        }
+        ctx.globalAlpha = Math.max(0, f.life);
+        ctx.fillStyle = f.big ? '#ffcf5f' : '#ffe08a';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.font = '900 ' + (f.big ? 30 : 22) + 'px "Pretendard Variable",sans-serif';
+        ctx.fillText(f.text, f.x, f.y);
+        ctx.globalAlpha = 1;
+      });
+    }
+
+    // ── 루프 ──
+    var last = 0;
+    function loop(ts) {
+      var t = ts / 1000, dt = last ? Math.min(0.05, t - last) : 0.016; last = t; tState = t;
+      updateEffects(dt, t);
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      if (shakeT > 0) { var m = shakeMag * (shakeT / 0.32); ctx.translate((Math.random() - 0.5) * m, (Math.random() - 0.5) * m); }
+      drawBg(t);
+      if (board) {
+        // 봉우리 카드: 위 행 → 아래 행 순으로(아래가 앞을 덮음)
+        var order = board.slots.slice().sort(function (a, b) { return a.row - b.row; });
+        order.forEach(function (s) { drawCard(s, t); });
+        drawDock(t);
+      }
+      drawEffects();
+      requestAnimationFrame(loop);
+    }
+
+    // ── HUD/노트 ──
+    function updateHud() {
+      document.getElementById('hud-level').textContent = String(level);
+      document.getElementById('hud-best').textContent = String(best);
+      document.getElementById('hud-left').textContent = String(remainingCount());
+      undoBtn.disabled = history.length === 0;
+      document.getElementById('mute').querySelector('use').setAttribute('href', muted ? '#p-speaker-slash' : '#p-speaker-high');
+    }
+    var noteTimer = null;
+    function flashNote(txt, ms) {
+      noteEl.textContent = txt; noteEl.style.opacity = '1';
+      if (noteTimer) clearTimeout(noteTimer);
+      noteTimer = setTimeout(function () { if (!stuckShown) noteEl.style.opacity = '0'; }, ms || 2200);
+    }
+    var hintFaded = false;
+    function fadeHint() { if (!hintFaded) { hintFaded = true; hintEl.style.opacity = '0'; } }
+
+    // ── 입력 ──
+    function hitTest(px, py) {
+      var d = dockGeo();
+      // 스톡
+      var cw = geo.cw * 0.82, ch = cw * 1.34;
+      if (px > d.stockX - cw * 0.8 && px < d.stockX + cw * 0.8 && py > d.stockY - ch * 0.7 && py < d.stockY + ch * 0.9) return { type: 'stock' };
+      // 봉우리 카드: 앞(아래 행)부터 검사
+      var order = board.slots.slice().sort(function (a, b) { return b.row - a.row; });
+      for (var i = 0; i < order.length; i++) {
+        var s = order[i]; if (removed[s.id]) continue;
+        var p = cardXY(s);
+        if (px > p.x - geo.cw / 2 && px < p.x + geo.cw / 2 && py > p.y - geo.ch / 2 && py < p.y + geo.ch / 2) {
+          return { type: 'card', id: s.id, open: isOpen(s.id) };
+        }
+      }
+      return null;
+    }
+    function onTap(px, py) {
+      if (won || !board) return;
+      if (actx() && ac.state === 'suspended') { try { ac.resume(); } catch (e) { } }
+      var h = hitTest(px, py);
+      if (!h) return;
+      if (h.type === 'stock') { drawStock(); return; }
+      if (h.type === 'card') { if (h.open) playCard(h.id); }
+    }
+    var downX = 0, downY = 0, moved = false;
+    cv.addEventListener('pointerdown', function (e) { downX = e.clientX; downY = e.clientY; moved = false; });
+    cv.addEventListener('pointermove', function (e) { if (Math.abs(e.clientX - downX) > 12 || Math.abs(e.clientY - downY) > 12) moved = true; });
+    cv.addEventListener('pointerup', function (e) { if (!moved) onTap(e.clientX, e.clientY); });
+
+    // ── 버튼 ──
+    undoBtn.addEventListener('click', undo);
+    document.getElementById('reset').addEventListener('click', function () { newBoard(level); flashNote('새 달판으로 섞었어요'); });
+    document.getElementById('mute').addEventListener('click', function () { muted = !muted; setI(KEY.muted, muted ? '1' : '0'); updateHud(); if (!muted) sDraw(); });
+    document.getElementById('over-next').addEventListener('click', function () { newBoard(level + 1); });
+    document.getElementById('over-again').addEventListener('click', function () { newBoard(level, seed); });
+    document.getElementById('over-sup').addEventListener('click', function () { if (window.GamePortal && GamePortal.openSupport) GamePortal.openSupport(); });
+    window.addEventListener('pagehide', saveState);
+    window.addEventListener('resize', layout);
+    document.addEventListener('visibilitychange', function () { if (document.hidden) saveState(); });
+
+    // ── 시작 ──
+    if (!restore()) newBoard(level);
+    requestAnimationFrame(loop);
+  })();
+  </script>
+  <script>
+    if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('./sw.js');
+  </script>
+</body>
+</html>

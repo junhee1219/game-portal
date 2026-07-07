@@ -532,6 +532,61 @@
       ]
     },
     {
+      "id": "peak",
+      "shell_mode": "fullscreen",
+      "title": "달빛 봉우리",
+      "tagline": "지금 달과 이어지는 달을 톡톡 — 봉우리에 걸린 달을 모두 걷어내는 밤하늘 카드 퍼즐.",
+      "unit": "레벨",
+      "score_key": "peakBest",
+      "score_metric": "level",
+      "state_keys": [
+        {
+          "key": "peakBest",
+          "merge": "max"
+        },
+        {
+          "key": "peakLevel",
+          "merge": "max"
+        },
+        {
+          "key": "peakStars",
+          "merge": "union"
+        },
+        {
+          "key": "peakSave",
+          "merge": "lww"
+        },
+        {
+          "key": "peakMuted",
+          "merge": "lww"
+        }
+      ]
+    },
+    {
+      "id": "dice",
+      "shell_mode": "panel",
+      "title": "원석 세공",
+      "tagline": "원석 다섯 알을 굴리고 남길 알을 톡 — 열두 칸에 세공해 넣어 최고 총점에 도전!",
+      "unit": "점",
+      "score_key": "diceBest",
+      "score_metric": "score",
+      "defer_share": true,
+      "state_keys": [
+        {
+          "key": "diceBest",
+          "merge": "max"
+        },
+        {
+          "key": "diceSave",
+          "merge": "lww"
+        },
+        {
+          "key": "diceMuted",
+          "merge": "lww"
+        }
+      ]
+    },
+    {
       "id": "flow",
       "shell_mode": "panel",
       "title": "무지개 잇기",

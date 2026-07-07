@@ -1,0 +1,68 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#fff;}</style></head>
+<body>
+<canvas id="c" width="512" height="512"></canvas>
+<script>
+// 달빛 봉우리 아이콘 — 밤하늘 + 봉우리 실루엣 + 보름달 (절차적, 즉시 __png 가능).
+// 게임 인게임 룩과 동일 톤(검보라·네온 금지, 차분한 슬레이트 나이트 + 따뜻한 달빛).
+const cv=document.getElementById('c'), x=cv.getContext('2d');
+function rr(X,Y,W,H,R){R=Math.min(R,W/2,H/2);x.beginPath();x.moveTo(X+R,Y);x.arcTo(X+W,Y,X+W,Y+H,R);x.arcTo(X+W,Y+H,X,Y+H,R);x.arcTo(X,Y+H,X,Y,R);x.arcTo(X,Y,X+W,Y,R);x.closePath();}
+// 라운드 클립
+rr(0,0,512,512,112); x.save(); x.clip();
+// 밤하늘 그라데이션 (명도폭 좁게)
+const g=x.createLinearGradient(0,0,0,512);
+g.addColorStop(0,'#141d2b'); g.addColorStop(.55,'#1a2536'); g.addColorStop(1,'#24344d');
+x.fillStyle=g; x.fillRect(0,0,512,512);
+// 별
+let s=7; function rnd(){s=(s*16807)%2147483647;return s/2147483647;}
+for(let i=0;i<70;i++){
+  const px=20+rnd()*472, py=20+rnd()*310, r=[1,1,1.5,2][Math.floor(rnd()*4)];
+  x.globalAlpha=.3+rnd()*.5; x.fillStyle=rnd()<.15?'#ffe6b0':'#cdd9f0';
+  x.beginPath(); x.arc(px,py,r,0,6.28); x.fill();
+}
+x.globalAlpha=1;
+// 봉우리 실루엣 2겹
+function peaks(col,baseY,amp,off){
+  x.fillStyle=col; x.beginPath(); x.moveTo(0,512); x.lineTo(0,baseY);
+  const n=4, span=512/n;
+  for(let p=0;p<=n;p++){ const px=span*p+off; const ph=baseY-amp*(0.7+0.3*((p*37%10)/10));
+    x.lineTo(px-span*0.5,baseY-amp*0.35); x.lineTo(px,ph); }
+  x.lineTo(512,baseY); x.lineTo(512,512); x.closePath(); x.fill();
+}
+peaks('#111925',378,133,20);
+peaks('#0d131d',420,174,64);
+// 달 글로우
+const cx=256, cy=196, R=112;
+const gl=x.createRadialGradient(cx,cy,R*0.4,cx,cy,R*1.9);
+gl.addColorStop(0,'rgba(255,224,150,.34)'); gl.addColorStop(1,'rgba(255,224,150,0)');
+x.fillStyle=gl; x.beginPath(); x.arc(cx,cy,R*1.9,0,6.28); x.fill();
+// 보름달 본체 (구체 그라데이션 + 크리스프 윗 림 + 하단 음영)
+const mg=x.createRadialGradient(cx-R*0.3,cy-R*0.35,R*0.2,cx,cy,R);
+mg.addColorStop(0,'#fbf8f0'); mg.addColorStop(.7,'#efeadd'); mg.addColorStop(1,'#d9d1c1');
+x.fillStyle=mg; x.beginPath(); x.arc(cx,cy,R,0,6.28); x.fill();
+// 크레이터
+x.save(); x.beginPath(); x.arc(cx,cy,R,0,6.28); x.clip();
+const craters=[[-40,-30,20],[35,-15,26],[10,45,30],[-55,35,16],[50,55,14],[-15,-5,10],[60,-40,12]];
+craters.forEach(c=>{ x.fillStyle='rgba(150,142,126,.4)'; x.beginPath(); x.arc(cx+c[0],cy+c[1],c[2],0,6.28); x.fill();
+  x.fillStyle='rgba(255,255,255,.35)'; x.beginPath(); x.arc(cx+c[0]-c[2]*0.25,cy+c[1]-c[2]*0.25,c[2]*0.7,0,6.28); x.fill();
+  x.fillStyle='rgba(150,142,126,.32)'; x.beginPath(); x.arc(cx+c[0],cy+c[1],c[2]*0.7,0,6.28); x.fill(); });
+// 윗 림 + 하단 음영
+const sh=x.createLinearGradient(0,cy-R,0,cy+R);
+sh.addColorStop(0,'rgba(255,255,255,.4)'); sh.addColorStop(.3,'rgba(255,255,255,0)');
+sh.addColorStop(.85,'rgba(90,80,60,0)'); sh.addColorStop(1,'rgba(90,80,60,.3)');
+x.fillStyle=sh; x.fillRect(cx-R,cy-R,R*2,R*2);
+x.restore();
+// 작은 별 두 개 (글로시 골드)
+function star(sx,sy,rad){
+  x.save(); x.translate(sx,sy);
+  const sg=x.createRadialGradient(-rad*0.3,-rad*0.3,rad*0.2,0,0,rad);
+  sg.addColorStop(0,'#ffd85f'); sg.addColorStop(1,'#f0a93f'); x.fillStyle=sg;
+  x.beginPath();
+  for(let k=0;k<10;k++){ const ang=Math.PI/5*k-Math.PI/2; const rr2=k%2?rad*0.44:rad; const px=Math.cos(ang)*rr2, py=Math.sin(ang)*rr2; k?x.lineTo(px,py):x.moveTo(px,py); }
+  x.closePath(); x.fill(); x.restore();
+}
+star(392,150,34);
+star(150,168,22);
+x.restore();
+window.__png=()=>cv.toDataURL('image/png');
+</script>
+</body></html>

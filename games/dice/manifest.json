@@ -1,0 +1,15 @@
+{
+  "name": "원석 세공 — 원석을 굴려 여섯 광물을 세공하는 야추 주사위",
+  "short_name": "원석 세공",
+  "description": "주사위 다섯 알을 굴려 원하는 원석을 고정하고, 열두 칸에 세공해 넣어 총점을 겨루세요. 시간제한 없음.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#efe6d3",
+  "theme_color": "#efe6d3",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

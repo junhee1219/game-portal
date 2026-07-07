@@ -1,0 +1,45 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#fff;}</style></head>
+<body>
+<canvas id="c" width="512" height="512"></canvas>
+<script>
+const cv=document.getElementById('c'), x=cv.getContext('2d'), S=512;
+function rr(ctx,X,Y,W,H,R){R=Math.min(R,W/2,H/2);ctx.beginPath();ctx.moveTo(X+R,Y);ctx.arcTo(X+W,Y,X+W,Y+H,R);ctx.arcTo(X+W,Y+H,X,Y+H,R);ctx.arcTo(X,Y+H,X,Y,R);ctx.arcTo(X,Y,X+W,Y,R);ctx.closePath();}
+// 크림 라운드 배경 (명도폭 좁게)
+const g=x.createLinearGradient(0,0,0,S);
+g.addColorStop(0,'#f9f3e6'); g.addColorStop(1,'#e4d6bb');
+rr(x,0,0,S,S,112); x.fillStyle=g; x.fill();
+// 세공대(어두운 워크벤치) 타일 + 소프트 그림자
+x.save(); x.shadowColor='rgba(60,40,10,.4)'; x.shadowBlur=26; x.shadowOffsetY=12;
+rr(x,84,150,344,300,58); x.fillStyle='#2d2721'; x.fill(); x.restore();
+rr(x,84,150,344,300,58);
+const tg=x.createLinearGradient(0,150,0,450);
+tg.addColorStop(0,'#3b342d'); tg.addColorStop(1,'#241f1a');
+x.fillStyle=tg; x.fill();
+// 브릴리언트 다이아 (파란 젬) — 절차 렌더
+const cx=256, yT=196, yG=286, yB=420, tw=78, gw=132;
+function facet(pts,fill){x.beginPath();pts.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.closePath();x.fillStyle=fill;x.fill();}
+// 몸통 그라데이션 베이스
+const dg=x.createLinearGradient(0,yT,0,yB);
+dg.addColorStop(0,'#bfe6ff'); dg.addColorStop(.5,'#4db6f5'); dg.addColorStop(1,'#2f97e0');
+facet([[cx-tw,yT],[cx+tw,yT],[cx+gw,yG],[cx,yB],[cx-gw,yG]],dg);
+// 크라운 상판 (밝은 면)
+facet([[cx-tw,yT],[cx+tw,yT],[cx+tw*0.66,yG-4],[cx-tw*0.66,yG-4]],'rgba(220,244,255,.92)');
+// 크라운 좌우 경사면
+facet([[cx-tw,yT],[cx-tw*0.66,yG-4],[cx-gw,yG]],'rgba(150,214,250,.9)');
+facet([[cx+tw,yT],[cx+tw*0.66,yG-4],[cx+gw,yG]],'rgba(120,198,244,.9)');
+// 파빌리온 (아래 삼각) — 중앙 밝게 / 좌우 음영으로 입체
+facet([[cx-tw*0.66,yG-4],[cx+tw*0.66,yG-4],[cx,yB]],'rgba(90,180,238,.96)');
+facet([[cx-gw,yG],[cx-tw*0.66,yG-4],[cx,yB]],'rgba(60,150,220,.96)');
+facet([[cx+gw,yG],[cx+tw*0.66,yG-4],[cx,yB]],'rgba(45,135,206,.96)');
+// 크리스프 윗 림 + 외곽 스트로크(중립 톤 통일)
+x.lineJoin='round';
+x.strokeStyle='rgba(255,255,255,.55)'; x.lineWidth=3;
+x.beginPath();x.moveTo(cx-tw,yT);x.lineTo(cx+tw,yT);x.stroke();
+x.strokeStyle='rgba(20,70,120,.35)'; x.lineWidth=4;
+facet([[cx-tw,yT],[cx+tw,yT],[cx+gw,yG],[cx,yB],[cx-gw,yG]]); x.stroke();
+// 반짝 스파클
+function star(sx,sy,r){x.save();x.translate(sx,sy);x.fillStyle='#fff';x.beginPath();for(let k=0;k<4;k++){const a=k*Math.PI/2;x.lineTo(Math.cos(a)*r,Math.sin(a)*r);x.lineTo(Math.cos(a+Math.PI/4)*r*0.32,Math.sin(a+Math.PI/4)*r*0.32);}x.closePath();x.fill();x.restore();}
+star(cx+44,yT+34,15); star(cx-58,yG+20,9);
+window.__png=()=>cv.toDataURL('image/png');
+</script>
+</body></html>

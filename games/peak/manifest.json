@@ -1,0 +1,15 @@
+{
+  "name": "달빛 봉우리 — 차고 기우는 달을 잇는 카드 퍼즐",
+  "short_name": "달빛 봉우리",
+  "description": "세 봉우리에 걸린 달을 위상 순서대로 이어 밤하늘을 걷어내요. 시간제한 없이, 항상 풀 수 있는 판만.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#16202e",
+  "theme_color": "#16202e",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
