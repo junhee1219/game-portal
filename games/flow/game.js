@@ -84,8 +84,11 @@
   function epOther(ci) { const s = paths[ci][0]; const e = endpoints[ci]; return e[0] === s ? e[1] : e[0]; }
 
   // ── 레벨 로드 ──
+  let guideSeg = null, guideT = -1; // 레벨1 무입력 가이드 (첫 색 정답 경로 점선)
   function loadLevel(lv) {
     const L = Core.genLevel(lv);
+    guideSeg = (lv === 1 && L.solution && L.solution[0]) ? L.solution[0].slice() : null;
+    guideT = guideSeg ? 0 : -1;
     w = L.w; h = L.h; N = w * h; K = L.colors;
     cellColor = new Int16Array(N).fill(-1);
     paths = []; connected = []; endpointOf = {}; endpoints = [];
@@ -307,6 +310,20 @@
       ctx.fill();
     }
 
+    // 레벨1 가이드 — 4초 무입력 시 첫 색 정답 경로를 점선으로 살짝 보여준다
+    if (guideT > 4 && guideSeg && paths[0] && paths[0].length === 0) {
+      const gk = (Math.sin((guideT - 4) * 3) + 1) / 2;
+      ctx.save();
+      ctx.globalAlpha = 0.25 + gk * 0.3;
+      ctx.setLineDash([cs * 0.22, cs * 0.3]);
+      ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(cellCX(guideSeg[0]), cellCY(guideSeg[0]));
+      for (let gi = 1; gi < guideSeg.length; gi++) ctx.lineTo(cellCX(guideSeg[gi]), cellCY(guideSeg[gi]));
+      ctx.lineWidth = cs * 0.18; ctx.strokeStyle = PAL[0].base; ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
     // 색 경로 리본
     const lw = cs * 0.46;
     for (let ci = 0; ci < K; ci++) {
@@ -409,6 +426,7 @@
       if (f.type === 'confetti') { f.vy += 14 * dt; f.x += f.vx; f.y += f.vy; f.rot += f.vr; }
     }
     fx = fx.filter(f => (f.type === 'confetti' ? f.t < f.life : f.t < 0.5));
+    if (guideT >= 0) guideT += dt;
     render();
     requestAnimationFrame(loop);
   }
@@ -418,6 +436,7 @@
   function px(e) { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left), y: (e.clientY - r.top) }; }
   cv.addEventListener('pointerdown', (e) => {
     if (solved) return;
+    guideT = -1; // 손을 대면 가이드 종료
     e.preventDefault();
     const p = px(e); const c = cellAt(p.x, p.y);
     if (startDraw(c)) { pointing = true; try { cv.setPointerCapture(e.pointerId); } catch (err) {} }
