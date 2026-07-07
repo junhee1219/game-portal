@@ -96,6 +96,8 @@
     .rclue{display:flex;align-items:center;justify-content:flex-end;gap:6px;padding-right:6px;padding-left:3px;}
     .cclue b,.rclue b{font-weight:800;color:#7c6c4c;line-height:1.05;font-size:var(--clue-fs,12px);}
     .cclue.done b,.rclue.done b{color:#cabf9f;}
+    .cclue.hl,.rclue.hl{background:rgba(233,190,90,.24);border-radius:8px;}
+    .cclue.hl b,.rclue.hl b{color:#8a6a1e;}
 
     .cell{
       width:var(--c,36px);height:var(--c,36px);border:none;border-radius:6px;cursor:pointer;position:relative;
@@ -649,10 +651,19 @@
       if(navigator.vibrate)navigator.vibrate(10);
       save();
     }
+    var hlR=-1,hlC=-1;
+    function hlLine(r,c){
+      if(hlR>=0&&rowEls[hlR])rowEls[hlR].classList.remove('hl');
+      if(hlC>=0&&colEls[hlC])colEls[hlC].classList.remove('hl');
+      hlR=r;hlC=c;
+      if(r>=0&&rowEls[r])rowEls[r].classList.add('hl');
+      if(c>=0&&colEls[c])colEls[c].classList.add('hl');
+    }
     function bindCell(el,r,c){
       var lpTimer=null,lpFired=false,px=0,py=0;
       el.addEventListener('pointerdown',function(e){
         if(ended)return;
+        hlLine(r,c);
         lpFired=false;px=e.clientX;py=e.clientY;
         if(state[r][c]===1||state[r][c]===4)return;
         lpTimer=setTimeout(function(){
