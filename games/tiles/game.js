@@ -11,6 +11,16 @@
   const SCALE = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25];
   // 타일 색 — 차분한 파스텔 5색 순환(음과 색을 연결)
   const HUES = [158, 192, 262, 28, 130];
+  // 공연 막(스테이지) — 25탭마다 무대가 커진다 (진행 서사)
+  const STAGES = [
+    { at: 0,   name: '연습실',       bg: ['#f2f7f0', '#e6efe4'] },
+    { at: 25,  name: '2막 소극장',   bg: ['#eef2fa', '#dfe6f4'] },
+    { at: 50,  name: '3막 대극장',   bg: ['#f6eff7', '#eadff0'] },
+    { at: 75,  name: '4막 페스티벌', bg: ['#fdf3e7', '#f7e6cf'] },
+    { at: 100, name: '5막 전설의 무대', bg: ['#eff7f7', '#d9ecec'] }
+  ];
+  function stageIdx(sc) { let t = 0; for (let k = 0; k < STAGES.length; k++) if (sc >= STAGES[k].at) t = k; return t; }
+  let banner = null; // {name, t}
 
   // ── DOM ──
   const wrap = document.getElementById('wrap');
@@ -111,6 +121,11 @@
       const row = rows[pending];
       row.hit = true; row.hitAt = performance.now();
       score++;
+      if (stageIdx(score) > stageIdx(score - 1)) {
+        banner = { name: STAGES[stageIdx(score)].name, t: 0 };
+        Audio.note(score + 7); Audio.note(score + 11);
+        vibrate([0, 14, 35, 14]);
+      }
       Audio.note(score - 1);
       vibrate(8);
       pending++;
@@ -154,6 +169,7 @@
       if (screenTopY(pending) > H) { fail = { i: pending, lane: rows[pending].lane, missed: true }; gameOver(); }
     }
     if (flash > 0) flash = Math.max(0, flash - dt * 1.2);
+    if (banner) { banner.t += dt; if (banner.t > 1.5) banner = null; }
     render();
     requestAnimationFrame(loop);
   }
@@ -190,6 +206,11 @@
   }
   function render() {
     ctx.clearRect(0, 0, W, H);
+    // 무대 배경 — 막이 오를수록 색이 바뀐다
+    const st = STAGES[stageIdx(score)];
+    const bgG = ctx.createLinearGradient(0, 0, 0, H);
+    bgG.addColorStop(0, st.bg[0]); bgG.addColorStop(1, st.bg[1]);
+    ctx.fillStyle = bgG; ctx.fillRect(0, 0, W, H);
     // 레인 구분선
     ctx.strokeStyle = 'rgba(70,110,90,.12)'; ctx.lineWidth = 1;
     for (let l = 1; l < LANES; l++) { ctx.beginPath(); ctx.moveTo(l * laneW, 0); ctx.lineTo(l * laneW, H); ctx.stroke(); }
@@ -221,6 +242,20 @@
     if (over && fail && !fail.missed) {
       const top = screenTopY(pending);
       tile(fail.lane, Math.max(0, Math.min(H - RH, top)), 4, { fail: true, alpha: .9 });
+    }
+    // 스테이지 배너
+    if (banner) {
+      const p = banner.t / 1.5;
+      const a = p < 0.12 ? p / 0.12 : (p > 0.65 ? Math.max(0, 1 - (p - 0.65) / 0.35) : 1);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.font = '900 24px "Pretendard Variable",-apple-system,sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(255,255,255,.92)';
+      ctx.strokeText(banner.name + '!', W / 2, H * 0.3 - p * 16);
+      ctx.fillStyle = '#4a6a5a';
+      ctx.fillText(banner.name + '!', W / 2, H * 0.3 - p * 16);
+      ctx.restore();
     }
     // 게임오버 붉은 플래시
     if (flash > 0) { ctx.fillStyle = 'rgba(220,80,80,' + (flash * 0.5) + ')'; ctx.fillRect(0, 0, W, H); }
