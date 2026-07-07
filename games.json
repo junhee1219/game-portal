@@ -44,7 +44,8 @@
           "merge": "lww"
         }
       ],
-      "hot": true
+      "hot": true,
+      "new": true
     },
     {
       "id": "twos",
@@ -460,7 +461,8 @@
           "key": "memoryMuted",
           "merge": "lww"
         }
-      ]
+      ],
+      "new": true
     },
     {
       "id": "flip",
@@ -577,7 +579,8 @@
           "key": "peakMuted",
           "merge": "lww"
         }
-      ]
+      ],
+      "new": true
     },
     {
       "id": "dice",
@@ -601,7 +604,8 @@
           "key": "diceMuted",
           "merge": "lww"
         }
-      ]
+      ],
+      "new": true
     },
     {
       "id": "flow",

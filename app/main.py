@@ -164,8 +164,14 @@ def _render_cards() -> str:
         gid = html.escape(g["id"])
         title = html.escape(g.get("title", gid))
         desc = html.escape(g.get("tagline", ""))
-        hot = '<span class="hot">HOT</span>' if g.get("hot") else ""
-        card_cls = "card is-hot" if g.get("hot") else "card"
+        # NEW가 HOT보다 우선 (신선함이 더 강한 신호)
+        if g.get("new"):
+            hot = '<span class="hot new">NEW</span>'
+        elif g.get("hot"):
+            hot = '<span class="hot">HOT</span>'
+        else:
+            hot = ""
+        card_cls = "card is-hot" if (g.get("hot") or g.get("new")) else "card"
         cards.append(
             f'<a class="{card_cls}" href="/{gid}/">'
             f'<img src="/{gid}/icon-192.png" alt="" width="64" height="64" loading="lazy">'
