@@ -26,6 +26,27 @@
       "hot": true
     },
     {
+      "id": "hoop",
+      "shell_mode": "panel",
+      "title": "옥상 농구",
+      "tagline": "공을 당겼다 놓으면 슛! 바람을 읽고 림에 꽂아요. 콤보를 이으면 공이 은·금·불꽃으로 진화해요.",
+      "unit": "점",
+      "score_key": "hoopBest",
+      "score_metric": "score",
+      "defer_share": true,
+      "state_keys": [
+        {
+          "key": "hoopBest",
+          "merge": "max"
+        },
+        {
+          "key": "hoopMuted",
+          "merge": "lww"
+        }
+      ],
+      "hot": true
+    },
+    {
       "id": "twos",
       "shell_mode": "panel",
       "title": "2048",

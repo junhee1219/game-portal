@@ -1,0 +1,61 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#fff;}</style></head>
+<body>
+<canvas id="c" width="512" height="512"></canvas>
+<script>
+const cv=document.getElementById('c'),x=cv.getContext('2d');
+function rr(ctx,X,Y,W,H,R){R=Math.min(R,W/2,H/2);ctx.beginPath();ctx.moveTo(X+R,Y);ctx.arcTo(X+W,Y,X+W,Y+H,R);ctx.arcTo(X+W,Y+H,X,Y+H,R);ctx.arcTo(X,Y+H,X,Y,R);ctx.arcTo(X,Y,X+W,Y,R);ctx.closePath();}
+const ballImg=new Image();ballImg.src='ball-leather.png';
+function draw(){
+  // 배경 — 옥상 하늘
+  const bg=x.createLinearGradient(0,0,0,512);
+  bg.addColorStop(0,'#e8f2f9');bg.addColorStop(.62,'#d3e7f5');bg.addColorStop(1,'#c2d6e6');
+  rr(x,0,0,512,512,112);x.fillStyle=bg;x.fill();
+  // 구름
+  x.fillStyle='rgba(255,255,255,.75)';
+  x.beginPath();x.ellipse(120,110,52,18,0,0,7);x.ellipse(152,96,34,14,0,0,7);x.fill();
+  x.beginPath();x.ellipse(400,170,40,14,0,0,7);x.fill();
+  // 빌딩 실루엣
+  x.fillStyle='rgba(130,160,185,.30)';
+  x.fillRect(24,340,80,120);x.fillRect(120,368,66,92);x.fillRect(330,352,74,108);x.fillRect(416,330,70,130);
+  // 옥상 바닥
+  x.fillStyle='#b9cddd';rr(x,0,404,512,108,0);x.save();rr(x,0,0,512,512,112);x.clip();x.fillRect(0,404,512,108);x.restore();
+  // 백보드 + 림 + 네트
+  x.save();
+  x.translate(340,120);
+  x.fillStyle='#f6fafd';rr(x,96,-26,26,168,10);x.fill();
+  x.strokeStyle='rgba(90,120,145,.45)';x.lineWidth=4;rr(x,96,-26,26,168,10);x.stroke();
+  // 네트
+  x.strokeStyle='rgba(255,255,255,.92)';x.lineWidth=5;
+  for(let i=0;i<=5;i++){
+    const fx=-36+((132+36)/5)*i*0.78;
+    x.beginPath();x.moveTo(-36+i*26,118);
+    x.quadraticCurveTo(-36+i*26*0.7+14,160,10+i*12,186);
+    x.stroke();
+  }
+  x.beginPath();x.moveTo(-24,146);x.quadraticCurveTo(40,158,86,146);x.stroke();
+  // 림
+  x.strokeStyle='#b04537';x.lineWidth=17;
+  x.beginPath();x.moveTo(-40,118);x.lineTo(96,118);x.stroke();
+  x.strokeStyle='#e0604f';x.lineWidth=13;
+  x.beginPath();x.moveTo(-40,114);x.lineTo(96,114);x.stroke();
+  x.restore();
+  // 궤적 점선
+  x.strokeStyle='rgba(255,255,255,.85)';x.lineWidth=9;x.setLineDash([2,26]);x.lineCap='round';
+  x.beginPath();x.moveTo(140,368);x.quadraticCurveTo(210,120,330,214);x.stroke();x.setLineDash([]);
+  // 공 (finda-asset)
+  const bx=150,by=330,d=190;
+  x.save();x.globalAlpha=.20;x.fillStyle='#2b3a45';x.beginPath();x.ellipse(bx,by+d/2+16,72,14,0,0,7);x.fill();x.restore();
+  if(ballImg.complete&&ballImg.naturalWidth>0){
+    x.save();x.translate(bx,by);x.rotate(-.35);x.drawImage(ballImg,-d/2,-d/2,d,d);x.restore();
+  }else{
+    x.fillStyle='#e0703f';x.beginPath();x.arc(bx,by,d/2-8,0,7);x.fill();
+    x.strokeStyle='rgba(120,50,20,.55)';x.lineWidth=7;
+    x.beginPath();x.arc(bx,by,d/2-8,0,7);x.stroke();
+    x.beginPath();x.moveTo(bx-d/2+8,by);x.lineTo(bx+d/2-8,by);x.stroke();
+  }
+}
+draw();
+window.__png=()=>{draw();return cv.toDataURL('image/png');};
+ballImg.onload=draw;
+</script>
+</body></html>

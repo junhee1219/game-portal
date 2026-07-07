@@ -1,0 +1,15 @@
+{
+  "name": "옥상 농구 — 당겨서 쏘는 한 손 슛 감각",
+  "short_name": "옥상 농구",
+  "description": "공을 당겼다 놓으면 슛! 바람을 읽고 림에 꽂아요. 콤보를 이으면 공이 은·금·불꽃으로 진화합니다.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#d9e9f4",
+  "theme_color": "#d9e9f4",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
