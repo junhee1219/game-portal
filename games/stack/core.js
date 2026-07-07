@@ -27,7 +27,20 @@
   function hueFor(i) { return (200 + i * 9) % 360; }
   function colorFor(i) { return 'hsl(' + hueFor(i) + ',46%,63%)'; }
 
-  var api = { computeDrop: computeDrop, hueFor: hueFor, colorFor: colorFor };
+  // 층 구간별 재질 티어 — 탑이 오를수록 재료가 진화한다 (오브젝트 서사)
+  var TIERS = [
+    { at: 0,  name: '목재',     base: '#c9a06a', alt: '#c2965e', line: 'rgba(120,84,40,.32)',  kind: 'wood' },
+    { at: 10, name: '벽돌',     base: '#cf8a70', alt: '#c78066', line: 'rgba(130,60,40,.30)',  kind: 'brick' },
+    { at: 20, name: '석재',     base: '#a8b2ba', alt: '#9fa9b2', line: 'rgba(70,85,95,.28)',   kind: 'stone' },
+    { at: 30, name: '강철',     base: '#9fb6c6', alt: '#95adbe', line: 'rgba(60,90,110,.30)',  kind: 'steel' },
+    { at: 40, name: '황금',     base: '#e2bc62', alt: '#dcb254', line: 'rgba(150,110,30,.32)', kind: 'gold' },
+    { at: 50, name: '크리스탈', base: '#b9a7e0', alt: '#af9cd9', line: 'rgba(110,90,160,.32)', kind: 'crystal' }
+  ];
+  function tierIdx(i) { var t = 0; for (var k = 0; k < TIERS.length; k++) if (i >= TIERS[k].at) t = k; return t; }
+  function tierFor(i) { return TIERS[tierIdx(i)]; }
+  function nextTierAt(i) { var t = tierIdx(i); return t < TIERS.length - 1 ? TIERS[t + 1] : null; }
+
+  var api = { computeDrop: computeDrop, hueFor: hueFor, colorFor: colorFor, TIERS: TIERS, tierIdx: tierIdx, tierFor: tierFor, nextTierAt: nextTierAt };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.StackCore = api;
 })(typeof self !== 'undefined' ? self : this);

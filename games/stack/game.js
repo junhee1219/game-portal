@@ -158,6 +158,11 @@
       vibrate(10);
     }
     blocks.push({ x: nx, w: nw, i: count, placedAt: performance.now() });
+    if (Core.tierIdx(count) > Core.tierIdx(count - 1)) {
+      fx.push({ type: 'tier', name: Core.tierFor(count).name, t: 0, life: 1.4 });
+      Audio.perfect(3);
+      vibrate([0, 15, 40, 15]);
+    }
     count++;
     score = count - 1;
     if (score > best) { best = score; localStorage.setItem('stackBest', String(best)); }
@@ -209,7 +214,7 @@
     shards = shards.filter(s => s.alpha > 0 && s.y < H + 80);
     // 효과 수명
     for (const f of fx) f.t += dt;
-    fx = fx.filter(f => f.t < 0.5);
+    fx = fx.filter(f => f.t < (f.life || 0.5));
 
     render();
     requestAnimationFrame(loop);
@@ -226,14 +231,55 @@
     ctx.arcTo(x, y, x + w, y, r);
     ctx.closePath();
   }
-  function paintSlab(x, top, w, hue, squash) {
+  function paintSlab(x, top, w, i, squash) {
     let h = BH;
     if (squash) { const k = 1 - squash * 0.18; const nh = h * k; top = top + (h - nh); h = nh; }
-    // 본체
-    ctx.fillStyle = 'hsl(' + hue + ',46%,63%)';
+    const mat = Core.tierFor(i);
+    // 본체 (짝홀 층 미세 명도차 — 단조로움 방지, 명도폭 좁게)
+    ctx.fillStyle = (i % 2) ? mat.alt : mat.base;
     roundRect(x, top, w, h, 4); ctx.fill();
-    // 윗 림(크리스프) + 하단 음영 — 명도폭 좁게
     ctx.save(); roundRect(x, top, w, h, 4); ctx.clip();
+    // 재질 패턴 — 숫자를 가려도 구간이 보이게
+    ctx.strokeStyle = mat.line; ctx.lineWidth = 1.5;
+    if (mat.kind === 'wood') {
+      ctx.beginPath();
+      ctx.moveTo(x, top + h * 0.35); ctx.lineTo(x + w, top + h * 0.32);
+      ctx.moveTo(x, top + h * 0.68); ctx.lineTo(x + w, top + h * 0.72);
+      ctx.stroke();
+    } else if (mat.kind === 'brick') {
+      const off = (i % 2) ? 14 : 0;
+      ctx.beginPath();
+      ctx.moveTo(x, top + h * 0.5); ctx.lineTo(x + w, top + h * 0.5);
+      for (let bx = x + off + 14; bx < x + w; bx += 28) { ctx.moveTo(bx, top); ctx.lineTo(bx, top + h * 0.5); }
+      for (let bx = x + off; bx < x + w; bx += 28) { ctx.moveTo(bx, top + h * 0.5); ctx.lineTo(bx, top + h); }
+      ctx.stroke();
+    } else if (mat.kind === 'stone') {
+      const off = (i * 13) % 30;
+      ctx.beginPath();
+      for (let sx = x + off; sx < x + w; sx += 30) { ctx.moveTo(sx, top); ctx.lineTo(sx, top + h); }
+      ctx.stroke();
+    } else if (mat.kind === 'steel') {
+      ctx.fillStyle = mat.line;
+      ctx.fillRect(x, top + h - 4, w, 2);
+      ctx.beginPath();
+      ctx.arc(x + 8, top + h / 2, 2.2, 0, 7); ctx.arc(x + w - 8, top + h / 2, 2.2, 0, 7);
+      ctx.fill();
+    } else if (mat.kind === 'gold') {
+      ctx.fillStyle = 'rgba(255,246,200,.55)';
+      ctx.fillRect(x, top + 2, w, 2);
+      const spx = x + 8 + ((i * 37) % Math.max(8, w - 16));
+      ctx.fillStyle = 'rgba(255,255,255,.85)';
+      ctx.beginPath(); ctx.arc(spx, top + h * 0.4, 1.8, 0, 7); ctx.fill();
+    } else if (mat.kind === 'crystal') {
+      ctx.beginPath();
+      const off = (i * 17) % 24;
+      for (let cxx = x + off; cxx < x + w + h; cxx += 24) { ctx.moveTo(cxx, top); ctx.lineTo(cxx - h * 0.5, top + h); }
+      ctx.stroke();
+      const spx = x + 10 + ((i * 29) % Math.max(8, w - 20));
+      ctx.fillStyle = 'rgba(255,255,255,.9)';
+      ctx.beginPath(); ctx.arc(spx, top + h * 0.35, 2, 0, 7); ctx.fill();
+    }
+    // 윗 림(크리스프) + 하단 음영 — 명도폭 좁게
     const g = ctx.createLinearGradient(0, top, 0, top + h);
     g.addColorStop(0, 'rgba(255,255,255,.40)');
     g.addColorStop(0.45, 'rgba(255,255,255,0)');
@@ -251,13 +297,13 @@
       if (top > H + BH || top + BH < -BH) continue;   // 화면 밖 스킵
       const age = b.placedAt ? (now - b.placedAt) / 1000 : 1;
       const squash = age < 0.16 ? (1 - age / 0.16) : 0;
-      paintSlab(b.x, top, b.w, Core.hueFor(b.i), squash);
+      paintSlab(b.x, top, b.w, b.i, squash);
     }
 
     // 활성 블록
     if (active && !over) {
       const top = screenTop(blockWorldTop(active.i));
-      paintSlab(active.x, top, active.w, Core.hueFor(active.i), 0);
+      paintSlab(active.x, top, active.w, active.i, 0);
     }
 
     // 파편
@@ -266,7 +312,7 @@
       ctx.globalAlpha = Math.max(0, s.alpha);
       ctx.translate(s.x + s.w / 2, s.y + s.h / 2);
       ctx.rotate(s.rot);
-      ctx.fillStyle = 'hsl(' + Core.hueFor(s.i) + ',46%,63%)';
+      ctx.fillStyle = Core.tierFor(s.i).base;
       roundRect(-s.w / 2, -s.h / 2, s.w, s.h, 4); ctx.fill();
       ctx.restore();
     }
@@ -274,6 +320,23 @@
 
     // 완벽 효과 (확장 외곽선 + Perfect!)
     for (const f of fx) {
+      if (f.type === 'tier') {
+        const p = f.t / f.life;
+        const a = p < 0.12 ? p / 0.12 : (p > 0.7 ? Math.max(0, 1 - (p - 0.7) / 0.3) : 1);
+        const scale = p < 0.12 ? 0.7 + 0.3 * (p / 0.12) : 1;
+        ctx.save();
+        ctx.globalAlpha = a;
+        ctx.translate(W / 2, H * 0.34 - p * 18);
+        ctx.scale(scale, scale);
+        ctx.font = '900 26px "Pretendard Variable",-apple-system,sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(255,255,255,.92)';
+        ctx.strokeText(f.name + ' 구간!', 0, 0);
+        ctx.fillStyle = '#5a4a7a';
+        ctx.fillText(f.name + ' 구간!', 0, 0);
+        ctx.restore();
+        continue;
+      }
       if (f.type !== 'perfect') continue;
       const p = f.t / 0.5;            // 0→1
       const grow = p * 10;
