@@ -553,10 +553,6 @@
           "merge": "union"
         },
         {
-          "key": "peakSave",
-          "merge": "lww"
-        },
-        {
           "key": "peakMuted",
           "merge": "lww"
         }
