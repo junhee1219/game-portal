@@ -90,6 +90,8 @@
       animation:open .18s ease;
     }
     @keyframes open{0%{filter:brightness(1.25);}100%{filter:none;}}
+    .hex.scan{animation:scan 1.05s ease;}
+    @keyframes scan{0%,100%{filter:none;}25%,65%{filter:brightness(1.35) drop-shadow(0 0 7px rgba(240,180,60,.85));}}
     .hex .num{font-weight:900;font-size:1em;line-height:1;pointer-events:none;}
     .n1{color:#4f8fd0;} .n2{color:#3f9b6e;} .n3{color:#d4763a;}
     .n4{color:#8a5fc9;} .n5{color:#c94f4f;} .n6{color:#8a6d3b;}
@@ -424,7 +426,7 @@
       });
       if(!viaChord)sPop(0);
       for(var d=1;d<=Math.min(maxD,8);d++)sPop(d);
-      if(batch.length>3&&!viaChord)note.textContent='숫자는 이웃 6칸에 숨은 벌의 수예요';
+      if(batch.length>3&&!viaChord)note.textContent='숫자를 톡 — 그 숫자가 세는 칸이 반짝여요';
       updateHud(); save(); checkWin();
       return true;
     }
@@ -445,7 +447,13 @@
       if(ended||!c.rev||c.n===0)return;
       var ns=neighbors(i), fl=0;
       ns.forEach(function(j){if(cells[j].flg||cells[j].caught)fl++;});
-      if(fl!==c.n)return;
+      if(fl!==c.n){
+        // 규칙을 눈으로: 이 숫자가 세는 안 열린 이웃 칸을 반짝인다
+        var blink=0;
+        ns.forEach(function(j){var cj=cells[j];if(!cj.rev&&!cj.caught){blink++;var el2=cj.el;el2.classList.remove('scan');void el2.offsetWidth;el2.classList.add('scan');}});
+        if(blink)note.textContent='숫자 '+c.n+' = 반짝인 '+blink+'칸 속 벌의 수';
+        return;
+      }
       sPop(0);
       for(var k=0;k<ns.length;k++){
         var j=ns[k], cj=cells[j];
