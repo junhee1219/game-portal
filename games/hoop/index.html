@@ -124,7 +124,7 @@
 
   <div id="stage">
     <div id="court-wrap"><canvas id="court"></canvas></div>
-    <div id="note">공을 아래로 당겼다 놓으면 슛!</div>
+    <div id="note">아무 곳이나 꾹— 아래로 당겼다 놓으면 슛!</div>
   </div>
 
   <div class="credit">Icons: Phosphor</div>
@@ -184,7 +184,7 @@
     var clouds=[];
     var firstEver=!gi(KEY.played);
 
-    var G=1500, POWER=6.4, MAXV=1350;
+    var G=1500, POWER=7.6, MAXV=1350; // 감도 상향 — 폰에서 짧은 당김으로도 풀파워
 
     // ── 사운드 (WebAudio 합성) ──────────────────────────────
     var ac=null;
@@ -252,8 +252,8 @@
       // 림과 최소 수평거리 확보 — 수직에 가까운 억울한 슛 각 방지
       var rimCx=hoop.bx-hoop.rimW/2;
       var maxX=Math.max(W*0.17,Math.min(W*0.42,rimCx-170));
-      ball.x=rnd(W*0.13,maxX);
-      ball.y=H-Math.max(66,H*0.12);
+      ball.x=rnd(W*0.17,maxX);
+      ball.y=H-Math.max(120,H*0.21); // 공 아래로 당길 공간 확보 (폰 한 손)
       ball.vx=0;ball.vy=0;ball.rot=0;
       ball.flying=false;ball.touched=false;ball.banked=false;ball.scored=false;
       ball.spawnT=0.001;
@@ -391,7 +391,7 @@
       ended=false;score=0;hearts=3;combo=0;bestCombo=0;shots=0;goals=0;goalRecordShown=false;
       del(KEY.save);
       newHoop(true);placeBall();hud();
-      note.textContent='공을 아래로 당겼다 놓으면 슛!';
+      note.textContent='아무 곳이나 꾹— 아래로 당겼다 놓으면 슛!';
     }
 
     // ── 물리 ────────────────────────────────────────────────
