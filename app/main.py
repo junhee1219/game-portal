@@ -176,12 +176,50 @@ def _render_cards() -> str:
     return "\n".join(cards)
 
 
+def _home_jsonld() -> str:
+    """홈 구조화 데이터(JSON-LD) — WebSite + 게임 ItemList. 레지스트리에서 동적 생성."""
+    canonical = settings.base_url.rstrip("/")
+    website = {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "미니게임",
+        "alternateName": "mini-game.kr",
+        "url": f"{canonical}/",
+        "description": "설치·가입 없이 브라우저에서 바로 즐기는 무료 미니게임 모음",
+        "inLanguage": "ko",
+    }
+    items = [
+        {
+            "@type": "ListItem",
+            "position": i + 1,
+            "item": {
+                "@type": "VideoGame",
+                "name": g.get("title", g["id"]),
+                "url": f"{canonical}/{g['id']}/",
+                "image": f"{canonical}/{g['id']}/icon-192.png",
+                "description": g.get("tagline", ""),
+                "playMode": "SinglePlayer",
+                "applicationCategory": "Game",
+                "operatingSystem": "Web",
+                "isAccessibleForFree": True,
+                "inLanguage": "ko",
+            },
+        }
+        for i, g in enumerate(games.load_games())
+    ]
+    itemlist = {"@context": "https://schema.org", "@type": "ItemList", "itemListElement": items}
+    return (
+        f'<script type="application/ld+json">{json.dumps(website, ensure_ascii=False)}</script>'
+        f'<script type="application/ld+json">{json.dumps(itemlist, ensure_ascii=False)}</script>'
+    )
+
+
 @app.get("/", response_class=HTMLResponse)
 async def portal_index(request: Request):
     page = (PORTAL_DIR / "index.html").read_text(encoding="utf-8")
     base = str(request.base_url).rstrip("/")
     canonical = settings.base_url.rstrip("/")  # canonical 호스트는 고정 도메인
-    head_extra = f'<link rel="canonical" href="{canonical}/">{_verification_meta()}'
+    head_extra = f'<link rel="canonical" href="{canonical}/">{_verification_meta()}{_home_jsonld()}'
     page = (
         page.replace("{{BASE}}", base)
         .replace("{{CARDS}}", _render_cards())
@@ -482,13 +520,31 @@ async def serve_game(request: Request, game: str, path: str = ""):
         # canonical 호스트는 고정 도메인(settings.base_url), 트레일링 슬래시는 sitemap과 일치.
         if path in ("", "index.html") and "<head>" in page:
             canonical = settings.base_url.rstrip("/")
+            g = games.games_by_id().get(game)
             seo = f'<link rel="canonical" href="{canonical}/{html.escape(game)}/">'
             # description이 이미 있으면 중복 주입 금지 — 없는 게임만 tagline으로 채운다
             if 'name="description"' not in page:
-                g = games.games_by_id().get(game)
                 tagline = (g or {}).get("tagline") or (g or {}).get("title", game)
                 seo += f'<meta name="description" content="{html.escape(tagline)}">'
+            # 구조화 데이터(VideoGame) — 일반 검색어 노출용
+            jsonld = {
+                "@context": "https://schema.org",
+                "@type": "VideoGame",
+                "name": (g or {}).get("title", game),
+                "url": f"{canonical}/{game}/",
+                "image": f"{canonical}/{game}/icon-192.png",
+                "description": (g or {}).get("tagline", ""),
+                "playMode": "SinglePlayer",
+                "applicationCategory": "Game",
+                "operatingSystem": "Web",
+                "isAccessibleForFree": True,
+                "inLanguage": "ko",
+            }
+            seo += f'<script type="application/ld+json">{json.dumps(jsonld, ensure_ascii=False)}</script>'
             page = page.replace("<head>", f"<head>{seo}", 1)
+            # <title>에 브랜드/키워드 접미사 — 게임 원본 무수정, 서빙 시점 치환
+            if "</title>" in page and "미니게임" not in page.split("</title>")[0]:
+                page = page.replace("</title>", " | 미니게임 - 무료 웹게임</title>", 1)
             # 공통 Game Shell(헤더/레이아웃) 주입 — 게임 메인 페이지에만
             page = _inject_game_shell(page, game)
         snippet = _inject_snippet(game)
