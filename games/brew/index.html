@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#1f1b18">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="약초 가마">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="약초 가마 — 이웃끼리 반응시키는 약초 엔진빌더">
+  <meta property="og:description" content="뽑은 약초를 가마 칸에 놓아 이웃끼리 곱하게 만들고, 점점 높아지는 주문서 효능을 넘겨 다음 마을로. 시간제한 없이.">
+  <link rel="manifest" href="manifest.json">
+  <title>약초 가마</title>
+  <style>
+    @font-face{font-family:"Pretendard Variable";font-weight:45 920;font-style:normal;font-display:swap;src:url("/fonts/PretendardVariable.woff2") format("woff2-variations");}
+    :root{
+      --bg-a:#33291f; --bg-b:#211b16; --bg-c:#171310;
+      --ink:#f0e6d6; --ink-soft:#b09c85;
+      --line:rgba(224,169,46,.14);
+      --panel:rgba(255,255,255,.05);
+      --accent:#e0a92e; --accent-deep:#b9861f;
+      --good:#6fbf73; --bad:#d9694f;
+      --fire:#d95f4f; --oil:#e0a92e; --water:#4f95d0; --herb:#68b268; --cat:#a97fd6;
+      --fs-1:26px; --fs-2:16px; --fs-3:13px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    html,body{height:100%;}
+    body{
+      font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
+      background-color:var(--bg-b);
+      background-image:radial-gradient(125% 90% at 50% 0%,var(--bg-a) 0%,var(--bg-b) 58%,var(--bg-c) 100%);
+      color:var(--ink);
+      user-select:none;-webkit-user-select:none;touch-action:manipulation;overflow:hidden;
+      --gp-shell-fg:#f0e6d6;
+    }
+    button{font:inherit;color:inherit;border:none;background:none;cursor:pointer;}
+    .wrap{
+      height:100%;height:100dvh;max-width:460px;margin:0 auto;
+      display:flex;flex-direction:column;padding:10px 14px calc(12px + env(safe-area-inset-bottom));gap:10px;
+    }
+    /* top bar */
+    .top{display:flex;align-items:center;gap:7px;flex:0 0 auto;}
+    .pill{
+      display:flex;flex-direction:column;gap:1px;align-items:flex-start;
+      border:1px solid var(--line);background:var(--panel);border-radius:13px;
+      padding:6px 11px;box-shadow:0 2px 0 rgba(0,0,0,.22);min-width:0;
+    }
+    .pill .lbl{font-size:11px;font-weight:750;color:var(--ink-soft);letter-spacing:.02em;}
+    .pill .val{font-size:var(--fs-2);font-weight:840;color:var(--ink);white-space:nowrap;}
+    .pill.goal .val{color:var(--accent);}
+    .pill.goal.reached .val{color:var(--good);}
+    .sp{margin-left:auto;}
+    .ibtn{
+      width:40px;height:40px;flex:0 0 auto;border:1px solid var(--line);border-radius:12px;
+      background:var(--panel);color:var(--ink-soft);display:flex;align-items:center;justify-content:center;
+      box-shadow:0 2px 0 rgba(0,0,0,.22);
+    }
+    .ibtn:active{transform:translateY(2px);box-shadow:0 0 0 rgba(0,0,0,.22);}
+    .ibtn svg{width:20px;height:20px;fill:currentColor;}
+
+    /* progress bar */
+    .bar{flex:0 0 auto;height:9px;border-radius:99px;background:rgba(0,0,0,.32);overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,.4);}
+    .bar>i{display:block;height:100%;width:0%;border-radius:99px;background:linear-gradient(90deg,var(--accent-deep),var(--accent));transition:width .28s cubic-bezier(.2,.8,.2,1);}
+    .bar.reached>i{background:linear-gradient(90deg,#4f9d54,var(--good));}
+
+    /* board */
+    .boardwrap{flex:1 1 auto;display:flex;align-items:center;justify-content:center;min-height:0;}
+    .board{
+      display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+      width:min(86vw,360px);aspect-ratio:1;
+      padding:10px;border-radius:20px;
+      background:linear-gradient(180deg,rgba(0,0,0,.16),rgba(0,0,0,.30));
+      box-shadow:inset 0 2px 8px rgba(0,0,0,.4),0 3px 0 rgba(0,0,0,.25);
+    }
+    .cell{
+      position:relative;border-radius:13px;
+      background:rgba(255,255,255,.035);
+      border:1px solid rgba(255,255,255,.05);
+      box-shadow:inset 0 -3px 6px rgba(0,0,0,.22);
+      display:flex;align-items:center;justify-content:center;overflow:hidden;
+      transition:transform .09s;
+    }
+    .cell.tgt{cursor:pointer;background:rgba(224,169,46,.09);border-color:rgba(224,169,46,.28);}
+    .cell.tgt:active{transform:scale(.93);}
+    .tile{
+      width:84%;height:84%;border-radius:11px;position:relative;
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 3px 0 rgba(0,0,0,.28),inset 0 2px 3px rgba(255,255,255,.22);
+      animation:pop .22s cubic-bezier(.2,1.4,.4,1);
+    }
+    @keyframes pop{0%{transform:scale(.4);opacity:0;}100%{transform:scale(1);opacity:1;}}
+    .tile svg{width:52%;height:52%;position:absolute;top:18%;opacity:.9;}
+    .tile .fv{
+      position:absolute;bottom:3px;right:5px;font-size:15px;font-weight:860;
+      color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.55);line-height:1;
+    }
+    .f-fire{background:linear-gradient(180deg,#e3705f,var(--fire));}
+    .f-oil{background:linear-gradient(180deg,#eebb4c,var(--oil));}
+    .f-water{background:linear-gradient(180deg,#5fa4dc,var(--water));}
+    .f-herb{background:linear-gradient(180deg,#78c078,var(--herb));}
+    .f-cat{background:linear-gradient(180deg,#b78ee0,var(--cat));}
+    .tile.f-oil.ignited{box-shadow:0 3px 0 rgba(0,0,0,.28),inset 0 2px 3px rgba(255,255,255,.22),0 0 0 2px rgba(255,120,60,.6);}
+    .cell.bump .tile{animation:bump .34s ease;}
+    @keyframes bump{0%,100%{transform:scale(1);}40%{transform:scale(1.14);}}
+
+    /* tray */
+    .tray{flex:0 0 auto;display:flex;align-items:center;gap:11px;
+      border:1px solid var(--line);background:var(--panel);border-radius:16px;padding:10px 12px;
+      box-shadow:0 3px 0 rgba(0,0,0,.22);}
+    .curbox{display:flex;flex-direction:column;align-items:center;gap:3px;}
+    .curtile{width:56px;height:56px;border-radius:13px;position:relative;box-shadow:0 3px 0 rgba(0,0,0,.28),inset 0 2px 3px rgba(255,255,255,.22);}
+    .curtile svg{width:52%;height:52%;position:absolute;top:16%;left:24%;opacity:.92;}
+    .curtile .b{position:absolute;bottom:3px;right:5px;font-size:14px;font-weight:860;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5);}
+    .traymeta{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 auto;}
+    .traymeta .nm{font-size:var(--fs-2);font-weight:850;}
+    .traymeta .ds{font-size:var(--fs-3);color:var(--ink-soft);line-height:1.35;}
+    .nextbox{display:flex;flex-direction:column;align-items:center;gap:2px;opacity:.8;}
+    .nexttile{width:34px;height:34px;border-radius:9px;position:relative;box-shadow:inset 0 1px 2px rgba(255,255,255,.2);}
+    .nexttile svg{width:52%;height:52%;position:absolute;top:16%;left:24%;opacity:.85;}
+    .nextbox .cap{font-size:10px;color:var(--ink-soft);font-weight:700;}
+
+    .acts{flex:0 0 auto;display:flex;gap:9px;}
+    .btn{flex:1 1 0;padding:14px 8px;border-radius:14px;font-size:var(--fs-2);font-weight:840;
+      text-align:center;box-shadow:0 3px 0 rgba(0,0,0,.28);border:1px solid var(--line);
+      background:var(--panel);color:var(--ink);transition:transform .09s,box-shadow .09s;}
+    .btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.28);}
+    .btn.sell{color:var(--ink-soft);}
+    .btn.brew{background:linear-gradient(180deg,#e9b73f,var(--accent-deep));color:#2a1e07;border-color:transparent;}
+    .draws{font-size:var(--fs-3);color:var(--ink-soft);font-weight:750;}
+    .draws b{color:var(--accent);font-size:var(--fs-2);}
+
+    /* overlays */
+    .ov{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;
+      padding:22px;background:rgba(15,11,8,.78);backdrop-filter:blur(4px);}
+    .ov.show{display:flex;}
+    .card{width:100%;max-width:380px;background:linear-gradient(180deg,#2c241c,#211b16);
+      border:1px solid var(--line);border-radius:22px;padding:22px 18px;box-shadow:0 10px 40px rgba(0,0,0,.5);}
+    .card h2{font-size:var(--fs-1);font-weight:880;text-align:center;margin-bottom:4px;}
+    .card p{font-size:var(--fs-3);color:var(--ink-soft);text-align:center;line-height:1.5;margin-bottom:14px;}
+    .shopgrid{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+    .offer{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:13px;
+      background:var(--panel);border:1px solid var(--line);}
+    .offer .ic{width:40px;height:40px;flex:0 0 auto;border-radius:10px;position:relative;box-shadow:inset 0 2px 3px rgba(255,255,255,.2);}
+    .offer .ic svg{width:52%;height:52%;position:absolute;top:16%;left:24%;opacity:.9;}
+    .offer .txt{flex:1 1 auto;min-width:0;}
+    .offer .txt .n{font-size:var(--fs-2);font-weight:820;}
+    .offer .txt .d{font-size:11px;color:var(--ink-soft);line-height:1.3;}
+    .offer .buy{flex:0 0 auto;padding:9px 13px;border-radius:11px;font-weight:840;font-size:var(--fs-3);
+      background:linear-gradient(180deg,#e9b73f,var(--accent-deep));color:#2a1e07;box-shadow:0 2px 0 rgba(0,0,0,.28);}
+    .offer .buy:active{transform:translateY(2px);}
+    .offer .buy.no{background:rgba(255,255,255,.06);color:var(--ink-soft);box-shadow:none;}
+    .offer.sold{opacity:.4;}
+    .rowbtn{display:flex;gap:9px;}
+    .cbtn{flex:1 1 0;padding:14px;border-radius:14px;font-weight:840;font-size:var(--fs-2);text-align:center;
+      box-shadow:0 3px 0 rgba(0,0,0,.28);border:1px solid var(--line);background:var(--panel);}
+    .cbtn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.28);}
+    .cbtn.go{background:linear-gradient(180deg,#6cc271,#4f9d54);color:#0f2410;border-color:transparent;}
+    .legend{display:flex;flex-wrap:wrap;gap:7px 10px;justify-content:center;margin-bottom:14px;}
+    .leg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-soft);font-weight:700;}
+    .leg i{width:13px;height:13px;border-radius:4px;display:inline-block;}
+    .toast{position:fixed;left:50%;top:16%;transform:translateX(-50%);z-index:40;
+      background:rgba(20,15,10,.92);border:1px solid var(--line);color:var(--ink);
+      padding:10px 18px;border-radius:99px;font-weight:820;font-size:var(--fs-2);
+      opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;white-space:nowrap;}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(6px);}
+  </style>
+</head>
+<body>
+  <!-- 재료 계열 심볼(단색 기하 도형, 이모지 아님) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <g id="s-fire"><path d="M50 6 C64 30 82 40 74 66 C70 84 56 94 50 94 C44 94 30 84 26 66 C18 40 36 30 50 6 Z"/></g>
+      <g id="s-oil"><circle cx="50" cy="54" r="34"/></g>
+      <g id="s-water"><path d="M12 42 q12 -14 24 0 t24 0 t24 0" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round"/><path d="M12 66 q12 -14 24 0 t24 0 t24 0" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round"/></g>
+      <g id="s-herb"><path d="M50 90 C50 60 20 54 22 22 C54 22 66 46 50 90 Z"/><path d="M50 88 L50 40" stroke="rgba(0,0,0,.25)" stroke-width="6" fill="none" stroke-linecap="round"/></g>
+      <g id="s-cat"><path d="M50 12 L86 50 L50 88 L14 50 Z" fill="none" stroke="currentColor" stroke-width="10" stroke-linejoin="round"/><circle cx="50" cy="50" r="9"/></g>
+    </defs>
+  </svg>
+
+  <div class="wrap">
+    <div class="top">
+      <div class="pill"><span class="lbl">마을</span><span class="val" id="pRound">1</span></div>
+      <div class="pill goal" id="pGoal"><span class="lbl">효능 / 목표</span><span class="val"><span id="pCur">0</span> / <span id="pTgt">16</span></span></div>
+      <div class="pill"><span class="lbl">엽전</span><span class="val" id="pCoin">0</span></div>
+      <button class="ibtn sp" id="btnMute" aria-label="소리"></button>
+      <button class="ibtn" id="btnHelp" aria-label="도움말"><svg viewBox="0 0 256 256"><path d="M128 24a104 104 0 1 0 104 104A104 104 0 0 0 128 24Zm0 168a12 12 0 1 1 12-12 12 12 0 0 1-12 12Zm8-56v4a8 8 0 0 1-16 0v-12a8 8 0 0 1 8-8 20 20 0 1 0-20-20 8 8 0 0 1-16 0 36 36 0 1 1 44 35Z"/></svg></button>
+    </div>
+
+    <div class="bar" id="bar"><i id="barFill"></i></div>
+
+    <div class="boardwrap"><div class="board" id="board"></div></div>
+
+    <div class="tray">
+      <div class="curbox"><div class="curtile" id="curTile"></div></div>
+      <div class="traymeta"><span class="nm" id="curName">약초</span><span class="ds" id="curDesc"></span></div>
+      <div class="nextbox"><span class="cap">다음</span><div class="nexttile" id="nextTile"></div></div>
+    </div>
+
+    <div class="draws" id="drawsLine" style="text-align:center;">남은 손패 <b id="drawsN">10</b></div>
+
+    <div class="acts">
+      <button class="btn sell" id="btnSell">팔기 <span id="sellV">+1</span></button>
+      <button class="btn brew" id="btnBrew">가마 열기</button>
+    </div>
+  </div>
+
+  <!-- 상점 -->
+  <div class="ov" id="ovShop"><div class="card">
+    <h2>약초상 좌판</h2>
+    <p id="shopSub">엽전 <b id="shopCoin">0</b> — 재료를 덱에 더해 다음 마을을 준비해요.</p>
+    <div class="shopgrid" id="shopGrid"></div>
+    <div class="rowbtn">
+      <button class="cbtn" id="btnReroll">다시 진열 -3</button>
+      <button class="cbtn go" id="btnNext">다음 마을로</button>
+    </div>
+  </div></div>
+
+  <!-- 원정 종료 -->
+  <div class="ov" id="ovOver"><div class="card">
+    <h2 id="overTitle">원정 종료</h2>
+    <p id="overSub"></p>
+    <div class="rowbtn"><button class="cbtn go" id="btnRetry">새 원정</button></div>
+    <div class="rowbtn" style="margin-top:9px;"><button class="cbtn" id="btnSupport">후원하기</button></div>
+  </div></div>
+
+  <!-- 도움말 -->
+  <div class="ov" id="ovHelp"><div class="card">
+    <h2>약초 가마</h2>
+    <p style="text-align:left;">뽑은 약초를 가마 칸에 놓으면 <b>이웃 칸끼리 반응</b>해 효능이 곱으로 불어요. 정해진 손패 안에 <b>주문서 목표 효능</b>을 넘기면 다음 마을로.</p>
+    <div class="legend">
+      <span class="leg"><i style="background:var(--fire)"></i>불</span>
+      <span class="leg"><i style="background:var(--oil)"></i>기름</span>
+      <span class="leg"><i style="background:var(--water)"></i>물</span>
+      <span class="leg"><i style="background:var(--herb)"></i>약초</span>
+      <span class="leg"><i style="background:var(--cat)"></i>촉매</span>
+    </div>
+    <p style="text-align:left;">· <b>불</b>은 옆 <b>기름</b>을 ×2 (기름이 불붙음)<br>· 불붙은 <b>기름</b>은 옆 <b>약초</b>를 ×3, 평소 ×2<br>· <b>물</b>은 옆 <b>약초</b>를 ×2, 옆 <b>불</b>은 절반으로 약화<br>· <b>촉매</b>는 옆 칸 전부를 ×2<br>· <b>약초</b>는 값이 낮지만 곱해 주는 재료</p>
+    <div class="rowbtn"><button class="cbtn go" id="btnHelpClose">시작</button></div>
+  </div></div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+  (function(){
+    "use strict";
+    const W=4,H=4,N=W*H;
+    const BASE={fire:3,oil:2,water:2,herb:1,cat:1};
+    const SELL={fire:3,oil:2,water:2,herb:1,cat:4};
+    const NAME={fire:'불',oil:'기름',water:'물',herb:'약초',cat:'촉매'};
+    const SYM={fire:'#s-fire',oil:'#s-oil',water:'#s-water',herb:'#s-herb',cat:'#s-cat'};
+    const DESC={
+      fire:'옆 기름을 ×2로 불붙여요.',
+      oil:'불에 붙으면 옆 약초를 ×3.',
+      water:'옆 약초 ×2, 하지만 옆 불은 절반.',
+      herb:'값은 낮지만 곱해서 키우는 재료.',
+      cat:'옆 칸 전부를 ×2로 증폭.'
+    };
+    // 튜닝 상수 (시뮬로 검증한 값)
+    const TARGET_BASE=16, TARGET_GROWTH=1.34, DRAWS_BASE=10;
+    const SHOP_COST={fire:6,oil:4,water:4,cat:13,herb:2};
+    const REROLL_COST=3;
+    const targetFor=r=>Math.round(TARGET_BASE*Math.pow(TARGET_GROWTH,r-1));
+    const drawsFor=r=>DRAWS_BASE+Math.floor((r-1)/3);
+    const rewardFor=(r,total,tgt)=>7+r+Math.floor(Math.max(0,total-tgt)/tgt*8);
+
+    // --- 순수 스코어링 (sim과 동일) ---
+    function neighbors(i){const r=(i/W)|0,c=i%W,o=[];if(r>0)o.push(i-W);if(r<H-1)o.push(i+W);if(c>0)o.push(i-1);if(c<W-1)o.push(i+1);return o;}
+    const NB=Array.from({length:N},(_,i)=>neighbors(i));
+    function computeBoard(cells){
+      const ign=new Array(N).fill(false);
+      for(let i=0;i<N;i++){const t=cells[i];if(t&&t.fam==='oil'){for(const j of NB[i])if(cells[j]&&cells[j].fam==='fire'){ign[i]=true;break;}}}
+      const finals=new Array(N).fill(0);let total=0;
+      for(let i=0;i<N;i++){const t=cells[i];if(!t)continue;let m=1;
+        for(const j of NB[i]){const u=cells[j];if(!u)continue;
+          if(u.fam==='fire'&&t.fam==='oil')m*=2;
+          if(u.fam==='oil'&&t.fam==='herb')m*=ign[j]?3:2;
+          if(u.fam==='water'&&t.fam==='herb')m*=2;
+          if(u.fam==='water'&&t.fam==='fire')m*=0.5;
+          if(u.fam==='cat')m*=2;}
+        const v=BASE[t.fam]*m;finals[i]=v;total+=v;}
+      return{finals,total:Math.round(total),ign};
+    }
+
+    // --- 상태 ---
+    const KEY={save:'brewSave',best:'brewBest',muted:'brewMuted'};
+    let S=null;
+    function newExpedition(){
+      return{
+        round:1, coins:0,
+        deck:['herb','herb','herb','herb','oil','oil','oil','fire','fire','fire','water','water'],
+        cells:new Array(N).fill(null),
+        queue:[], qi:0,
+        phase:'play',
+        shop:null
+      };
+    }
+    function shuffle(a){for(let i=a.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[a[i],a[j]]=[a[j],a[i]];}return a;}
+    function buildQueue(){
+      const bag=shuffle(S.deck.slice());
+      const n=drawsFor(S.round),q=[];
+      for(let k=0;k<n;k++)q.push(bag[k%bag.length]);
+      S.queue=q;S.qi=0;
+    }
+    function startRound(){
+      S.cells=new Array(N).fill(null);
+      S.phase='play';S.shop=null;
+      buildQueue();
+      save();render();
+    }
+
+    // --- 저장/복원 (부팅 시 setItem 하지 않음: getItem 복원만) ---
+    let muted=false;
+    function save(){try{localStorage.setItem(KEY.save,JSON.stringify(S));}catch(e){}}
+    function commitBest(){
+      try{
+        const cur=parseInt(localStorage.getItem(KEY.best)||'0',10)||0;
+        if(S.round>cur)localStorage.setItem(KEY.best,String(S.round));
+      }catch(e){}
+    }
+    function loadMuted(){try{muted=localStorage.getItem(KEY.muted)==='1';}catch(e){}}
+
+    // --- 사운드 (최소) ---
+    let ac=null;
+    function tone(freq,dur,type,vol){
+      if(muted)return;
+      try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+        const o=ac.createOscillator(),g=ac.createGain();o.type=type||'sine';o.frequency.value=freq;
+        g.gain.value=vol||0.06;o.connect(g);g.connect(ac.destination);
+        const t=ac.currentTime;g.gain.setValueAtTime(vol||0.06,t);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+        o.start(t);o.stop(t+dur);}catch(e){}
+    }
+    const sfx={
+      place(gain){tone(300+Math.min(600,gain*30),0.09,'triangle',0.05);},
+      sell(){tone(680,0.06,'square',0.04);setTimeout(()=>tone(880,0.05,'square',0.03),50);},
+      clear(){[523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,0.16,'triangle',0.06),i*80));},
+      over(){tone(180,0.5,'sine',0.07);}
+    };
+
+    // --- 렌더 ---
+    const $=id=>document.getElementById(id);
+    const board=$('board');
+    let cellEls=[];
+    function buildBoardDom(){
+      board.innerHTML='';cellEls=[];
+      for(let i=0;i<N;i++){const d=document.createElement('div');d.className='cell';d.dataset.i=i;
+        d.addEventListener('click',()=>onCell(i));board.appendChild(d);cellEls.push(d);}
+    }
+    function tileSvg(fam){return '<svg viewBox="0 0 100 100" style="fill:rgba(255,255,255,.94);color:rgba(255,255,255,.94)"><use href="'+SYM[fam]+'"/></svg>';}
+    function render(){
+      if(S.phase==='play'){
+        const cur=S.queue[S.qi]||null;
+        const b=computeBoard(S.cells);
+        const tgt=targetFor(S.round);
+        // 상단
+        $('pRound').textContent=S.round;
+        $('pCur').textContent=b.total;$('pTgt').textContent=tgt;
+        $('pCoin').textContent=S.coins;
+        const reached=b.total>=tgt;
+        $('pGoal').classList.toggle('reached',reached);
+        const pct=Math.min(100,b.total/tgt*100);
+        $('barFill').style.width=pct+'%';
+        $('bar').classList.toggle('reached',reached);
+        // 보드
+        for(let i=0;i<N;i++){const el=cellEls[i],t=S.cells[i];
+          el.classList.toggle('tgt',!t&&!!cur);
+          if(t){
+            let tl=el.querySelector('.tile');
+            if(!tl||tl.dataset.fam!==t.fam){el.innerHTML='';tl=document.createElement('div');tl.className='tile f-'+t.fam;tl.dataset.fam=t.fam;tl.innerHTML=tileSvg(t.fam)+'<span class="fv"></span>';el.appendChild(tl);}
+            tl.classList.toggle('ignited',t.fam==='oil'&&b.ign[i]);
+            const fvEl=tl.querySelector('.fv');const nv=Math.round(b.finals[i]);
+            if(fvEl.textContent!==String(nv)){fvEl.textContent=nv;}
+          }else if(el.firstChild){el.innerHTML='';}
+        }
+        // 트레이
+        const ct=$('curTile');
+        if(cur){ct.className='curtile f-'+cur;ct.innerHTML=tileSvg(cur)+'<span class="b">'+BASE[cur]+'</span>';
+          $('curName').textContent=NAME[cur];$('curDesc').textContent=DESC[cur];
+          $('sellV').textContent='+'+SELL[cur];
+        }else{ct.className='curtile';ct.innerHTML='';$('curName').textContent='';$('curDesc').textContent='';}
+        const nx=S.queue[S.qi+1]||null,nt=$('nextTile');
+        if(nx){nt.className='nexttile f-'+nx;nt.innerHTML=tileSvg(nx);}else{nt.className='nexttile';nt.innerHTML='';}
+        $('drawsN').textContent=Math.max(0,S.queue.length-S.qi);
+        $('btnSell').style.visibility=cur?'visible':'hidden';
+      }
+      $('btnMute').innerHTML=muted
+        ?'<svg viewBox="0 0 256 256"><path d="M155 41a8 8 0 0 0-8 1L92 88H56a16 16 0 0 0-16 16v48a16 16 0 0 0 16 16h36l55 46a8 8 0 0 0 13-6V48a8 8 0 0 0-5-7Zm73 60-14 14 14 14a8 8 0 0 1-12 12l-14-14-14 14a8 8 0 0 1-12-12l14-14-14-14a8 8 0 0 1 12-12l14 14 14-14a8 8 0 0 1 12 12Z"/></svg>'
+        :'<svg viewBox="0 0 256 256"><path d="M155 41a8 8 0 0 0-8 1L92 88H56a16 16 0 0 0-16 16v48a16 16 0 0 0 16 16h36l55 46a8 8 0 0 0 13-6V48a8 8 0 0 0-5-7Zm60 47a48 48 0 0 1 0 80 8 8 0 0 1-10-12 32 32 0 0 0 0-56 8 8 0 0 1 10-12Z"/></svg>';
+    }
+
+    // --- 액션 ---
+    function onCell(i){
+      if(S.phase!=='play')return;
+      const cur=S.queue[S.qi];if(!cur||S.cells[i])return;
+      ensureAudio();
+      const before=computeBoard(S.cells).total;
+      S.cells[i]={fam:cur};
+      const after=computeBoard(S.cells).total;
+      sfx.place(after-before);
+      S.qi++;
+      render();
+      // 배치로 값이 오른 이웃 강조
+      bumpNeighbors(i);
+      afterAction();
+    }
+    function sellCur(){
+      if(S.phase!=='play')return;
+      const cur=S.queue[S.qi];if(!cur)return;
+      ensureAudio();
+      S.coins+=SELL[cur];S.qi++;sfx.sell();
+      flashCoin();render();afterAction();
+    }
+    function afterAction(){
+      save();
+      if(S.qi>=S.queue.length)setTimeout(brew,260);
+    }
+    function bumpNeighbors(i){
+      NB[i].forEach(j=>{if(S.cells[j]){cellEls[j].classList.remove('bump');void cellEls[j].offsetWidth;cellEls[j].classList.add('bump');}});
+    }
+    function flashCoin(){const p=$('pCoin');p.style.transition='transform .15s';p.style.transform='scale(1.3)';setTimeout(()=>p.style.transform='',160);}
+
+    function brew(){
+      const b=computeBoard(S.cells),tgt=targetFor(S.round);
+      if(b.total>=tgt){
+        const rw=rewardFor(S.round,b.total,tgt);
+        S.coins+=rw;
+        S.round++;commitBest();
+        toast('가마 성공! 엽전 +'+rw);
+        sfx.clear();
+        setTimeout(openShop,700);
+      }else{
+        S.phase='over';save();sfx.over();
+        openOver(b.total,tgt);
+      }
+    }
+
+    // --- 상점 ---
+    const SHOP_DESC={
+      fire:'불 — 옆 기름을 ×2',oil:'기름 — 불붙으면 약초 ×3',
+      water:'물 — 약초 ×2 / 불 약화',cat:'촉매 — 옆 전부 ×2 (귀함)',herb:'약초 — 값싼 곱셈 재료'
+    };
+    function rollShop(){
+      const pool=['fire','oil','water','herb','cat'];
+      const weights={fire:3,oil:3,water:2,herb:2,cat:1};
+      const bag=[];pool.forEach(f=>{for(let k=0;k<weights[f];k++)bag.push(f);});
+      shuffle(bag);const seen={},offers=[];
+      for(const f of bag){if(!seen[f]){seen[f]=1;offers.push({fam:f,sold:false});}if(offers.length>=3)break;}
+      S.shop=offers;save();
+    }
+    function openShop(){
+      if(!S.shop)rollShop();
+      renderShop();$('ovShop').classList.add('show');
+    }
+    function renderShop(){
+      $('pRound').textContent=S.round;
+      $('shopCoin').textContent=S.coins;$('pCoin').textContent=S.coins;
+      const g=$('shopGrid');g.innerHTML='';
+      S.shop.forEach((o,idx)=>{
+        const cost=SHOP_COST[o.fam];
+        const row=document.createElement('div');row.className='offer'+(o.sold?' sold':'');
+        const afford=S.coins>=cost&&!o.sold;
+        row.innerHTML='<div class="ic f-'+o.fam+'">'+tileSvg(o.fam)+'</div>'
+          +'<div class="txt"><div class="n">'+NAME[o.fam]+'</div><div class="d">'+SHOP_DESC[o.fam]+'</div></div>'
+          +'<button class="buy'+(afford?'':' no')+'">'+(o.sold?'구매됨':cost+'냥')+'</button>';
+        const btn=row.querySelector('.buy');
+        btn.addEventListener('click',()=>{if(!afford)return;S.coins-=cost;S.deck.push(o.fam);o.sold=true;ensureAudio();sfx.sell();renderShop();save();});
+        g.appendChild(row);
+      });
+      $('btnReroll').style.opacity=S.coins>=REROLL_COST?'1':'.5';
+    }
+
+    // --- 오버레이 ---
+    function openOver(total,tgt){
+      let best=1;try{best=Math.max(parseInt(localStorage.getItem(KEY.best)||'1',10)||1,S.round);}catch(e){}
+      $('overTitle').textContent='원정 종료';
+      $('overSub').innerHTML='효능 <b>'+total+'</b> — 목표 <b>'+tgt+'</b>에 못 미쳤어요.<br>마을 <b>'+S.round+'</b>까지 왔어요. 최고 <b>'+best+'</b>마을.';
+      $('ovOver').classList.add('show');
+    }
+
+    // --- 이벤트 ---
+    $('btnSell').addEventListener('click',sellCur);
+    $('btnBrew').addEventListener('click',()=>{if(S.phase==='play')brew();});
+    $('btnMute').addEventListener('click',()=>{muted=!muted;try{localStorage.setItem(KEY.muted,muted?'1':'0');}catch(e){}render();});
+    $('btnHelp').addEventListener('click',()=>$('ovHelp').classList.add('show'));
+    $('btnHelpClose').addEventListener('click',()=>{$('ovHelp').classList.remove('show');ensureAudio();});
+    $('btnReroll').addEventListener('click',()=>{if(S.coins>=REROLL_COST){S.coins-=REROLL_COST;rollShop();renderShop();}});
+    $('btnNext').addEventListener('click',()=>{$('ovShop').classList.remove('show');startRound();});
+    $('btnRetry').addEventListener('click',()=>{$('ovOver').classList.remove('show');S=newExpedition();startRound();});
+    $('btnSupport').addEventListener('click',()=>{if(window.GamePortal&&GamePortal.openSupport)GamePortal.openSupport();});
+
+    function ensureAudio(){if(!ac&&!muted){try{ac=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}}
+    let toastT=null;
+    function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),1400);}
+
+    // --- 부팅 ---
+    function boot(){
+      loadMuted();buildBoardDom();
+      let restored=false;
+      try{const raw=localStorage.getItem(KEY.save);
+        if(raw){const s=JSON.parse(raw);
+          if(s&&s.cells&&s.deck&&s.phase!=='over'){S=s;restored=true;}}
+      }catch(e){}
+      if(!restored){S=newExpedition();buildQueue();}
+      render();
+      if(restored&&S.phase==='shop'){openShop();}
+      // 첫 방문이면 도움말
+      let firstSeen=false;try{firstSeen=localStorage.getItem('brewSeen')==='1';}catch(e){}
+      if(!firstSeen&&!restored){$('ovHelp').classList.add('show');try{localStorage.setItem('brewSeen','1');}catch(e){}}
+    }
+    // shop 진입 시 phase 표시를 위해 openShop에서 기록
+    const _openShop=openShop;openShop=function(){S.phase='shop';save();_openShop();};
+    document.addEventListener('visibilitychange',()=>{if(document.hidden)save();});
+    window.addEventListener('pagehide',save);
+    boot();
+  })();
+  </script>
+</body>
+</html>

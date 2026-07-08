@@ -1,0 +1,11 @@
+{
+  "name": "동네 지킴이 — 완전정보 턴제 전술",
+  "short_name": "동네 지킴이",
+  "description": "벌레의 다음 수는 전부 공개. 로봇으로 밀어 물·구덩이·서로에게 처넣어 마을을 지켜라. 시간제한 없음.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ece5d3",
+  "theme_color": "#e7e0cf"
+}
