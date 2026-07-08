@@ -53,6 +53,13 @@
     .pill .hearts{display:flex;gap:3px;}
     .pill .hearts .ki{width:17px;height:17px;color:#e0604f;}
     .pill .hearts .ki.off{color:#c9d6de;}
+    .pill .hearts .ki.lost{animation:heart-lost .45s ease forwards;}
+    @keyframes heart-lost{0%{transform:scale(1);color:#e0604f;}45%{transform:scale(1.5);color:#e0604f;}100%{transform:scale(.92);color:#c9d6de;}}
+    .pill .hearts .ki.pulse{animation:heart-pulse .9s ease-in-out infinite;}
+    @keyframes heart-pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.14);}}
+    .pill>.ki{width:16px;height:16px;color:#c9a23f;}
+    #score-pill.pop{animation:score-pop .18s ease;}
+    @keyframes score-pop{50%{transform:scale(1.16);}}
     .sp{margin-left:auto;}
     .icon-btn{
       width:42px;height:42px;border:1px solid rgba(50,80,100,.16);border-radius:13px;
@@ -114,8 +121,8 @@
   </svg>
 
   <div class="topbar">
-    <div class="pill">점수 <b id="score">0</b></div>
-    <div class="pill">최고 <b id="best">0</b></div>
+    <div class="pill" id="score-pill">점수 <b id="score">0</b></div>
+    <div class="pill" aria-label="최고 기록"><svg class="ki"><use href="#p-trophy"/></svg><b id="best">0</b></div>
     <div class="pill"><span class="hearts" id="hearts"></span></div>
     <div class="sp"></div>
     <button class="icon-btn" id="reset" aria-label="새 게임"><svg class="ki"><use href="#p-arrow-clockwise"/></svg></button>
@@ -137,6 +144,7 @@
       <p class="result" id="over-result"></p>
       <button class="primary" id="again">한 판 더</button>
       <div class="mini">
+        <button id="share">기록 공유</button>
         <a href="/rank">기록실</a>
         <button id="support">후원 · 의견</button>
       </div>
@@ -146,7 +154,8 @@
   <script>
   (function(){
     'use strict';
-    var KEY={best:'hoopBest',muted:'hoopMuted',save:'hoopSave',played:'hoopPlayed'};
+    var KEY={best:'hoopBest',muted:'hoopMuted',save:'hoopSave',played:'hoopPlayed',
+             bestCombo:'hoopBestCombo',goals:'hoopGoals',swish:'hoopSwish'};
     function gi(k){try{return parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){return 0;}}
     function set(k,v){try{localStorage.setItem(k,String(v));}catch(e){}}
     function del(k){try{localStorage.removeItem(k);}catch(e){}}
@@ -168,7 +177,10 @@
     // ── 상태 ────────────────────────────────────────────────
     var best=gi(KEY.best);
     var muted=false;try{muted=localStorage.getItem(KEY.muted)==='1';}catch(e){}
-    var score=0,hearts=3,combo=0,bestCombo=0,shots=0,goals=0,ended=false;
+    var score=0,hearts=3,combo=0,bestCombo=0,shots=0,goals=0,swishes=0,ended=false;
+    var runRecord=false;     // 이번 판에 실제로 best를 '넘은' 적 있음 (동점 오표시 방지)
+    var windSeen=false;      // 이번 판에서 바람 첫 등장 고지를 이미 했음
+    var comboRecord=false;   // 이번 판에 통산 최고 콤보 경신
     var wrap=document.getElementById('court-wrap'),cv=document.getElementById('court'),ctx=cv.getContext('2d');
     var note=document.getElementById('note'),over=document.getElementById('over');
     var W=360,H=560,DPR=1;
@@ -177,18 +189,20 @@
     var hoop={bx:0,rimY:0,rimW:66,golden:false,shakeT:0};
     var ball={x:0,y:0,vx:0,vy:0,r:17,rot:0,flying:false,touched:false,banked:false,scored:false,spawnT:0};
     var drag=null;           // {sx,sy,cx,cy}
+    var lastLaunchX=null;    // 직전 발사 시점의 공 x (미스 재도전 위치 유지용)
     var wind=0;              // px/s^2 수평 가속
-    var trail=[],parts=[],floats=[];
+    var trail=[],parts=[],floats=[],rings=[];
     var netPulse=0,netT=0;   // 스위시 출렁
     var shakeT=0,shakeMag=0; // 화면 흔들림
     var clouds=[];
     var firstEver=!gi(KEY.played);
+    var graceRun=firstEver;  // 생애 첫 판: 첫 골까지 하트 안 닳는 연습 슛
 
     var G=1500, POWER=7.6, MAXV=1350; // 감도 상향 — 폰에서 짧은 당김으로도 풀파워
 
     // ── 사운드 (WebAudio 합성) ──────────────────────────────
     var ac=null;
-    function actx(){if(!ac){try{ac=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}return ac;}
+    function actx(){if(!ac){try{ac=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}if(ac&&ac.state==='suspended'){try{ac.resume();}catch(e){}}return ac;}
     function tone(f,t,d,type,vol){if(muted)return;var c=actx();if(!c)return;var o=c.createOscillator(),g=c.createGain();o.type=type||'sine';o.frequency.value=f;o.connect(g);g.connect(c.destination);var x=c.currentTime+(t||0);g.gain.setValueAtTime(.0001,x);g.gain.exponentialRampToValueAtTime(vol||.13,x+.01);g.gain.exponentialRampToValueAtTime(.0001,x+(d||.12));o.start(x);o.stop(x+(d||.12)+.03);}
     function sThrow(){tone(190,0,.09,'triangle',.07);tone(320,.02,.07,'sine',.05);}
     function sRim(){tone(520,0,.05,'square',.05);tone(260,0,.09,'triangle',.07);}
@@ -202,24 +216,41 @@
 
     // ── HUD ────────────────────────────────────────────────
     var scoreEl=document.getElementById('score'),bestEl=document.getElementById('best'),heartsEl=document.getElementById('hearts');
+    var scorePill=document.getElementById('score-pill');
+    var lastHearts=-1;
     function hud(){
       scoreEl.textContent=String(score);
       bestEl.textContent=String(best);
-      var h='';
-      for(var i=0;i<3;i++)h+='<svg class="ki'+(i<hearts?'':' off')+'"><use href="#p-heart"/></svg>';
-      heartsEl.innerHTML=h;
+      if(hearts!==lastHearts){ // 하트 변화 시에만 재구성 (pulse 애니 리스타트 방지)
+        var justLost=(lastHearts>=0&&hearts<lastHearts)?hearts:-1;
+        var h='';
+        for(var i=0;i<3;i++){
+          var cls='ki';
+          if(i>=hearts)cls+=(i===justLost?' lost':' off');
+          else if(hearts===1)cls+=' pulse';
+          h+='<svg class="'+cls+'"><use href="#p-heart"/></svg>';
+        }
+        heartsEl.innerHTML=h;
+        lastHearts=hearts;
+      }
       document.getElementById('mute-ic').innerHTML='<use href="'+(muted?'#p-speaker-slash':'#p-speaker-high')+'"/>';
     }
+    function scorePop(){scorePill.classList.remove('pop');void scorePill.offsetWidth;scorePill.classList.add('pop');}
 
     // ── 저장/복원 (판 단위 — 나갔다 와도 이어짐) ─────────────
     function saveRun(){
       if(ended){del(KEY.save);return;}
-      try{localStorage.setItem(KEY.save,JSON.stringify({score:score,hearts:hearts,combo:combo,bestCombo:bestCombo,shots:shots,goals:goals}));}catch(e){}
+      if(shots===0&&score===0){del(KEY.save);return;} // 빈 판은 저장 안 함 ("0점 이어하기" 방지)
+      try{localStorage.setItem(KEY.save,JSON.stringify({score:score,hearts:hearts,combo:combo,bestCombo:bestCombo,shots:shots,goals:goals,swishes:swishes,rec:runRecord?1:0,recShown:goalRecordShown?1:0,ws:windSeen?1:0}));}catch(e){}
     }
     function loadRun(){
       try{
         var s=JSON.parse(localStorage.getItem(KEY.save)||'null');
-        if(s&&s.hearts>0){score=s.score||0;hearts=s.hearts;combo=s.combo||0;bestCombo=s.bestCombo||0;shots=s.shots||0;goals=s.goals||0;return true;}
+        if(s&&s.hearts>0&&(s.score>0||s.shots>0)){
+          score=s.score||0;hearts=s.hearts;combo=s.combo||0;bestCombo=s.bestCombo||0;shots=s.shots||0;goals=s.goals||0;swishes=s.swishes||0;
+          runRecord=!!s.rec;goalRecordShown=!!s.recShown;windSeen=!!s.ws;
+          return true;
+        }
       }catch(e){}
       return false;
     }
@@ -232,7 +263,9 @@
       cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);
       ctx.setTransform(DPR,0,0,DPR,0,0);
       ball.r=Math.max(15,Math.min(22,W*0.052));
-      if(!ball.flying)placeBall();
+      drag=null;
+      if(ball.flying){ball.flying=false;nextShot(false);} // 비행 중 회전 = 억울한 미스 금지
+      else placeBall();
       clampHoop();
     }
     function clampHoop(){
@@ -247,6 +280,14 @@
       clampHoop();
       wind=(score>=15)?Math.round(rnd(-1,1)*Math.min(240,60+score*3)):0;
       if(Math.abs(wind)<28)wind=0;
+      if(wind!==0&&!windSeen){ // 바람 첫 등장 — 규칙 변화를 반드시 고지
+        windSeen=true;
+        if(Math.abs(wind)>60)wind=wind>0?60:-60; // 첫 바람은 관대하게
+        floatText(W/2,H*0.30,'바람이 불어요!','#3f8fd0',true);
+        burst(26,H*0.18,'#5f9bd0',10,120);
+        tone(520,0,.12,'sine',.09);tone(680,.09,.14,'sine',.08);
+        note.textContent='깃발 반대쪽을 살짝 겨냥하세요';
+      }
     }
     function placeBall(){
       // 림과 최소 수평거리 확보 — 수직에 가까운 억울한 슛 각 방지
@@ -294,6 +335,7 @@
       var v=Math.hypot(vx,vy);
       if(v>MAXV){vx*=MAXV/v;vy*=MAXV/v;}
       ball.vx=vx;ball.vy=vy;ball.flying=true;ball.touched=false;ball.banked=false;ball.scored=false;
+      lastLaunchX=ball.x;
       shots++;sThrow();
       if(navigator.vibrate)navigator.vibrate(10);
       if(firstEver){firstEver=false;set(KEY.played,1);}
@@ -302,6 +344,7 @@
     cv.addEventListener('touchstart',down,{passive:false});
     cv.addEventListener('touchmove',move,{passive:false});
     cv.addEventListener('touchend',up,{passive:false});
+    cv.addEventListener('touchcancel',function(){drag=null;});
     cv.addEventListener('mousedown',down);
     window.addEventListener('mousemove',move);
     window.addEventListener('mouseup',up);
@@ -323,6 +366,7 @@
       ball.scored=true;
       goals++;combo++;bestCombo=Math.max(bestCombo,combo);
       var swish=!ball.touched&&!ball.banked;
+      if(swish)swishes++;
       var base=swish?3:2;
       var mult=1+Math.floor(combo/4);
       var pts=base*mult*(hoop.golden?2:1);
@@ -331,32 +375,51 @@
       if(score>best){
         var wasRecord=best>0;
         best=score; // 영속화는 종료/pagehide 때 — 매 골마다 서버 캡처 안 쏘게
+        runRecord=true;
         if(wasRecord&&!goalRecordShown){goalRecordShown=true;floatText(W/2,H*0.5,'신기록!','#e5b84d',true);sRecord();burst(W/2,H*0.5,'#e5b84d',26,220);}
       }
       netPulse=1;netT=0;
       var rx=hoop.bx-hoop.rimW/2;
-      floatText(rx,hoop.rimY-26,'+'+pts+(mult>1?' ×'+mult:''),hoop.golden?'#c98a12':'#e0703f',pts>=6);
+      rings.push({x:rx,y:hoop.rimY,t:0,life:.35,c:curTier.glow||'rgba(224,112,63,.6)'});
+      scorePop();
+      floatText(rx,hoop.rimY-26,'+'+pts,hoop.golden?'#c98a12':'#e0703f',pts>=6);
       if(swish){floatText(rx,hoop.rimY-52,'스위시!','#3f8fd0');sSwish();burst(rx,hoop.rimY,'#7ec3ef',14,170);}
       else if(ball.banked){floatText(rx,hoop.rimY-52,'뱅크!','#7a8a97');}
       if(hoop.golden){floatText(rx,hoop.rimY-78,'황금 림 ×2','#c98a12');burst(rx,hoop.rimY-8,'#e5b84d',18,190);}
       sGoal(combo);
-      if(curTier!==prevTier){floatText(W/2,H*0.42,curTier.name+' 진화!',
-        '#8a5fc9',true);sTier();burst(ball.x,ball.y,'#c9a5ef',20,200);}
+      if(curTier!==prevTier){
+        floatText(W/2,H*0.42,curTier.name+' 진화!','#8a5fc9',true);
+        if(mult>1)floatText(W/2,H*0.49,'점수 ×'+mult+'!','#8a5fc9');
+        sTier();burst(ball.x,ball.y,'#c9a5ef',20,200);
+      }
       if(navigator.vibrate)navigator.vibrate(swish?[14,30,20]:16);
       var nx=nextTier(combo);
-      note.textContent=(combo>=2?'콤보 ×'+combo+'  ':'')+(nx?('다음 진화 '+nx.name+'까지 '+(nx.at-combo)+'골'):'최고 티어! 무지개공');
+      var rem=4-(combo%4);if(rem===0)rem=4;
+      note.textContent=(combo>=2?'콤보 ×'+combo+' · ':'')+(nx
+        ?('다음 진화 '+nx.name+'까지 '+(nx.at-combo)+'골')
+        :('다음 배수 ×'+(mult+1)+'까지 '+rem+'골'));
       hud();saveRun();
     }
     var goalRecordShown=false;
     function missReason(){
-      // 실패 이유 코칭 — 억울하지 않게
+      // 실패 이유 코칭 — 억울하지 않게. 오버슛을 바람보다 먼저, 바람 귀속엔 방향 일치 조건
       if(ball.x<hoop.bx-hoop.rimW*2.2)return '짧았어요 — 조금 더 세게!';
-      if(ball.y<-40)return '너무 셌어요 — 살짝만 부드럽게';
-      if(wind!==0)return '바람에 밀렸어요 — 화살표 반대쪽을 노려요';
+      if(ball.x>hoop.bx+30)return '너무 셌어요 — 조금만 약하게';
+      if(wind!==0&&((wind>0&&ball.x>hoop.bx-hoop.rimW/2)||(wind<0&&ball.x<hoop.bx-hoop.rimW/2)))
+        return '바람에 밀렸어요 — 화살표 반대쪽을 노려요';
       return '아깝다! 각도를 살짝만 바꿔봐요';
     }
     function miss(){
-      hearts--;combo=0;
+      if(graceRun&&goals===0){ // 생애 첫 판, 첫 골 전엔 하트가 닳지 않는다 (첫 실패는 관대하게)
+        combo=0;sMiss();shake(3);
+        if(navigator.vibrate)navigator.vibrate([30,30,30]);
+        note.textContent=missReason()+' (연습 슛 — 첫 골까지 하트가 안 닳아요)';
+        nextShot(false);saveRun();return;
+      }
+      hearts--;
+      var ti=TIERS.indexOf(tierFor(combo));
+      combo=ti>0?TIERS[ti-1].at:0; // 티어 전액 몰수 대신 한 단계 강등 (배수는 경계 정렬로 자동 하락)
+      if(ti>0)floatText(W/2,H*0.45,tierFor(combo).name+'으로 강등...','#7a8a97');
       sMiss();shake(4);
       if(navigator.vibrate)navigator.vibrate([30,30,30]);
       hud();
@@ -368,27 +431,47 @@
     function nextShot(moveHoop){
       if(moveHoop!==false)newHoop(false);
       placeBall();
+      // 미스 재도전: 직전 발사 위치에서 다시 (코칭 "조금 더 세게"가 그대로 적용되게)
+      if(moveHoop===false&&lastLaunchX!=null)ball.x=Math.min(Math.max(lastLaunchX,W*0.10),W*0.46);
     }
     function finish(){
       ended=true;del(KEY.save);sEnd();
       if(best>gi(KEY.best))set(KEY.best,best); // 여기서 영속화 → portal.js가 신기록 캡처
+      // 세션 누적 자산 커밋 (신기록 못 깬 판에도 남을 2차 기록)
+      comboRecord=bestCombo>gi(KEY.bestCombo);
+      if(comboRecord)set(KEY.bestCombo,bestCombo);
+      set(KEY.goals,gi(KEY.goals)+goals);
+      set(KEY.swish,gi(KEY.swish)+swishes);
       setTimeout(function(){showOver();},620);
     }
     function showOver(){
-      var record=score>0&&score===best&&goals>0;
-      document.getElementById('badge').classList.toggle('record',record);
-      document.getElementById('over-title').textContent=record?'신기록!':'경기 종료!';
+      if(!ended)return; // restart를 620ms 안에 눌렀으면 유령 카드 방지
+      var record=runRecord&&goals>0;
+      document.getElementById('badge').classList.toggle('record',record||comboRecord);
+      document.getElementById('over-title').textContent=record?'신기록!':(comboRecord?'최고 콤보 경신!':'경기 종료!');
+      var nearGap=best-score, nearThresh=Math.max(8,Math.round(best*0.15));
       document.getElementById('over-sub').textContent=record
         ?'옥상 최고의 슈터! 최고 점수를 갱신했어요.'
-        :(best>0&&best-score<=6?('아깝다 — 최고 기록까지 '+(best-score)+'점!'):'바람을 읽으면 더 멀리 갑니다.');
+        :(comboRecord?('최고 콤보 ×'+bestCombo+' 달성! 이제 점수도 노려봐요.')
+        :(best>0&&nearGap>0&&nearGap<=nearThresh?('아깝다 — 최고 기록까지 '+nearGap+'점!')
+        :(score<15?'당기는 길이로 힘을, 방향으로 각도를 — 감이 금방 옵니다.':'바람을 읽으면 더 멀리 갑니다.')));
       document.getElementById('over-result').innerHTML=
-        '점수 <b>'+score+'</b> · 최고 콤보 <b>×'+bestCombo+'</b> · 성공 <b>'+goals+'/'+shots+'</b><br>최고 기록 <b>'+best+'</b>';
+        '점수 <b>'+score+'</b> · 최고 콤보 <b>×'+bestCombo+'</b> · 성공 <b>'+goals+'/'+shots+'</b><br>'
+        +'최고 기록 <b>'+best+'</b> · 통산 <b>'+gi(KEY.goals)+'</b>골 · 스위시 <b>'+gi(KEY.swish)+'</b>';
       over.classList.add('show');
+      try{if(window.GamePortal&&GamePortal.shareResult)GamePortal.shareResult();}catch(e){}
+    }
+    function shareRun(){
+      var txt='옥상 농구 '+score+'점 · 최고 콤보 ×'+bestCombo+'! 도전해보세요';
+      var url=location.origin+'/hoop/';
+      if(navigator.share){navigator.share({title:'옥상 농구',text:txt,url:url}).catch(function(){});}
+      else if(navigator.clipboard){navigator.clipboard.writeText(txt+' '+url).then(function(){note.textContent='기록을 복사했어요 — 붙여넣기로 자랑하세요!';}).catch(function(){});}
     }
     function restart(){
       over.classList.remove('show');
       document.getElementById('badge').classList.remove('record');
-      ended=false;score=0;hearts=3;combo=0;bestCombo=0;shots=0;goals=0;goalRecordShown=false;
+      ended=false;score=0;hearts=3;combo=0;bestCombo=0;shots=0;goals=0;swishes=0;
+      goalRecordShown=false;runRecord=false;windSeen=false;comboRecord=false;lastHearts=-1;lastLaunchX=null;graceRun=false;
       del(KEY.save);
       newHoop(true);placeBall();hud();
       note.textContent='아무 곳이나 꾹— 아래로 당겼다 놓으면 슛!';
@@ -430,6 +513,10 @@
       if(!ball.scored&&ball.vy>0&&prevY<=rimY&&ball.y>rimY&&ball.x>rimL+7&&ball.x<rimR-7){
         goal();
       }
+      // 득점 후 조기 종료 — 화면 밖까지 죽은 낙하 시간 제거
+      if(ball.scored&&ball.y>rimY+120){
+        ball.flying=false;nextShot(true);return;
+      }
       // 종료 판정
       if(ball.y>H+70||ball.x<-90||ball.x>W+90){
         ball.flying=false;
@@ -440,11 +527,11 @@
 
     // ── 그리기 ──────────────────────────────────────────────
     function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
-    function drawBG(t){
+    function drawBG(t,dt){
       // 구름 (상시 모션)
       ctx.save();
       clouds.forEach(function(c){
-        c.x+=c.v*0.016;if(c.x>W+70)c.x=-70;
+        c.x+=c.v*dt;if(c.x>W+70)c.x=-70;
         ctx.globalAlpha=.5;
         ctx.fillStyle='#fff';
         ctx.beginPath();
@@ -464,6 +551,17 @@
         ctx.fillStyle=(i%2)?'rgba(120,150,178,.24)':'rgba(130,160,185,.28)';
       }
       ctx.restore();
+      // 옥상 난간 (옥상임을 증명하는 정적 소품 — 바닥선 바로 위)
+      var railY=H*0.62;
+      ctx.strokeStyle='rgba(90,120,145,.30)';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(0,railY-30);ctx.lineTo(W,railY-30);ctx.stroke(); // 가로 레일
+      ctx.lineWidth=2.5;
+      var posts=Math.max(8,Math.round(W/44));
+      for(var pi=0;pi<=posts;pi++){var px=(W/posts)*pi;ctx.beginPath();ctx.moveTo(px,railY-30);ctx.lineTo(px,railY);ctx.stroke();}
+      // 좌측 급수탑
+      ctx.fillStyle='rgba(120,150,178,.26)';
+      roundRect(W*0.06,railY-78,34,50,6);ctx.fill();
+      ctx.fillRect(W*0.06+6,railY-28,6,20);ctx.fillRect(W*0.06+22,railY-28,6,20); // 다리
       // 옥상 바닥
       ctx.fillStyle='#b9cddd';
       ctx.fillRect(0,H*0.62,W,H);
@@ -488,13 +586,14 @@
         ctx.font='800 12px "Pretendard Variable",sans-serif';
         ctx.fillStyle='#5d7385';
         ctx.textAlign='left';
-        ctx.fillText('바람 '+(dir>0?'→':'←')+' '+Math.round(Math.abs(wind)/30),fx-8,fy+66);
+        var arrows=(dir>0?'→':'←').repeat(Math.max(1,Math.ceil(mag*3)));
+        ctx.fillText('바람 '+arrows,fx-8,fy+66);
       }
     }
-    function drawHoop(t){
+    function drawHoop(t,dt){
       var rimL=hoop.bx-hoop.rimW,rimR=hoop.bx,rimY=hoop.rimY;
       var jx=0,jy=0;
-      if(hoop.shakeT>0){hoop.shakeT-=0.016;jx=Math.sin(t*70)*2.4*hoop.shakeT;jy=Math.cos(t*66)*1.8*hoop.shakeT;}
+      if(hoop.shakeT>0){hoop.shakeT-=dt;if(hoop.shakeT<0)hoop.shakeT=0;jx=Math.sin(t*70)*2.4*hoop.shakeT;jy=Math.cos(t*66)*1.8*hoop.shakeT;}
       ctx.save();ctx.translate(jx,jy);
       // 지지대
       ctx.strokeStyle='#8fa5b5';ctx.lineWidth=5;
@@ -668,6 +767,18 @@
         ctx.restore();
       }
       ctx.globalAlpha=1;
+      // 득점 임팩트 링
+      for(var m=rings.length-1;m>=0;m--){
+        var rg=rings[m];rg.t+=dt;
+        if(rg.t>=rg.life){rings.splice(m,1);continue;}
+        var rk=rg.t/rg.life;
+        ctx.save();
+        ctx.globalAlpha=(1-rk)*.8;
+        ctx.strokeStyle=rg.c;ctx.lineWidth=3*(1-rk)+1;
+        ctx.beginPath();ctx.arc(rg.x,rg.y,8+rk*38,0,Math.PI*2);ctx.stroke();
+        ctx.restore();
+      }
+      ctx.globalAlpha=1;
     }
     function easeOutBack(x){var c=1.70158;return 1+(c+1)*Math.pow(x-1,3)+c*Math.pow(x-1,2);}
 
@@ -682,8 +793,8 @@
       ctx.clearRect(0,0,W,H);
       ctx.save();
       if(shakeT>0){shakeT-=dt;ctx.translate(rnd(-1,1)*shakeMag*shakeT*3,rnd(-1,1)*shakeMag*shakeT*3);}
-      drawBG(t);
-      drawHoop(t);
+      drawBG(t,dt);
+      drawHoop(t,dt);
       drawBall(t);
       drawFX(dt);
       ctx.restore();
@@ -694,6 +805,7 @@
     document.getElementById('reset').addEventListener('click',restart);
     document.getElementById('mute').addEventListener('click',function(){muted=!muted;set(KEY.muted,muted?'1':'0');hud();if(!muted)sThrow();});
     document.getElementById('again').addEventListener('click',restart);
+    document.getElementById('share').addEventListener('click',shareRun);
     document.getElementById('support').addEventListener('click',function(){if(window.GamePortal&&GamePortal.openSupport)GamePortal.openSupport();});
     window.addEventListener('resize',resize);
     window.addEventListener('pagehide',function(){saveRun();if(best>gi(KEY.best))set(KEY.best,best);});
