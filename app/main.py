@@ -160,7 +160,7 @@ def _render_cards() -> str:
     클라 fetch 카드는 OG 프리뷰/초기 페인트에 안 잡히므로 서버에서 박는다.
     """
     cards = []
-    for g in games.load_games():
+    for g in games.home_games():
         gid = html.escape(g["id"])
         title = html.escape(g.get("title", gid))
         desc = html.escape(g.get("tagline", ""))
@@ -176,6 +176,30 @@ def _render_cards() -> str:
             f'<a class="{card_cls}" href="/{gid}/">'
             f'<img src="/{gid}/icon-192.png" alt="" width="64" height="64" loading="lazy">'
             f'<span class="meta"><span class="name">{title}{hot}</span>'
+            f'<span class="desc">{desc}</span></span>'
+            f'<span class="go" aria-hidden="true">&rarr;</span></a>'
+        )
+    return "\n".join(cards)
+
+
+def _render_lab_cards() -> str:
+    """/lab 실험실 게임 카드. 홈 카드와 동일 톤 + '실험실' 표식. lab 게임 0개면 빈 상태 안내."""
+    labs = games.lab_games()
+    if not labs:
+        return (
+            '<p class="lab-empty">아직 실험 중인 게임이 없습니다. '
+            'games.json 엔트리에 <code>"lab": true</code>를 넣으면 여기에 뜹니다.</p>'
+        )
+    cards = []
+    for g in labs:
+        gid = html.escape(g["id"])
+        title = html.escape(g.get("title", gid))
+        desc = html.escape(g.get("tagline", ""))
+        cards.append(
+            f'<a class="card is-lab" href="/{gid}/">'
+            f'<img src="/{gid}/icon-192.png" alt="" width="64" height="64" loading="lazy">'
+            f'<span class="meta"><span class="name">{title}'
+            f'<span class="hot lab">실험실</span></span>'
             f'<span class="desc">{desc}</span></span>'
             f'<span class="go" aria-hidden="true">&rarr;</span></a>'
         )
@@ -211,7 +235,7 @@ def _home_jsonld() -> str:
                 "inLanguage": "ko",
             },
         }
-        for i, g in enumerate(games.load_games())
+        for i, g in enumerate(games.home_games())
     ]
     itemlist = {"@context": "https://schema.org", "@type": "ItemList", "itemListElement": items}
     return (
@@ -374,6 +398,7 @@ async def robots_txt():
         # 계정/운영/동적(무한 생성) 경로는 색인 낭비 — 차단
         "Disallow: /account\n"
         "Disallow: /dash\n"
+        "Disallow: /lab\n"
         "Disallow: /onboard\n"
         "Disallow: /follow/\n"
         "Disallow: /s/\n"
@@ -391,7 +416,8 @@ async def sitemap_xml():
     """
     base = settings.base_url.rstrip("/")
     urls = [f"{base}/", f"{base}/rank"]
-    urls += [f"{base}/{gid}/" for gid in games.playable_ids()]
+    # lab(실험실) 게임은 색인 제외 — 프로토타입 URL이 검색에 노출되면 안 됨
+    urls += [f"{base}/{g['id']}/" for g in games.home_games()]
     items = "".join(f"<url><loc>{html.escape(u)}</loc></url>" for u in urls)
     body = (
         '<?xml version="1.0" encoding="UTF-8"?>'
@@ -410,6 +436,14 @@ async def rank_page():
 async def dash_page():
     """운영 지표 대시보드 (noindex). 어느 게임이 사는지 보는 곳."""
     return (PORTAL_DIR / "dash.html").read_text(encoding="utf-8")
+
+
+@app.get("/lab", response_class=HTMLResponse)
+async def lab_page():
+    """실험실(noindex). lab 프로토타입 게임만 목록. 홈/sitemap/rank엔 안 뜨지만 서빙·계측은 정상."""
+    page = (PORTAL_DIR / "lab.html").read_text(encoding="utf-8")
+    page = page.replace("{{CARDS}}", _render_lab_cards())
+    return HTMLResponse(page, headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/account", response_class=HTMLResponse)

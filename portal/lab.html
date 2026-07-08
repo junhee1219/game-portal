@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>실험실 — 미니게임</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="stylesheet" href="/portal.css">
+  <link rel="icon" href="/icons/portal-192.png">
+  <meta name="theme-color" content="#FFF6E5">
+  <style>
+    /* 실험실 전용 소량 스타일 — 홈 카드 톤 그대로 두고 표식만 얹는다 */
+    .hero .kicker.lab { color: var(--accent, #E8833A); letter-spacing: .04em; }
+    .card.is-lab { position: relative; }
+    .hot.lab {
+      background: #E8833A; color: #fff; font-weight: 700;
+      border-radius: 999px; padding: 1px 8px; margin-left: 6px; font-size: 11px;
+      vertical-align: middle;
+    }
+    .lab-note {
+      margin: 4px auto 18px; max-width: 34ch; text-align: center;
+      color: var(--dim, #8a8a95); font-size: 13px; line-height: 1.5;
+    }
+    .lab-empty {
+      text-align: center; color: var(--dim, #8a8a95); font-size: 14px;
+      line-height: 1.6; padding: 32px 8px;
+    }
+    .lab-empty code {
+      background: rgba(0,0,0,.06); border-radius: 5px; padding: 1px 6px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="topbar" id="topbar"></div>
+    <header class="hero">
+      <p class="kicker lab">실험실 · lab</p>
+      <h1>실험실</h1>
+      <p class="sub">아직 공개 전인 프로토타입. 플레이하며 keep/kill을 정해요.</p>
+    </header>
+
+    <p class="lab-note">여기 게임은 홈·기록실·검색에 노출되지 않지만, 플레이 계측은 정상 동작합니다.</p>
+
+    <section class="list" aria-label="실험실 게임 목록">
+      {{CARDS}}
+    </section>
+
+    <footer class="foot">
+      <p><a href="/" class="foot-link">← 홈으로</a></p>
+    </footer>
+  </main>
+  <script src="/portal.js" data-game="portal"></script>
+  <script src="/account-widget.js"></script>
+</body>
+</html>

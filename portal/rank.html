@@ -132,7 +132,8 @@
         renderFriendFinder(container);
         renderFriendRequests(container);
       }
-      (data.games || []).forEach(function (g) {
+      // lab(실험실) 게임은 기록실에 섞지 않는다 — 서버 /api/games는 lab 포함이라 여기서 거른다.
+      (data.games || []).filter(function (g) { return !g.lab; }).forEach(function (g) {
         var board = document.createElement('section');
         board.className = 'board';
         board.dataset.game = g.id;

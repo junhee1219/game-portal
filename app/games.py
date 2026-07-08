@@ -53,12 +53,34 @@ def playable_ids() -> set[str]:
 
 
 def valid_event_games() -> set[str]:
-    """ping/score가 허용하는 game 값 = 플레이 게임 + 합성 소스(portal)."""
+    """ping/score가 허용하는 game 값 = 플레이 게임 + 합성 소스(portal).
+
+    lab 게임도 포함 — 실험실 게임은 서빙·계측이 정상 동작해야 초기 신호(얍-곡선)를 얻는다.
+    """
     return playable_ids() | SYNTHETIC_SOURCES
 
 
+def is_lab(g: dict) -> bool:
+    """실험실(lab) 게임 여부. games.json 엔트리에 `"lab": true`면 프로토타입."""
+    return bool(g.get("lab"))
+
+
+def home_games() -> list[dict]:
+    """홈 그리드·sitemap·리더보드 등 *공개 노출*에 쓰는 게임 = lab 제외."""
+    return [g for g in load_games() if not is_lab(g)]
+
+
+def lab_games() -> list[dict]:
+    """실험실(/lab)에만 노출하는 프로토타입 게임."""
+    return [g for g in load_games() if is_lab(g)]
+
+
 def public_games() -> list[dict]:
-    """/api/games 응답용 — 클라이언트가 쓰는 필드만, icon은 컨벤션으로 채워서."""
+    """/api/games 응답용 — 클라이언트가 쓰는 필드만, icon은 컨벤션으로 채워서.
+
+    lab 게임도 포함하되 `lab` 필드로 구분한다 — dash는 전체를 보고,
+    rank 등 공개 목록은 클라이언트에서 `lab`을 걸러낸다.
+    """
     out = []
     for g in load_games():
         out.append(
@@ -71,6 +93,7 @@ def public_games() -> list[dict]:
                 "score_metric": g.get("score_metric", "best"),
                 "icon": f"/{g['id']}/icon-192.png",
                 "state_keys": g.get("state_keys", []),
+                "lab": is_lab(g),
             }
         )
     return out
