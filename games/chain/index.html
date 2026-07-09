@@ -71,6 +71,23 @@
       font-size:var(--fs-3);font-weight:700;color:var(--ink);opacity:0;transition:opacity .25s ease;pointer-events:none;white-space:nowrap;}
     #toast.show{opacity:1;}
 
+    /* 실시간 등불 카운터 */
+    #counter{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:6;pointer-events:none;
+      display:flex;align-items:center;gap:7px;background:rgba(20,28,38,.82);border:1px solid var(--line);
+      border-radius:999px;padding:6px 14px;box-shadow:0 3px 10px rgba(0,0,0,.35);transition:transform .12s ease;}
+    #counter .dot{width:10px;height:10px;border-radius:50%;background:#3a4a5a;border:1px solid rgba(255,255,255,.08);transition:background .2s ease,box-shadow .2s ease,transform .2s ease;}
+    #counter .dot.on{background:#ffcf7a;box-shadow:0 0 8px rgba(255,207,122,.7);transform:scale(1.12);}
+    #counter .lbl{font-size:var(--fs-3);font-weight:800;color:var(--ink-soft);white-space:nowrap;}
+    #counter .lbl b{color:var(--good);}
+    #counter.bump{transform:translateX(-50%) scale(1.1);}
+    #counter.full .lbl b{color:#fff2d6;}
+
+    /* 전부 켜짐 성공 플래시(최소) */
+    #flash{position:absolute;inset:0;z-index:9;pointer-events:none;opacity:0;
+      background:radial-gradient(circle at 50% 55%,rgba(255,207,122,.42),rgba(255,207,122,0) 62%);}
+    #flash.go{animation:flashGo .62s ease-out;}
+    @keyframes flashGo{0%{opacity:0;}18%{opacity:1;}100%{opacity:0;}}
+
     /* ── 하단 부품 트레이 + 실행 ── */
     #dock{flex:0 0 auto;padding:8px 12px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(180deg,transparent,rgba(15,21,29,.6) 30%);}
     #tray{display:flex;gap:8px;margin-bottom:9px;}
@@ -90,11 +107,13 @@
     #run:active{transform:translateY(3px);box-shadow:0 1px 0 #8f611f,0 4px 10px rgba(0,0,0,.35);}
     #run.running{background:linear-gradient(180deg,#5a6b7c,#3f4e5d);color:#e6eef5;box-shadow:0 4px 0 #2a3540,0 8px 18px rgba(0,0,0,.35);}
     #run:disabled{filter:grayscale(.5) brightness(.8);}
+    #run.pulse{animation:runPulse 1.3s ease-in-out infinite;}
+    @keyframes runPulse{0%,100%{box-shadow:0 4px 0 #8f611f,0 8px 18px rgba(0,0,0,.35);}50%{box-shadow:0 4px 0 #8f611f,0 8px 18px rgba(0,0,0,.35),0 0 0 4px rgba(255,207,122,.4);}}
 
     /* ── 결과 시트 ── */
-    #sheet{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;
+    #sheet,#intro{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;
       background:rgba(10,15,20,.66);backdrop-filter:blur(3px);padding:22px;}
-    #sheet.show{display:flex;}
+    #sheet.show,#intro.show{display:flex;}
     .card{width:100%;max-width:340px;background:linear-gradient(180deg,#22303f,#18232f);border:1px solid var(--line);
       border-radius:22px;padding:26px 22px 20px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.5);}
     .card h2{font-size:26px;font-weight:900;margin-bottom:4px;}
@@ -133,6 +152,8 @@
 
   <main id="stage">
     <canvas id="cv"></canvas>
+    <div id="counter"><span id="cDots"></span><span class="lbl">등불 <b id="cNum">0</b>/<span id="cTot">0</span></span></div>
+    <div id="flash"></div>
     <div id="popover">
       <button id="popRotate" aria-label="회전"><svg class="ki"><use href="#p-rotate"/></svg></button>
       <button id="popRemove" class="rm" aria-label="제거"><svg class="ki"><use href="#p-trash"/></svg></button>
@@ -145,6 +166,12 @@
     <button id="run">실 행</button>
     <div class="hint" id="hint">부품을 골라 무대를 탭해 놓으세요</div>
   </footer>
+
+  <div id="intro"><div class="card">
+    <h2>연쇄 장치</h2>
+    <p style="margin-bottom:14px;line-height:1.55;">부품을 놓고 <b style="color:var(--good)">실행</b>을 누르면 구슬이 굴러<br>모든 <b style="color:var(--good)">등불</b>을 켜요. 궤적을 미리 설계하는 퍼즐!<br>부품을 <b style="color:var(--good)">적게</b> 쓰고 다 켤수록 별이 많아요.</p>
+    <div class="row"><button class="btn-primary" id="introGo">해볼게요</button></div>
+  </div></div>
 
   <div id="sheet"><div class="card">
     <h2 id="rsTitle">완성!</h2>
@@ -404,8 +431,10 @@ function drawEffect(e){
   const a = 1 - e.t/18;
   if (a <= 0) return;
   if (e.kind==='light'){
-    ctx.strokeStyle=`rgba(255,207,122,${a})`; ctx.lineWidth=3;
-    ctx.beginPath(); ctx.arc(e.x,e.y, 6 + (1-a)*26, 0, 7); ctx.stroke();
+    const rr = 6 + (1-a)*36;
+    ctx.fillStyle=`rgba(255,207,122,${a*0.45})`; ctx.beginPath(); ctx.arc(e.x,e.y, rr*0.55, 0, 7); ctx.fill();
+    ctx.strokeStyle=`rgba(255,244,220,${a})`; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(e.x,e.y, rr, 0, 7); ctx.stroke();
   } else {
     ctx.fillStyle = e.kind==='spring' ? `rgba(200,210,220,${a})` : `rgba(255,207,122,${a})`;
     const rad = 4 + (1-a)*14;
@@ -421,6 +450,7 @@ function loadLevel(i){
   remain = Object.assign({}, lv.budget);
   ball = null; trail = []; effects = [];
   targets = lv.targets.map(t=>({x:t.x, y:t.y, r:t.r||TARGET_R, lit:false}));
+  _lastLit = 0; updateCounter();
   syncUI();
   hidePopover();
   document.getElementById('sheet').classList.remove('show');
@@ -478,17 +508,32 @@ function drawTrayIcon(c, kind){
 function updateHint(){
   const h = document.getElementById('hint');
   if (phase==='run'){ h.textContent='굴러가는 중…'; return; }
+  const par = LEVELS[cur].par;
   const anyLeft = Object.values(remain).some(v=>v>0);
   if (held) h.textContent = '무대를 탭해 놓기 · 놓인 부품을 탭하면 회전/제거';
-  else if (placed.length) h.textContent = '실행을 눌러 굴려보세요';
-  else if (anyLeft) h.textContent = '부품을 골라 무대를 탭해 놓으세요';
+  else if (placed.length) h.textContent = `실행을 눌러 굴려보세요 · 별셋 목표 부품 ${par}개 (지금 ${placed.length}개)`;
+  else if (anyLeft) h.textContent = `부품을 골라 무대를 탭해 놓으세요 · 별셋 목표 ${par}개`;
   else h.textContent = '실행을 눌러 굴려보세요';
 }
 function updateRunBtn(){
   const btn = document.getElementById('run');
   btn.disabled = false;
-  if (phase==='run'){ btn.textContent='멈추고 다시 짜기'; btn.classList.add('running'); }
-  else { btn.textContent='실 행'; btn.classList.remove('running'); }
+  if (phase==='run'){ btn.textContent='멈추고 다시 짜기'; btn.classList.add('running'); btn.classList.remove('pulse'); }
+  else { btn.textContent='실 행'; btn.classList.remove('running');
+    btn.classList.toggle('pulse', phase==='edit' && placed.length>0); }
+}
+let _lastLit = 0;
+function updateCounter(){
+  const tot = targets.length, lit = targets.filter(t=>t.lit).length;
+  document.getElementById('cTot').textContent = tot;
+  document.getElementById('cNum').textContent = lit;
+  const cd = document.getElementById('cDots');
+  if (cd.childElementCount !== tot){ cd.innerHTML=''; for(let i=0;i<tot;i++){ const d=document.createElement('span'); d.className='dot'; cd.appendChild(d);} }
+  Array.prototype.forEach.call(cd.children, (d,i)=> d.classList.toggle('on', i<lit));
+  const c = document.getElementById('counter');
+  c.classList.toggle('full', lit>0 && lit===tot);
+  if (lit > _lastLit){ c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
+  _lastLit = lit;
 }
 
 function selectHeld(k){
@@ -562,12 +607,13 @@ function startRun(){
   const lv = LEVELS[cur];
   ball = { x: lv.ballX, y: 22, vx:0, vy:0, dead:false };
   targets.forEach(t=>t.lit=false);
-  trail=[]; effects=[]; runSteps=0;
+  trail=[]; effects=[]; runSteps=0; _lastLit=0; updateCounter();
   updateRunBtn(); updateHint();
 }
 function abortRun(){
   phase='edit'; ball=null; trail=[]; effects=[];
   targets.forEach(t=>t.lit=false);
+  _lastLit=0; updateCounter();
   updateRunBtn(); updateHint();
 }
 function finishWin(){
@@ -578,14 +624,18 @@ function finishWin(){
   LS.setStars(cur+1, st);
   LS.setBestParts(cur+1, used);
   snd.win();
-  showResult(true, st, used);
+  updateCounter();
+  const fl = document.getElementById('flash'); fl.classList.remove('go'); void fl.offsetWidth; fl.classList.add('go');
+  setTimeout(()=> showResult(true, st, used), 560); // 성공 플래시 잠깐 보여주고 시트
 }
 function finishFail(){
   phase='edit'; ball=null;
+  const lit = targets.filter(t=>t.lit).length, tot = targets.length;
   targets.forEach(t=>t.lit=false);
+  _lastLit=0; updateCounter();
   snd.fail();
   updateRunBtn(); updateHint();
-  toast('아직 다 못 켰어요 — 다시 배치해 보세요');
+  toast(`등불 ${lit}/${tot} — 부품을 조금 틀어서 다시!`);
 }
 
 /* ---- 결과 시트 ---- */
@@ -607,6 +657,7 @@ document.getElementById('rsNext').onclick = ()=>{
   if (cur+1>=LEVELS.length){ loadLevel(0); } else { LS.setLevel(cur+2); loadLevel(cur+1); }
 };
 document.getElementById('supportLine').onclick = ()=>{ try{ if(window.GamePortal&&GamePortal.openSupport) GamePortal.openSupport(); }catch(e){} };
+document.getElementById('introGo').onclick = ()=>{ document.getElementById('intro').classList.remove('show'); localStorage.setItem('chainSeenIntro','1'); if(actx&&actx.state==='suspended')actx.resume(); };
 
 /* ---- 상단 버튼 ---- */
 document.getElementById('btnReset').onclick = ()=>{
@@ -631,6 +682,7 @@ function frame(){
       if (ball.dead){ if (targets.every(t=>t.lit)) finishWin(); else finishFail(); break; }
       if (runSteps>7000){ finishFail(); break; }
     }
+    if (phase==='run') updateCounter();
   }
   for (const e of effects) e.t++;
   effects = effects.filter(e=>e.t<18);
@@ -644,6 +696,7 @@ function boot(){
   applyMuteIcon();
   const start = Math.min(Math.max(1, LS.level()), unlockedMax());
   loadLevel(start-1);
+  if (!localStorage.getItem('chainSeenIntro')) document.getElementById('intro').classList.add('show');
   draw();
   requestAnimationFrame(frame);
 }

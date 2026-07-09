@@ -50,7 +50,10 @@
     .pill .lbl{font-size:11px;font-weight:750;color:var(--ink-soft);letter-spacing:.02em;}
     .pill .val{font-size:var(--fs-2);font-weight:840;color:var(--ink);white-space:nowrap;}
     .pill.goal .val{color:var(--accent);}
+    .pill.goal.reached{border-color:rgba(111,191,115,.5);background:rgba(111,191,115,.12);}
     .pill.goal.reached .val{color:var(--good);}
+    .pill.goal.reached .lbl::after{content:" ✓ 달성";color:var(--good);font-weight:820;}
+    .bar.reached{box-shadow:inset 0 1px 2px rgba(0,0,0,.4),0 0 10px rgba(111,191,115,.5);}
     .sp{margin-left:auto;}
     .ibtn{
       width:40px;height:40px;flex:0 0 auto;border:1px solid var(--line);border-radius:12px;
@@ -103,7 +106,25 @@
     .f-cat{background:linear-gradient(180deg,#b78ee0,var(--cat));}
     .tile.f-oil.ignited{box-shadow:0 3px 0 rgba(0,0,0,.28),inset 0 2px 3px rgba(255,255,255,.22),0 0 0 2px rgba(255,120,60,.6);}
     .cell.bump .tile{animation:bump .34s ease;}
-    @keyframes bump{0%,100%{transform:scale(1);}40%{transform:scale(1.14);}}
+    @keyframes bump{0%,100%{transform:scale(1);}40%{transform:scale(1.2);}}
+    .cell.flash::after{content:"";position:absolute;inset:0;border-radius:13px;background:rgba(255,235,180,.55);animation:flash .4s ease forwards;pointer-events:none;}
+    @keyframes flash{0%{opacity:.9;}100%{opacity:0;}}
+    .cell.bump .tile .fv{animation:fvpop .34s ease;}
+    @keyframes fvpop{0%,100%{transform:scale(1);}40%{transform:scale(1.55);color:#fff;}}
+    /* 곱셈 반응 플로팅 */
+    .cell.combo-on{overflow:visible;z-index:6;}
+    .combo{position:absolute;left:50%;top:6%;transform:translateX(-50%);z-index:5;
+      font-weight:900;font-size:20px;color:#ffe08a;text-shadow:0 2px 4px rgba(0,0,0,.6);
+      pointer-events:none;white-space:nowrap;animation:combo 1s cubic-bezier(.2,.9,.3,1) forwards;}
+    @keyframes combo{0%{opacity:0;transform:translate(-50%,4px) scale(.6);}
+      22%{opacity:1;transform:translate(-50%,-14px) scale(1.15);}
+      100%{opacity:0;transform:translate(-50%,-46px) scale(1);}}
+    /* 재미포인트 힌트 스트립 */
+    .hint{flex:0 0 auto;text-align:center;font-size:var(--fs-3);color:var(--ink-soft);
+      font-weight:720;line-height:1.35;min-height:18px;transition:color .2s;}
+    .hint b{color:var(--accent);}
+    .hint.hot{color:#ffe08a;}
+    .hint.hot b{color:#fff;}
 
     /* tray */
     .tray{flex:0 0 auto;display:flex;align-items:center;gap:11px;
@@ -128,6 +149,8 @@
     .btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.28);}
     .btn.sell{color:var(--ink-soft);}
     .btn.brew{background:linear-gradient(180deg,#e9b73f,var(--accent-deep));color:#2a1e07;border-color:transparent;}
+    .btn.brew.ready{background:linear-gradient(180deg,#6cc271,#4f9d54);color:#0f2410;animation:readyp 1.1s ease-in-out infinite;}
+    @keyframes readyp{0%,100%{box-shadow:0 3px 0 rgba(0,0,0,.28);}50%{box-shadow:0 3px 0 rgba(0,0,0,.28),0 0 14px rgba(111,191,115,.7);}}
     .draws{font-size:var(--fs-3);color:var(--ink-soft);font-weight:750;}
     .draws b{color:var(--accent);font-size:var(--fs-2);}
 
@@ -189,6 +212,7 @@
     </div>
 
     <div class="bar" id="bar"><i id="barFill"></i></div>
+    <div class="hint" id="hint"></div>
 
     <div class="boardwrap"><div class="board" id="board"></div></div>
 
@@ -228,7 +252,7 @@
   <!-- 도움말 -->
   <div class="ov" id="ovHelp"><div class="card">
     <h2>약초 가마</h2>
-    <p style="text-align:left;">뽑은 약초를 가마 칸에 놓으면 <b>이웃 칸끼리 반응</b>해 효능이 곱으로 불어요. 정해진 손패 안에 <b>주문서 목표 효능</b>을 넘기면 다음 마을로.</p>
+    <p style="text-align:left;font-size:var(--fs-2);color:var(--ink);line-height:1.5;">재료를 <b>딱 붙여 놓으면</b> 이웃끼리 반응해 효능이 <b style="color:var(--good)">곱으로</b> 터져요.<br><b style="color:var(--fire)">불</b> → <b style="color:var(--oil)">기름</b> → <b style="color:var(--herb)">약초</b> 사슬을 만들면 한 방에 수십으로!<br>손패를 다 쓰기 전에 <b>목표 효능</b>을 넘기면 다음 마을로.</p>
     <div class="legend">
       <span class="leg"><i style="background:var(--fire)"></i>불</span>
       <span class="leg"><i style="background:var(--oil)"></i>기름</span>
@@ -362,6 +386,13 @@
         const pct=Math.min(100,b.total/tgt*100);
         $('barFill').style.width=pct+'%';
         $('bar').classList.toggle('reached',reached);
+        // 목표 안내 + 가마 버튼 상태
+        const bb=$('btnBrew');bb.classList.toggle('ready',reached);
+        bb.textContent=reached?'가마 열기 · 성공!':'가마 열기';
+        const empty=S.cells.every(c=>!c);
+        if(empty)setHint('재료를 <b>이웃에 붙이면</b> 반응이 <b>곱</b>! 불→기름→약초 사슬을 노려요',false);
+        else if(reached)setHint('<b>목표 달성!</b> 가마 열기로 다음 마을 →',false);
+        else setHint('이웃 사슬로 곱하세요 · 목표까지 <b>'+(tgt-b.total)+'</b>',false);
         // 보드
         for(let i=0;i<N;i++){const el=cellEls[i],t=S.cells[i];
           el.classList.toggle('tgt',!t&&!!cur);
@@ -394,14 +425,19 @@
       if(S.phase!=='play')return;
       const cur=S.queue[S.qi];if(!cur||S.cells[i])return;
       ensureAudio();
-      const before=computeBoard(S.cells).total;
+      const bBefore=computeBoard(S.cells);
       S.cells[i]={fam:cur};
-      const after=computeBoard(S.cells).total;
-      sfx.place(after-before);
+      const bAfter=computeBoard(S.cells);
+      const gain=bAfter.total-bBefore.total;
+      sfx.place(gain);
       S.qi++;
       render();
-      // 배치로 값이 오른 이웃 강조
-      bumpNeighbors(i);
+      // 놓은 칸 + 값이 오른 이웃만 강조(최소 손맛)
+      pulseCell(i,false);
+      NB[i].forEach(j=>{if(S.cells[j]&&Math.round(bAfter.finals[j])>Math.round(bBefore.finals[j]))pulseCell(j,true);});
+      // 곱셈 반응이 터졌으면 플로팅 + 힌트 강조
+      const factor=gain/BASE[cur];
+      if(factor>=1.5){floatCombo(i,factor);setHint('<b>×'+trim(factor)+'</b> 반응! 곱이 터졌어요',true);}
       afterAction();
     }
     function sellCur(){
@@ -415,9 +451,10 @@
       save();
       if(S.qi>=S.queue.length)setTimeout(brew,260);
     }
-    function bumpNeighbors(i){
-      NB[i].forEach(j=>{if(S.cells[j]){cellEls[j].classList.remove('bump');void cellEls[j].offsetWidth;cellEls[j].classList.add('bump');}});
-    }
+    function pulseCell(i,flash){const el=cellEls[i];el.classList.remove('bump','flash');void el.offsetWidth;el.classList.add('bump');if(flash)el.classList.add('flash');setTimeout(()=>el.classList.remove('bump','flash'),440);}
+    function floatCombo(i,factor){const el=cellEls[i];el.classList.add('combo-on');const s=document.createElement('span');s.className='combo';s.textContent='×'+trim(factor)+' 반응!';el.appendChild(s);setTimeout(()=>{if(s.parentNode)s.parentNode.removeChild(s);el.classList.remove('combo-on');},1000);}
+    function trim(f){return (Math.round(f*10)/10).toString().replace(/\.0$/,'');}
+    function setHint(html,hot){const h=$('hint');h.innerHTML=html;h.classList.toggle('hot',!!hot);}
     function flashCoin(){const p=$('pCoin');p.style.transition='transform .15s';p.style.transform='scale(1.3)';setTimeout(()=>p.style.transform='',160);}
 
     function brew(){
