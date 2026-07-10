@@ -1,0 +1,15 @@
+{
+  "name": "우르르 — 데일리 소거",
+  "short_name": "우르르",
+  "description": "같은 색 뭉치를 톡 — 우르르 쏟아지는 블록 소거. 오늘의 판은 모두 같아요.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#efe7db",
+  "theme_color": "#efe7db",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

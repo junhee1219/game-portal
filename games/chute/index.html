@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#1b2836">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="조르르">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="조르르 — 오늘의 비탈, 구슬을 톡">
+  <meta property="og:description" content="열 하나를 골라 구슬을 떨어뜨리면 화살표를 따라 조르르 굴러 보석을 줍는다. 매일 같은 비탈, 누가 더 많이 줍나.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>조르르</title>
+  <style>
+    @font-face{font-family:"Pretendard Variable";font-weight:45 920;font-style:normal;font-display:swap;src:url("/fonts/PretendardVariable.woff2") format("woff2-variations");}
+    :root{
+      --bg-a:#243646;
+      --bg-b:#1b2836;
+      --bg-c:#141f2b;
+      --ink:#e9f0f5;
+      --ink-soft:#93a7b8;
+      --line:rgba(150,180,205,.15);
+      --tile:#2b3f52;
+      --tile-hi:#34506a;
+      --accent:#f0b74a;
+      --fs-1:30px;--fs-2:16px;--fs-3:13px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    html,body{height:100%;background:var(--bg-b);}
+    body{
+      font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
+      background-color:var(--bg-b);
+      background-image:radial-gradient(125% 95% at 50% 0%,var(--bg-a) 0%,var(--bg-b) 58%,var(--bg-c) 100%);
+      color:var(--ink);
+      user-select:none;-webkit-user-select:none;touch-action:manipulation;
+      overflow:hidden;
+      --gp-shell-fg:#e9f0f5;
+      display:flex;flex-direction:column;align-items:center;
+      padding:calc(env(safe-area-inset-top) + 10px) 12px calc(env(safe-area-inset-bottom) + 12px);
+      gap:10px;
+    }
+    button{font:inherit;}
+    .ki{width:22px;height:22px;display:block;fill:currentColor;}
+
+    .topbar{display:flex;align-items:center;gap:7px;width:100%;max-width:460px;flex:0 0 auto;}
+    .pill{
+      display:flex;align-items:center;gap:5px;white-space:nowrap;
+      border:1px solid var(--line);background:rgba(255,255,255,.06);
+      border-radius:999px;padding:6px 11px;box-shadow:0 2px 0 rgba(0,0,0,.18);
+      color:var(--ink-soft);font-size:var(--fs-3);font-weight:740;
+    }
+    .pill b{color:var(--ink);font-size:var(--fs-2);}
+    .pill .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:inset 0 1px 0 rgba(255,255,255,.5);}
+    .sp{margin-left:auto;}
+    .icon-btn{
+      width:40px;height:40px;border:1px solid var(--line);border-radius:12px;
+      background:rgba(255,255,255,.06);color:#b7c8d6;
+      display:flex;align-items:center;justify-content:center;box-shadow:0 3px 0 rgba(0,0,0,.2);
+      cursor:pointer;transition:transform .1s ease,box-shadow .1s ease;flex:0 0 auto;
+    }
+    .icon-btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.2);}
+
+    #stage{flex:1 1 auto;width:100%;max-width:460px;display:flex;flex-direction:column;align-items:center;min-height:0;gap:8px;}
+
+    /* 남은 구슬 */
+    #queue{display:flex;align-items:center;justify-content:center;gap:6px;min-height:20px;flex:0 0 auto;}
+    #queue .mq{width:13px;height:13px;border-radius:50%;transition:opacity .2s ease,transform .2s ease;}
+    #queue .mq.used{opacity:.18;transform:scale(.7);}
+
+    /* 비탈 */
+    #board-wrap{position:relative;flex:0 0 auto;}
+    #board{position:relative;border-radius:16px;overflow:hidden;
+      border:1px solid var(--line);
+      background:linear-gradient(180deg,#223546 0%,#1c2a38 60%,#182533 100%);
+      box-shadow:0 8px 0 rgba(0,0,0,.22),0 16px 34px rgba(0,0,0,.32);
+    }
+    .cell{position:absolute;display:flex;align-items:center;justify-content:center;}
+    .cell .tile{position:absolute;inset:11%;border-radius:22%;}
+    .cell.arrow .tile{background:var(--tile);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 2px 0 rgba(0,0,0,.22);}
+    .cell .chev{width:46%;height:46%;fill:#7f98ac;}
+    .cell.aL .chev{transform:rotate(90deg);}
+    .cell.aR .chev{transform:rotate(-90deg);}
+    /* 보석 */
+    .gem{position:absolute;border-radius:50%;pointer-events:none;
+      background:radial-gradient(circle at 38% 30%,var(--g-hi),var(--g-lo));
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 2px 0 rgba(0,0,0,.28);
+      transition:transform .16s ease,opacity .16s ease;}
+    .gem.g1{--g-hi:#ffe08a;--g-lo:#e0a02f;}
+    .gem.g3{--g-hi:#ffc6d8;--g-lo:#d85f86;}
+    .gem.gone{transform:scale(1.9);opacity:0;}
+
+    /* 열 선택 밴드 + 런처 립 */
+    #cols{position:absolute;inset:0;display:flex;z-index:5;}
+    #cols .col{flex:1;position:relative;cursor:pointer;}
+    #cols .col .band{position:absolute;inset:0;background:linear-gradient(180deg,rgba(240,183,74,.22),rgba(240,183,74,0) 70%);opacity:0;transition:opacity .12s ease;}
+    #cols .col.hot .band{opacity:1;}
+    #lips{position:absolute;left:0;right:0;top:-9px;height:9px;display:flex;z-index:4;}
+    #lips .lip{flex:1;display:flex;justify-content:center;}
+    #lips .lip i{width:60%;height:9px;border-radius:6px 6px 0 0;background:#334b60;box-shadow:inset 0 1px 0 rgba(255,255,255,.1);}
+
+    /* 구슬 */
+    #marble{position:absolute;border-radius:50%;z-index:8;pointer-events:none;
+      background:radial-gradient(circle at 36% 28%,#eaf3fb,#8fb6d6 62%,#5f86a6);
+      box-shadow:inset 0 1px 1px rgba(255,255,255,.7),0 2px 4px rgba(0,0,0,.35);
+      opacity:0;transition:transform .09s linear;}
+
+    /* 떠오르는 점수 */
+    .pop{position:absolute;z-index:9;font-weight:900;font-size:15px;pointer-events:none;
+      text-shadow:0 1px 2px rgba(0,0,0,.5);animation:popUp .7s ease forwards;}
+    @keyframes popUp{0%{transform:translateY(0) scale(.7);opacity:0;}25%{opacity:1;transform:translateY(-6px) scale(1.1);}100%{transform:translateY(-26px) scale(1);opacity:0;}}
+
+    #dock{flex:0 0 auto;display:flex;align-items:center;gap:9px;min-height:46px;}
+    .btn{
+      height:44px;display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:14px;padding:0 16px;
+      background:rgba(255,255,255,.06);color:var(--ink);font-weight:820;font-size:var(--fs-3);
+      box-shadow:0 3px 0 rgba(0,0,0,.2);cursor:pointer;transition:transform .1s ease,opacity .15s ease;
+    }
+    .btn:active{transform:translateY(2px);}
+    .btn .ki{width:18px;height:18px;}
+    #note{min-height:18px;flex:0 0 auto;color:var(--ink-soft);font-size:var(--fs-3);font-weight:720;text-align:center;padding:0 12px;}
+    .credit{font-size:11px;color:var(--ink-soft);opacity:.55;flex:0 0 auto;}
+
+    /* 결과 카드 */
+    #over{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:24px;
+      background:rgba(8,14,20,.55);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
+      opacity:0;pointer-events:none;transition:opacity .25s ease;}
+    #over.show{opacity:1;pointer-events:auto;}
+    .card{width:min(330px,88vw);border-radius:22px;background:#f6f2ea;color:#2c3a30;padding:24px 22px 18px;text-align:center;
+      box-shadow:0 24px 60px rgba(0,0,0,.42);transform:translateY(12px);transition:transform .25s ease;}
+    #over.show .card{transform:none;}
+    .badge{width:56px;height:56px;border-radius:50%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;
+      background:radial-gradient(circle at 38% 30%,#ffe08a,#e0a02f);color:#7a4e12;box-shadow:inset 0 2px 0 rgba(255,255,255,.5),0 4px 10px rgba(0,0,0,.2);}
+    .badge .ki{width:30px;height:30px;}
+    .card h2{font-size:22px;font-weight:900;margin-bottom:4px;}
+    .card .big{font-size:44px;font-weight:900;color:#c98a1e;line-height:1.05;margin:6px 0 2px;}
+    .card .sub{font-size:var(--fs-3);color:#6c7a70;font-weight:700;}
+    .card .rows{margin:14px 0 16px;display:flex;flex-direction:column;gap:7px;}
+    .card .rr{display:flex;justify-content:space-between;font-size:var(--fs-3);color:#4a5850;font-weight:740;padding:0 4px;}
+    .card .rr b{color:#2c3a30;font-size:var(--fs-2);}
+    .primary{width:100%;height:50px;border:none;border-radius:15px;background:#e0a02f;color:#fff;font-weight:900;font-size:var(--fs-2);
+      box-shadow:0 4px 0 #b47f1e;cursor:pointer;transition:transform .1s ease;}
+    .primary:active{transform:translateY(3px);box-shadow:0 1px 0 #b47f1e;}
+    .share{width:100%;height:46px;margin-top:8px;border:1px solid #d8cfbf;border-radius:14px;background:#fff;color:#3a4a3e;font-weight:820;font-size:var(--fs-3);
+      display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;box-shadow:0 3px 0 #e2dacb;}
+    .share:active{transform:translateY(2px);box-shadow:0 1px 0 #e2dacb;}
+    .share .ki{width:17px;height:17px;}
+    .mini{margin-top:12px;display:flex;align-items:center;justify-content:center;gap:16px;font-size:var(--fs-3);}
+    .mini a,.mini button{color:#6c7a70;background:none;border:none;text-decoration:none;font-weight:740;cursor:pointer;}
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="p-speaker-high" viewBox="0 0 256 256"><path d="M155.51,24.81a8,8,0,0,0-8.42.88L77.25,80H32A16,16,0,0,0,16,96v64a16,16,0,0,0,16,16H77.25l69.84,54.31A8,8,0,0,0,160,224V32A8,8,0,0,0,155.51,24.81ZM208,128a40,40,0,0,1-40,40,8,8,0,0,1,0-16,24,24,0,0,0,0-48,8,8,0,0,1,0-16A40,40,0,0,1,208,128Z"/></symbol>
+    <symbol id="p-speaker-slash" viewBox="0 0 256 256"><path d="M213.92,210.62a8,8,0,1,1-11.84,10.76L160,175.09v48.6a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.55-51A4,4,0,0,1,80,176.18V87.09L42.08,45.38A8,8,0,1,1,53.92,34.62ZM160,80.91V32.25a8.27,8.27,0,0,0-2.88-6.4,8,8,0,0,0-10-.16L103.83,59.33a4,4,0,0,0-.5,5.85l53.66,59A4,4,0,0,0,160,121.5Z"/></symbol>
+    <symbol id="p-arrow-clockwise" viewBox="0 0 256 256"><path d="M240,56v48a8,8,0,0,1-8,8H184a8,8,0,0,1-5.66-13.66L197.77,78.9A88,88,0,1,0,216,128a8,8,0,0,1,16,0A104,104,0,1,1,186.9,42.23L226.34,2.34A8,8,0,0,1,240,8Z"/></symbol>
+    <symbol id="p-caret-down" viewBox="0 0 256 256"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></symbol>
+    <symbol id="p-trophy" viewBox="0 0 256 256"><path d="M232,64H208V48a16,16,0,0,0-16-16H64A16,16,0,0,0,48,48V64H24A16,16,0,0,0,8,80V96a40,40,0,0,0,40,40h3.65A80.13,80.13,0,0,0,120,191.6V216H96a8,8,0,0,0,0,16h64a8,8,0,0,0,0-16H136V191.6A80.13,80.13,0,0,0,204.35,136H208a40,40,0,0,0,40-40V80A16,16,0,0,0,232,64ZM48,120A24,24,0,0,1,24,96V80H48v32q0,4,.39,8Zm184-24a24,24,0,0,1-24,24h-.39q.39-4,.39-8V80h24Z"/></symbol>
+    <symbol id="p-share" viewBox="0 0 256 256"><path d="M237.66,106.35l-80-80A8,8,0,0,0,144,32V72.35c-25.94,2.22-54.59,14.92-78.16,34.91-28.38,24.08-46.05,55.11-49.76,87.37a12,12,0,0,0,20.68,9.58c11-11.71,50.14-48.74,107.24-52V192a8,8,0,0,0,13.66,5.65l80-80A8,8,0,0,0,237.66,106.35Z"/></symbol>
+  </svg>
+
+  <div class="topbar">
+    <div class="pill"><span class="dot"></span>이번 판 <b id="cur">0</b></div>
+    <div class="pill">오늘 최고 <b id="tbest">0</b></div>
+    <div class="pill">연속 <b id="streak">0</b></div>
+    <div class="sp"></div>
+    <button class="icon-btn" id="mute" aria-label="소리 켜기/끄기"><svg class="ki" id="mute-ic"><use href="#p-speaker-high"/></svg></button>
+  </div>
+
+  <div id="stage">
+    <div id="queue"></div>
+    <div id="board-wrap">
+      <div id="board">
+        <div id="lips"></div>
+        <div id="cols"></div>
+      </div>
+    </div>
+    <div id="dock">
+      <button class="btn" id="retry"><svg class="ki"><use href="#p-arrow-clockwise"/></svg><span>다시</span></button>
+    </div>
+    <div id="note">오늘의 비탈 — 열을 골라 구슬을 톡</div>
+  </div>
+
+  <div class="credit">Icons: Phosphor</div>
+
+  <div id="over">
+    <div class="card">
+      <div class="badge"><svg class="ki"><use href="#p-trophy"/></svg></div>
+      <h2 id="over-title">오늘 조르르 끝!</h2>
+      <div class="big" id="over-big">0</div>
+      <p class="sub">보석 수집</p>
+      <div class="rows">
+        <div class="rr">오늘 최고 <b id="over-tbest">0</b></div>
+        <div class="rr">연속 기록 <b id="over-streak">0일</b></div>
+        <div class="rr">역대 최고 <b id="over-allbest">0</b></div>
+      </div>
+      <button class="primary" id="again">다시 도전</button>
+      <button class="share" id="share"><svg class="ki"><use href="#p-share"/></svg>결과 공유</button>
+      <div class="mini">
+        <a href="/rank">기록실</a>
+        <button id="support">후원 · 의견</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    'use strict';
+
+    /* ---------- 저장 ---------- */
+    var KEY={best:'chuteBest',daily:'chuteDaily',save:'chuteSave',muted:'chuteMuted'};
+    function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+    function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+    function lsGetInt(k){var v=lsGet(k);return v?(parseInt(v,10)||0):0;}
+    function lsGetJSON(k){var v=lsGet(k);if(!v)return null;try{return JSON.parse(v);}catch(e){return null;}}
+
+    /* ---------- 코어 (chute_core.js와 동일 로직) ---------- */
+    function hashSeed(str){var h=2166136261>>>0;for(var i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}return h>>>0;}
+    function mulberry32(a){return function(){a|=0;a=(a+0x6D2B79F5)|0;var t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return ((t^(t>>>14))>>>0)/4294967296;};}
+    var ROWS=9,COLS=6,N_MARBLES=7;
+    function buildSlope(dateStr){
+      var rng=mulberry32(hashSeed('chute-slope-'+dateStr));
+      var tiles=[],gems=[];
+      for(var r=0;r<ROWS;r++){
+        var trow=[],grow=[];
+        for(var c=0;c<COLS;c++){
+          var t='.';
+          if(r>=1){var a=rng();if(a<0.17)t='L';else if(a<0.34)t='R';}else{rng();}
+          trow.push(t);
+          var g=rng(),v=0;
+          if(g<0.09)v=3;else if(g<0.42)v=1;
+          grow.push(v);
+        }
+        tiles.push(trow);gems.push(grow);
+      }
+      return {tiles:tiles,gems:gems};
+    }
+    function marblePath(tiles,dropCol){
+      var path=[],c=dropCol;
+      for(var r=0;r<ROWS;r++){
+        path.push({r:r,c:c});
+        var t=tiles[r][c],nc=c;
+        if(t==='L')nc=c-1;else if(t==='R')nc=c+1;
+        if(nc<0||nc>=COLS)nc=c;
+        c=nc;
+      }
+      return path;
+    }
+
+    /* ---------- 날짜 ---------- */
+    function todayStr(){var d=new Date();var m=String(d.getMonth()+1).padStart(2,'0');var day=String(d.getDate()).padStart(2,'0');return d.getFullYear()+'-'+m+'-'+day;}
+    function prevStr(dateStr){var p=dateStr.split('-');var d=new Date(+p[0],+p[1]-1,+p[2]);d.setDate(d.getDate()-1);var m=String(d.getMonth()+1).padStart(2,'0');var day=String(d.getDate()).padStart(2,'0');return d.getFullYear()+'-'+m+'-'+day;}
+
+    /* ---------- 상태 ---------- */
+    var TODAY=todayStr();
+    var slope=buildSlope(TODAY);
+    var muted=lsGet(KEY.muted)==='1';
+
+    // 데일리 (연속기록·오늘최고) — 부팅 시 write 안 함
+    var daily=lsGetJSON(KEY.daily)||{date:TODAY,todayBest:0,streak:0,lastPlayed:''};
+    if(daily.date!==TODAY){daily.date=TODAY;daily.todayBest=0;} // 새 날: 오늘최고 리셋, streak/lastPlayed 유지
+
+    var allBest=lsGetInt(KEY.best);
+
+    // 진행 (marblesLeft/score/collected) — save.date==오늘이면 복원
+    var collected={}; // key -> true
+    var marblesLeft=N_MARBLES, score=0;
+    (function restore(){
+      var sv=lsGetJSON(KEY.save);
+      if(sv&&sv.date===TODAY){
+        marblesLeft=(typeof sv.marblesLeft==='number')?sv.marblesLeft:N_MARBLES;
+        score=sv.score||0;
+        (sv.collected||[]).forEach(function(k){collected[k]=true;});
+      }
+    })();
+
+    /* ---------- DOM ---------- */
+    var boardWrap=document.getElementById('board-wrap');
+    var board=document.getElementById('board');
+    var colsEl=document.getElementById('cols');
+    var lipsEl=document.getElementById('lips');
+    var queueEl=document.getElementById('queue');
+    var marbleEl=null;
+    var cell=54; // 계산됨
+
+    function layout(){
+      // 사용가능 폭 기준 셀 크기 (모바일 세로 한손)
+      var maxW=Math.min(boardWrap.parentElement.clientWidth||360,460);
+      cell=Math.max(38,Math.min(60,Math.floor((maxW-4)/COLS)));
+      var W=cell*COLS,H=cell*ROWS;
+      board.style.width=W+'px';board.style.height=H+'px';
+      renderStatic();renderGems();renderQueue();positionMarbleTop();
+    }
+
+    var gemEls={}; // key -> el
+    function renderStatic(){
+      // 타일 + 열 오버레이 + 립 (한 번만이 아니라 리레이아웃 시 재구성)
+      // 타일
+      board.querySelectorAll('.cell').forEach(function(n){n.remove();});
+      for(var r=0;r<ROWS;r++)for(var c=0;c<COLS;c++){
+        var t=slope.tiles[r][c];
+        var d=document.createElement('div');
+        d.className='cell'+(t!=='.'?' arrow '+(t==='L'?'aL':'aR'):'');
+        d.style.left=(c*cell)+'px';d.style.top=(r*cell)+'px';d.style.width=cell+'px';d.style.height=cell+'px';
+        if(t!=='.'){
+          var tile=document.createElement('div');tile.className='tile';d.appendChild(tile);
+          var svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+          svg.setAttribute('class','chev');svg.setAttribute('viewBox','0 0 256 256');
+          var use=document.createElementNS('http://www.w3.org/2000/svg','use');
+          use.setAttribute('href','#p-caret-down');svg.appendChild(use);d.appendChild(svg);
+        }
+        board.insertBefore(d,colsEl);
+      }
+      // 열 오버레이
+      colsEl.innerHTML='';lipsEl.innerHTML='';
+      for(var ci=0;ci<COLS;ci++){
+        var col=document.createElement('div');col.className='col';col.dataset.c=ci;
+        var band=document.createElement('div');band.className='band';col.appendChild(band);
+        colsEl.appendChild(col);
+        var lip=document.createElement('div');lip.className='lip';var i=document.createElement('i');lip.appendChild(i);lipsEl.appendChild(lip);
+      }
+    }
+
+    function gemKey(r,c){return r*COLS+c;}
+    function renderGems(){
+      // 기존 제거 후 남은 보석만
+      board.querySelectorAll('.gem').forEach(function(n){n.remove();});
+      gemEls={};
+      var gd=Math.round(cell*0.44);
+      for(var r=0;r<ROWS;r++)for(var c=0;c<COLS;c++){
+        var v=slope.gems[r][c];if(!v)continue;
+        var k=gemKey(r,c);if(collected[k])continue;
+        var g=document.createElement('div');
+        g.className='gem '+(v===3?'g3':'g1');
+        var sz=v===3?gd*1.18:gd;
+        g.style.width=sz+'px';g.style.height=sz+'px';
+        g.style.left=(c*cell+(cell-sz)/2)+'px';g.style.top=(r*cell+(cell-sz)/2)+'px';
+        board.insertBefore(g,colsEl);
+        gemEls[k]=g;
+      }
+    }
+
+    var marbleColors=['#eaf3fb'];
+    function renderQueue(){
+      queueEl.innerHTML='';
+      for(var i=0;i<N_MARBLES;i++){
+        var m=document.createElement('div');m.className='mq'+(i>=marblesLeft?' used':'');
+        m.style.background='radial-gradient(circle at 36% 28%,#eaf3fb,#8fb6d6 62%,#5f86a6)';
+        queueEl.appendChild(m);
+      }
+    }
+
+    function ensureMarble(){
+      if(!marbleEl){marbleEl=document.createElement('div');marbleEl.id='marble';board.appendChild(marbleEl);}
+      var sz=Math.round(cell*0.52);
+      marbleEl.style.width=sz+'px';marbleEl.style.height=sz+'px';
+      return sz;
+    }
+    function positionMarbleTop(){
+      if(marblesLeft<=0){if(marbleEl)marbleEl.style.opacity='0';return;}
+      var sz=ensureMarble();
+      // 살짝 위에 대기 (열은 안 정함 — 가운데)
+      marbleEl.style.transition='none';
+      marbleEl.style.transform='translate('+((COLS/2)*cell-sz/2)+'px,'+(-sz*0.7)+'px)';
+      marbleEl.style.opacity='0';
+    }
+
+    /* ---------- 사운드 ---------- */
+    var AC=null;
+    function actx(){if(muted)return null;if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){AC=null;}}if(AC&&AC.state==='suspended')AC.resume();return AC;}
+    function beep(freq,dur,type,vol){var a=actx();if(!a)return;var o=a.createOscillator(),g=a.createGain();o.type=type||'sine';o.frequency.value=freq;g.gain.value=0;o.connect(g);g.connect(a.destination);var t=a.currentTime;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol||0.09,t+0.008);g.gain.exponentialRampToValueAtTime(0.0001,t+(dur||0.12));o.start(t);o.stop(t+(dur||0.12)+0.02);}
+    function sTick(){beep(220+Math.random()*40,0.05,'triangle',0.05);}
+    function sGem(v){beep(v===3?1046:784,0.13,'sine',0.11);if(v===3)beep(1318,0.16,'sine',0.08);}
+    function sRecord(){[523,659,784,1046].forEach(function(f,i){setTimeout(function(){beep(f,0.18,'sine',0.11);},i*80);});}
+
+    /* ---------- 화면 갱신 ---------- */
+    function refreshPills(){
+      document.getElementById('cur').textContent=score;
+      document.getElementById('tbest').textContent=daily.todayBest;
+      document.getElementById('streak').textContent=daily.streak;
+    }
+    function updateMuteIcon(){document.getElementById('mute-ic').innerHTML='<use href="#'+(muted?'p-speaker-slash':'p-speaker-high')+'"/>';}
+
+    /* ---------- 저장 (변경 시에만) ---------- */
+    function persistProgress(){
+      var col=Object.keys(collected).filter(function(k){return collected[k];}).map(Number);
+      lsSet(KEY.save,JSON.stringify({date:TODAY,marblesLeft:marblesLeft,score:score,collected:col}));
+    }
+    function persistDaily(){lsSet(KEY.daily,JSON.stringify(daily));}
+
+    function markPlayedToday(){
+      if(daily.lastPlayed===TODAY)return;
+      if(daily.lastPlayed===prevStr(TODAY))daily.streak+=1;else daily.streak=1;
+      daily.lastPlayed=TODAY;
+      persistDaily();
+      refreshPills();
+    }
+
+    /* ---------- 드롭 ---------- */
+    var busy=false,started=false;
+    function popText(x,y,txt,color){
+      var p=document.createElement('div');p.className='pop';p.textContent=txt;p.style.color=color;
+      p.style.left=x+'px';p.style.top=y+'px';board.appendChild(p);
+      setTimeout(function(){p.remove();},700);
+    }
+
+    function drop(dropCol){
+      if(busy||marblesLeft<=0)return;
+      busy=true;
+      if(!started){started=true;document.getElementById('note').textContent='보석을 지나면 조르르 줍는다';}
+      markPlayedToday();
+      var path=marblePath(slope.tiles,dropCol);
+      var sz=ensureMarble();
+      marbleEl.style.opacity='1';
+      var STEP=90;
+      var i=0;
+      // 첫 위치 (위→row0)
+      marbleEl.style.transition='none';
+      marbleEl.style.transform='translate('+(dropCol*cell+(cell-sz)/2)+'px,'+(-cell)+'px)';
+      // 강제 리플로우
+      void marbleEl.offsetWidth;
+      marbleEl.style.transition='transform '+(STEP/1000)+'s linear';
+
+      function step(){
+        if(i>=path.length){finishMarble();return;}
+        var p=path[i];
+        marbleEl.style.transform='translate('+(p.c*cell+(cell-sz)/2)+'px,'+(p.r*cell+(cell-sz)/2)+'px)';
+        sTick();
+        // 도착 시점(전이 완료 후)에 보석 판정
+        setTimeout(function(){
+          var k=gemKey(p.r,p.c);var v=slope.gems[p.r][p.c];
+          if(v>0&&!collected[k]){
+            collected[k]=true;score+=v;
+            var el=gemEls[k];if(el){el.classList.add('gone');(function(e){setTimeout(function(){e.remove();},180);})(el);delete gemEls[k];}
+            popText(p.c*cell+cell/2-8,p.r*cell+cell/2-12,'+'+v,v===3?'#ff9bbd':'#ffd56a');
+            sGem(v);
+            refreshPills();
+          }
+          i++;step();
+        },STEP);
+      }
+      step();
+    }
+
+    function finishMarble(){
+      marblesLeft-=1;
+      renderQueue();
+      persistProgress();
+      busy=false;
+      if(marblesLeft<=0){
+        marbleEl.style.opacity='0';
+        setTimeout(endRun,300);
+      }else{
+        positionMarbleTop();
+      }
+    }
+
+    function endRun(){
+      // 오늘최고 / 역대최고 갱신
+      var newToday=score>daily.todayBest;
+      var newAll=score>allBest;
+      if(newToday){daily.todayBest=score;persistDaily();}
+      if(newAll){allBest=score;lsSet(KEY.best,String(score));} // portal.js가 chuteBest 캡처
+      refreshPills();
+      // 결과 카드
+      document.getElementById('over-big').textContent=score;
+      document.getElementById('over-tbest').textContent=daily.todayBest;
+      document.getElementById('over-streak').textContent=daily.streak+'일';
+      document.getElementById('over-allbest').textContent=allBest;
+      document.getElementById('over-title').textContent=newToday?'오늘 최고 경신!':'오늘 조르르 끝!';
+      if(newToday)sRecord();
+      document.getElementById('over').classList.add('show');
+    }
+
+    function retry(){
+      // 오늘의 비탈 재도전 — todayBest/streak 유지, 진행만 리셋
+      collected={};marblesLeft=N_MARBLES;score=0;started=false;
+      persistProgress();
+      document.getElementById('over').classList.remove('show');
+      document.getElementById('note').textContent='오늘의 비탈 — 열을 골라 구슬을 톡';
+      refreshPills();renderGems();renderQueue();positionMarbleTop();
+    }
+
+    /* ---------- 입력 ---------- */
+    colsEl.addEventListener('pointermove',function(e){
+      var t=e.target.closest('.col');if(!t)return;
+      colsEl.querySelectorAll('.col').forEach(function(n){n.classList.remove('hot');});
+      if(marblesLeft>0&&!busy)t.classList.add('hot');
+    });
+    colsEl.addEventListener('pointerleave',function(){colsEl.querySelectorAll('.col').forEach(function(n){n.classList.remove('hot');});});
+    colsEl.addEventListener('click',function(e){
+      var t=e.target.closest('.col');if(!t)return;
+      colsEl.querySelectorAll('.col').forEach(function(n){n.classList.remove('hot');});
+      drop(+t.dataset.c);
+    });
+
+    document.getElementById('retry').addEventListener('click',function(){if(!busy)retry();});
+    document.getElementById('again').addEventListener('click',retry);
+    document.getElementById('mute').addEventListener('click',function(){muted=!muted;lsSet(KEY.muted,muted?'1':'0');updateMuteIcon();if(!muted)actx();});
+    document.getElementById('support').addEventListener('click',function(){if(window.GamePortal&&GamePortal.openSupport)GamePortal.openSupport();});
+
+    document.getElementById('share').addEventListener('click',function(){
+      var txt='조르르 — 오늘의 비탈 보석 '+score+' · '+daily.streak+'일 연속\n'+location.origin+'/chute/';
+      if(navigator.share){navigator.share({text:txt}).catch(function(){});}
+      else if(navigator.clipboard){navigator.clipboard.writeText(txt).then(function(){var b=document.getElementById('share');var o=b.innerHTML;b.textContent='복사됨!';setTimeout(function(){b.innerHTML=o;},1400);});}
+    });
+
+    /* ---------- 부팅 ---------- */
+    updateMuteIcon();
+    layout();
+    refreshPills();
+    positionMarbleTop();
+    if(marblesLeft<=0){/* 오늘 이미 다 씀 — 결과 보여줌 */ setTimeout(endRun,200);}
+    window.addEventListener('resize',function(){layout();});
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "한 획 — 오늘의 경로 한 번에 긋기",
+  "short_name": "한 획",
+  "description": "숫자 들판 위로 손가락을 쭉 긋는다. 배수칸을 물고 돌아 최고 경로를 찾자. 오늘은 모두 같은 판 — 시간제한 없음.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ece3d0",
+  "theme_color": "#ece3d0",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

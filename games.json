@@ -633,6 +633,66 @@
           "merge": "lww"
         }
       ]
+    },
+    {
+      "id": "blast",
+      "shell_mode": "panel",
+      "lab": true,
+      "title": "우르르",
+      "tagline": "같은 색 뭉치를 톡 — 우르르 쏟아지는 데일리 소거. 오늘의 판은 모두 같아요.",
+      "unit": "점",
+      "score_key": "blastBest",
+      "score_metric": "score",
+      "state_keys": [
+        {
+          "key": "blastBest",
+          "merge": "max"
+        },
+        {
+          "key": "blastMuted",
+          "merge": "lww"
+        }
+      ]
+    },
+    {
+      "id": "trace",
+      "shell_mode": "panel",
+      "lab": true,
+      "title": "한 획",
+      "tagline": "숫자 들판 위로 손가락을 쭉 긋는 한 번의 경로. 배수칸을 물고 돌아 오늘의 최고 경로를 — 모두 같은 판.",
+      "unit": "점",
+      "score_key": "traceBest",
+      "score_metric": "score",
+      "state_keys": [
+        {
+          "key": "traceBest",
+          "merge": "max"
+        },
+        {
+          "key": "traceMuted",
+          "merge": "lww"
+        }
+      ]
+    },
+    {
+      "id": "chute",
+      "shell_mode": "fullscreen",
+      "lab": true,
+      "title": "조르르",
+      "tagline": "열을 골라 구슬을 톡 — 오늘의 비탈에서 보석 줍기. 매일 새 비탈, 모두 같은 판.",
+      "unit": "보석",
+      "score_key": "chuteBest",
+      "score_metric": "score",
+      "state_keys": [
+        {
+          "key": "chuteBest",
+          "merge": "max"
+        },
+        {
+          "key": "chuteMuted",
+          "merge": "lww"
+        }
+      ]
     }
   ]
 }

@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#efe7db">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="우르르">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="우르르 — 데일리 소거 경쟁">
+  <meta property="og:description" content="같은 색 뭉치를 톡 — 우르르 쏟아지는 블록 소거. 오늘의 판은 모두 같아요.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>우르르</title>
+  <style>
+    @font-face{font-family:"Pretendard Variable";font-weight:45 920;font-style:normal;font-display:swap;src:url("/fonts/PretendardVariable.woff2") format("woff2-variations");}
+    :root{
+      --bg:#efe7db; --card:#f7f1e8; --ink:#3b3630; --ink-soft:#8a8175; --line:rgba(70,60,45,.12);
+      --accent:#e0793c;
+      --c0:#e8635a; --c1:#eaad34; --c2:#3fb0a2; --c3:#6c8ad9;
+      --fs-1:clamp(24px,7vw,34px); --fs-2:16px; --fs-3:13px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    html,body{height:100%;background:var(--bg);}
+    body{font-family:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
+      color:var(--ink);overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:manipulation;
+      display:flex;flex-direction:column;align-items:center;}
+
+    /* ── 상단 HUD ── */
+    #top{width:100%;max-width:460px;padding:calc(8px + env(safe-area-inset-top)) 14px 6px;
+      display:flex;flex-direction:column;gap:8px;}
+    #hud{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;}
+    .pill{display:flex;flex-direction:column;align-items:center;gap:1px;white-space:nowrap;
+      border:1px solid var(--line);background:var(--card);
+      border-radius:14px;padding:6px 14px;min-width:74px;}
+    .pill .lab{font-size:11px;font-weight:800;color:var(--ink-soft);letter-spacing:.3px;}
+    .pill b{color:var(--ink);font-size:18px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1.1;}
+    .pill.hot b{color:var(--accent);}
+    #hint{text-align:center;font-size:var(--fs-3);font-weight:700;color:var(--ink-soft);
+      transition:opacity .5s ease;min-height:16px;}
+    #hint b{color:var(--accent);}
+
+    /* ── 보드 ── */
+    #stage{flex:1;width:100%;display:flex;align-items:center;justify-content:center;padding:6px 12px;min-height:0;}
+    #board{position:relative;border-radius:16px;background:rgba(60,50,35,.05);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.5), inset 0 -2px 6px rgba(60,50,35,.06);
+      touch-action:none;}
+    .tile{position:absolute;left:0;top:0;border-radius:24%;
+      transition:transform .22s cubic-bezier(.3,.9,.35,1);
+      box-shadow:inset 0 3px 0 rgba(255,255,255,.32), inset 0 -4px 0 rgba(0,0,0,.14), 0 1px 0 rgba(0,0,0,.08);
+      will-change:transform;}
+    .tile.c0{background:var(--c0);} .tile.c1{background:var(--c1);}
+    .tile.c2{background:var(--c2);} .tile.c3{background:var(--c3);}
+    .tile.pop{transition:transform .18s ease, opacity .18s ease;transform-origin:center;opacity:0;}
+    .tile.pop.go{transform:scale(.1) !important;}
+    .tile.wig{animation:wig .28s ease;}
+    @keyframes wig{0%,100%{}25%{transform:translate(var(--tx),var(--ty)) rotate(-6deg);}75%{transform:translate(var(--tx),var(--ty)) rotate(6deg);}}
+
+    /* 점수 팝 */
+    .fx{position:absolute;z-index:20;font-weight:900;color:#fff;font-size:20px;pointer-events:none;
+      text-shadow:0 2px 6px rgba(0,0,0,.35);transform:translate(-50%,-50%);
+      animation:fx .7s cubic-bezier(.2,.8,.3,1) forwards;}
+    @keyframes fx{0%{opacity:0;transform:translate(-50%,-50%) scale(.6);}20%{opacity:1;}100%{opacity:0;transform:translate(-50%,-160%) scale(1.1);}}
+
+    /* ── 하단 바 ── */
+    #bottom{width:100%;max-width:460px;padding:6px 14px calc(12px + env(safe-area-inset-bottom));
+      display:flex;gap:8px;align-items:center;}
+    .btn{flex:1;border:1px solid var(--line);background:var(--card);color:var(--ink);
+      border-radius:14px;padding:12px;font-size:var(--fs-2);font-weight:800;cursor:pointer;
+      box-shadow:0 2px 0 rgba(60,50,35,.12);transition:transform .09s ease,box-shadow .09s ease;}
+    .btn:active{transform:translateY(2px);box-shadow:0 0 0 rgba(0,0,0,0);}
+    .btn.icon{flex:0 0 48px;padding:12px 0;display:flex;align-items:center;justify-content:center;}
+    .btn.pri{background:var(--accent);color:#fff;border-color:transparent;box-shadow:0 2px 0 rgba(150,70,20,.4);}
+    .ic{width:22px;height:22px;display:block;}
+
+    /* ── 결과 모달 ── */
+    .pop-over{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:22px;
+      background:rgba(40,32,22,.4);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+      opacity:0;pointer-events:none;transition:opacity .26s ease;}
+    .pop-over.show{opacity:1;pointer-events:auto;}
+    .modal{width:min(340px,90vw);border-radius:24px;background:var(--card);border:1px solid var(--line);
+      padding:24px 22px 18px;text-align:center;box-shadow:0 24px 60px rgba(40,32,22,.3);
+      transform:translateY(12px) scale(.97);transition:transform .3s cubic-bezier(.2,1.15,.4,1);}
+    .pop-over.show .modal{transform:none;}
+    .modal .cap{font-size:var(--fs-3);font-weight:800;letter-spacing:1px;color:var(--accent);text-transform:uppercase;}
+    .modal h2{font-size:var(--fs-1);font-weight:900;margin:4px 0 2px;}
+    .modal .big{font-size:44px;font-weight:900;color:var(--ink);font-variant-numeric:tabular-nums;margin:6px 0;}
+    .modal .sub{font-size:var(--fs-3);font-weight:700;color:var(--ink-soft);line-height:1.6;}
+    .meter{font-size:22px;letter-spacing:3px;margin:8px 0 4px;color:var(--accent);}
+    .modal .row{display:flex;gap:8px;margin-top:16px;}
+    .support{margin-top:12px;font-size:12px;font-weight:700;color:var(--ink-soft);
+      background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
+    .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(10px);
+      z-index:60;background:var(--ink);color:#fff;font-size:13px;font-weight:700;padding:9px 16px;border-radius:12px;
+      opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  </style>
+</head>
+<body>
+  <div id="top">
+    <div id="hud">
+      <div class="pill hot"><span class="lab">점수</span><b id="uiScore">0</b></div>
+      <div class="pill"><span class="lab">오늘 최고</span><b id="uiToday">0</b></div>
+      <div class="pill"><span class="lab">연속</span><b id="uiStreak">0</b></div>
+    </div>
+    <div id="hint">같은 색 붙은 뭉치를 <b>톡</b> — 클수록 점수가 커져요</div>
+  </div>
+
+  <div id="stage"><div id="board"></div></div>
+
+  <div id="bottom">
+    <button class="btn icon" id="btnMute" aria-label="소리">
+      <svg class="ic" viewBox="0 0 24 24"><path id="muteIcon" fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>
+    </button>
+    <button class="btn" id="btnNew">새 판</button>
+    <button class="btn pri" id="btnShare">결과 공유</button>
+  </div>
+
+  <div class="pop-over" id="over">
+    <div class="modal">
+      <div class="cap" id="mCap">오늘의 판</div>
+      <h2 id="mTitle">끝!</h2>
+      <div class="big" id="mScore">0</div>
+      <div class="meter" id="mMeter"></div>
+      <div class="sub" id="mSub"></div>
+      <div class="row">
+        <button class="btn" id="mAgain">다시</button>
+        <button class="btn pri" id="mShare">공유</button>
+      </div>
+      <button class="support" id="mSupport">이 게임 응원하기</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+/* ══════════════════════ 우르르 (blast) — 데일리 소거 ══════════════════════
+   포털 계약: 모든 localStorage 키 blast 접두사.
+   blastBest(역대 최고=score_key) / blastDaily(날짜·오늘최고·연속) / blastSave(진행판) / blastMuted */
+(function(){
+'use strict';
+
+// ── 설정 ──
+var COLS=8, ROWS=11, COLORS=4, CLEAR_BONUS=2000;
+
+/* ── 순수 코어 로직 (node로 유닛/시뮬 검증하는 것과 동일) ────────────────
+   보드 = 열(column) 배열. 각 열 = 아래→위 색상(0..COLORS-1) 배열. 빈칸은 값 없음(열 길이로 표현). */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function hashDate(s){var h=2166136261>>>0;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+function genColors(seed,cols,rows,colors){
+  var rnd=mulberry32(seed),g=[];
+  for(var c=0;c<cols;c++){var col=[];for(var r=0;r<rows;r++)col.push(Math.floor(rnd()*colors));g.push(col);}
+  return g;
+}
+function colorAt(g,c,r){ if(c<0||c>=g.length)return -1; var col=g[c]; if(r<0||r>=col.length)return -1; var v=col[r]; return v==null?-1:v; }
+function groupAt(g,c,r){
+  var target=colorAt(g,c,r); if(target<0)return [];
+  var seen={},st=[[c,r]],out=[];
+  while(st.length){
+    var p=st.pop(),x=p[0],y=p[1],k=x+','+y;
+    if(seen[k])continue;
+    if(colorAt(g,x,y)!==target)continue;
+    seen[k]=1; out.push([x,y]);
+    st.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]);
+  }
+  return out;
+}
+function collapseColors(g){
+  var out=[];
+  for(var c=0;c<g.length;c++){ var col=g[c].filter(function(v){return v!=null;}); if(col.length)out.push(col); }
+  return out;
+}
+function anyMove(g){
+  for(var c=0;c<g.length;c++)for(var r=0;r<g[c].length;r++){
+    var v=g[c][r]; if(v==null)continue;
+    if(colorAt(g,c+1,r)===v||colorAt(g,c,r+1)===v)return true;
+  }
+  return false;
+}
+function countTiles(g){var n=0;for(var c=0;c<g.length;c++)for(var r=0;r<g[c].length;r++)if(g[c][r]!=null)n++;return n;}
+
+// (검증 스크립트에서 재사용) 노드 환경이면 export
+if(typeof module!=='undefined'&&module.exports){
+  module.exports={mulberry32,hashDate,genColors,colorAt,groupAt,collapseColors,anyMove,countTiles,COLS,ROWS,COLORS,CLEAR_BONUS};
+  return;
+}
+
+// ── 날짜 유틸 (로컬 기준 YYYY-MM-DD) ──
+function dstr(d){ var y=d.getFullYear(),m=('0'+(d.getMonth()+1)).slice(-2),da=('0'+d.getDate()).slice(-2); return y+'-'+m+'-'+da; }
+function today(){ return dstr(new Date()); }
+function yesterdayOf(t){ var d=new Date(t+'T12:00:00'); d.setDate(d.getDate()-1); return dstr(d); }
+
+// ── 상태 ──
+var seed=hashDate(today());
+var board=[];        // 열 배열, 각 원소 = {color,el} 타일 객체 (아래→위)
+var score=0;
+var cell=44;
+var daily=loadDaily();
+var best=parseInt(localStorage.getItem('blastBest')||'0',10)||0;
+var muted=localStorage.getItem('blastMuted')==='1';
+var _uid=0;
+
+var boardEl=document.getElementById('board');
+
+// ── 사운드 (최소) ──
+var ac=null;
+function pop(size){
+  if(muted)return;
+  try{
+    ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+    var o=ac.createOscillator(),g=ac.createGain(),t=ac.currentTime;
+    o.type='triangle';
+    var f=260+Math.min(size,12)*34;
+    o.frequency.setValueAtTime(f,t); o.frequency.exponentialRampToValueAtTime(f*1.6,t+.09);
+    g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.16,t+.01); g.gain.exponentialRampToValueAtTime(.0001,t+.16);
+    o.connect(g).connect(ac.destination); o.start(t); o.stop(t+.18);
+  }catch(e){}
+}
+
+// ── 저장/복원 ──
+function loadDaily(){
+  var d; try{ d=JSON.parse(localStorage.getItem('blastDaily')||'null'); }catch(e){}
+  if(!d)d={date:null,todayBest:0,streak:0,lastDate:null};
+  var t=today();
+  if(d.date!==t){
+    // 오늘 첫 방문 = 연속 갱신 (어제 했으면 +1, 아니면 1로 리셋)
+    if(d.lastDate===yesterdayOf(t)) d.streak=(d.streak||0)+1;
+    else d.streak=1;
+    d.date=t; d.todayBest=0; d.lastDate=t;
+    localStorage.setItem('blastDaily',JSON.stringify(d));
+  }
+  return d;
+}
+function saveDaily(){ localStorage.setItem('blastDaily',JSON.stringify(daily)); }
+function saveGame(){
+  var m=board.map(function(col){return col.map(function(t){return t.color;});});
+  localStorage.setItem('blastSave',JSON.stringify({seed:seed,score:score,board:m}));
+}
+function clearSave(){ localStorage.removeItem('blastSave'); }
+
+// ── 보드 구축 ──
+function tilesFromColors(cm){
+  boardEl.innerHTML='';
+  board=cm.map(function(col){
+    return col.map(function(color){
+      var el=document.createElement('div');
+      el.className='tile c'+color;
+      boardEl.appendChild(el);
+      return {color:color,el:el,id:++_uid};
+    });
+  });
+}
+function newGame(){
+  score=0;
+  tilesFromColors(genColors(seed,COLS,ROWS,COLORS));
+  layout(); render(); paintHud(); clearSave(); saveGame();
+}
+function restoreOrNew(){
+  var s; try{ s=JSON.parse(localStorage.getItem('blastSave')||'null'); }catch(e){}
+  if(s&&s.seed===seed&&Array.isArray(s.board)){
+    score=s.score||0;
+    tilesFromColors(s.board);
+    layout(); render(); paintHud();
+  }else{
+    newGame();
+  }
+}
+
+// ── 레이아웃(반응형 셀 크기) ──
+function layout(){
+  var stage=document.getElementById('stage');
+  var availW=Math.min(stage.clientWidth,440)-4;
+  var availH=stage.clientHeight-4;
+  cell=Math.max(24,Math.floor(Math.min(availW/COLS, availH/ROWS)));
+  boardEl.style.width=(cell*COLS)+'px';
+  boardEl.style.height=(cell*ROWS)+'px';
+}
+function render(){
+  var H=cell*ROWS;
+  for(var c=0;c<board.length;c++)for(var r=0;r<board[c].length;r++){
+    var t=board[c][r];
+    t.el.style.width=t.el.style.height=cell+'px';
+    var tx=c*cell, ty=H-(r+1)*cell;
+    t.el.style.setProperty('--tx',tx+'px'); t.el.style.setProperty('--ty',ty+'px');
+    t.el.style.transform='translate('+tx+'px,'+ty+'px)';
+  }
+}
+
+// ── 좌표 → 격자 ──
+function cellFromXY(x,y){
+  var H=cell*ROWS;
+  var c=Math.floor(x/cell);
+  var r=Math.floor((H-y)/cell);
+  return [c,r];
+}
+function gcolorAt(c,r){ if(c<0||c>=board.length)return -1; var col=board[c]; if(r<0||r>=col.length)return -1; var t=col[r]; return t?t.color:-1; }
+function ggroupAt(c,r){
+  var target=gcolorAt(c,r); if(target<0)return [];
+  var seen={},st=[[c,r]],out=[];
+  while(st.length){var p=st.pop(),x=p[0],y=p[1],k=x+','+y;if(seen[k])continue;if(gcolorAt(x,y)!==target)continue;seen[k]=1;out.push([x,y]);st.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]);}
+  return out;
+}
+function ganyMove(){
+  for(var c=0;c<board.length;c++)for(var r=0;r<board[c].length;r++){
+    var t=board[c][r]; if(!t)continue;
+    if(gcolorAt(c+1,r)===t.color||gcolorAt(c,r+1)===t.color)return true;
+  }
+  return false;
+}
+function gcount(){var n=0;for(var c=0;c<board.length;c++)n+=board[c].length;return n;}
+
+// ── 탭 처리 ──
+var busy=false;
+boardEl.addEventListener('pointerdown',function(e){
+  if(busy)return;
+  var rect=boardEl.getBoundingClientRect();
+  var g=cellFromXY(e.clientX-rect.left, e.clientY-rect.top);
+  handle(g[0],g[1],e.clientX-rect.left,e.clientY-rect.top);
+});
+function handle(c,r,px,py){
+  var grp=ggroupAt(c,r);
+  if(grp.length<2){
+    var t=board[c]&&board[c][r];
+    if(t){ t.el.classList.add('wig'); setTimeout(function(){t.el.classList.remove('wig');},300); }
+    return;
+  }
+  busy=true;
+  var gained=grp.length*grp.length;
+  score+=gained;
+  scoreFx(px,py,gained,grp.length);
+  pop(grp.length);
+  // 팝 애니메이션 후 제거
+  var dead=[];
+  grp.forEach(function(p){ var t=board[p[0]][p[1]]; dead.push(t); board[p[0]][p[1]]=null; });
+  dead.forEach(function(t){ t.el.classList.add('pop'); requestAnimationFrame(function(){t.el.classList.add('go');}); });
+  setTimeout(function(){ dead.forEach(function(t){t.el.remove();}); },180);
+  // 중력 + 좌정렬
+  board=board.map(function(col){return col.filter(function(t){return t!=null;});}).filter(function(col){return col.length;});
+  render();
+  hideHint();
+  paintHud();
+  liveRecords();
+  saveGame();
+  setTimeout(function(){
+    busy=false;
+    if(!ganyMove()) endRound();
+  },230);
+}
+function scoreFx(x,y,val,n){
+  var f=document.createElement('div');
+  f.className='fx'; f.textContent='+'+val;
+  f.style.left=x+'px'; f.style.top=y+'px';
+  f.style.fontSize=Math.min(34,16+n*1.4)+'px';
+  boardEl.appendChild(f);
+  setTimeout(function(){f.remove();},720);
+}
+
+// ── 기록 갱신 ──
+function liveRecords(){
+  if(score>daily.todayBest){ daily.todayBest=score; saveDaily(); }
+  if(score>best){ best=score; localStorage.setItem('blastBest',String(best)); } // portal.js가 캡처(score_key)
+}
+
+// ── 라운드 종료 ──
+function parScore(){ return COLS*ROWS*10; } // 880 기준
+function meterStr(sc){
+  var tier=Math.max(0,Math.min(5,Math.round(sc/parScore()*5)));
+  var s=''; for(var i=0;i<5;i++)s+= i<tier?'▮':'▯'; return s;
+}
+var lastCleared=false;
+function endRound(){
+  var cleared=gcount()===0;
+  lastCleared=cleared;
+  if(cleared){ score+=CLEAR_BONUS; }
+  liveRecords();
+  paintHud();
+  var m=document.getElementById('over');
+  document.getElementById('mCap').textContent='오늘의 판 · '+today();
+  document.getElementById('mTitle').textContent=cleared?'완전 소거!':'끝!';
+  document.getElementById('mScore').textContent=score.toLocaleString();
+  document.getElementById('mMeter').textContent=meterStr(score);
+  var sub='오늘 최고 '+daily.todayBest.toLocaleString()+'점 · '+daily.streak+'일 연속';
+  if(cleared) sub='완전 소거 보너스 +'+CLEAR_BONUS.toLocaleString()+'\n'+sub;
+  document.getElementById('mSub').textContent=sub;
+  m.classList.add('show');
+  clearSave();
+}
+
+// ── HUD ──
+function paintHud(){
+  document.getElementById('uiScore').textContent=score.toLocaleString();
+  document.getElementById('uiToday').textContent=Math.max(daily.todayBest,score).toLocaleString();
+  document.getElementById('uiStreak').textContent=daily.streak;
+}
+var hintHidden=false;
+function hideHint(){ if(hintHidden)return; hintHidden=true; document.getElementById('hint').style.opacity='0'; }
+
+// ── 공유 ──
+function shareText(){
+  var cleared=lastCleared?' 완전소거':'';
+  return '우르르 · '+today()+'\n'+meterStr(score)+'  '+score.toLocaleString()+'점'+cleared+'\n'+daily.streak+'일 연속 · mini-game.kr';
+}
+function doShare(){
+  var txt=shareText();
+  if(navigator.share){ navigator.share({text:txt}).catch(function(){}); return; }
+  if(navigator.clipboard){ navigator.clipboard.writeText(txt).then(function(){toast('결과를 복사했어요');},function(){toast(txt);}); }
+  else toast('복사 실패');
+}
+function toast(msg){
+  var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._t); t._t=setTimeout(function(){t.classList.remove('show');},1600);
+}
+
+// ── 버튼 ──
+document.getElementById('btnNew').addEventListener('click',function(){ newGame(); document.getElementById('over').classList.remove('show'); });
+document.getElementById('btnShare').addEventListener('click',doShare);
+document.getElementById('mShare').addEventListener('click',doShare);
+document.getElementById('mAgain').addEventListener('click',function(){ document.getElementById('over').classList.remove('show'); newGame(); });
+document.getElementById('mSupport').addEventListener('click',function(){ if(window.GamePortal&&GamePortal.openSupport)GamePortal.openSupport(); });
+function paintMute(){ document.getElementById('muteIcon').setAttribute('opacity',muted?'.35':'1'); document.getElementById('btnMute').style.opacity=muted?'.55':'1'; }
+document.getElementById('btnMute').addEventListener('click',function(){ muted=!muted; localStorage.setItem('blastMuted',muted?'1':'0'); paintMute(); });
+
+// ── 리사이즈 ──
+var rz; window.addEventListener('resize',function(){ clearTimeout(rz); rz=setTimeout(function(){layout();render();},120); });
+
+// ── 부팅 ──
+paintMute();
+requestAnimationFrame(function(){ layout(); restoreOrNew(); });
+
+})();
+</script>
+</body>
+</html>

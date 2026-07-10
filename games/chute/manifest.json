@@ -1,0 +1,15 @@
+{
+  "name": "조르르 — 오늘의 비탈",
+  "short_name": "조르르",
+  "description": "열을 골라 구슬을 떨어뜨리면 화살표를 따라 조르르 굴러 보석을 줍는다. 매일 같은 비탈, 누가 더 많이 줍나.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1b2836",
+  "theme_color": "#1b2836",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
