@@ -154,54 +154,76 @@ async def health():
     return {"ok": True}
 
 
-def _card_html(g: dict) -> str:
-    """게임 카드 1개 마크업."""
+def _dot_html(g: dict) -> str:
+    """아이콘 코너 신호 점 — NEW(초록) 우선, 아니면 HOT(코랄). iOS '새 앱' 점 느낌."""
+    if g.get("new"):
+        return '<span class="dot new" aria-hidden="true"></span>'
+    if g.get("hot"):
+        return '<span class="dot hot" aria-hidden="true"></span>'
+    return ""
+
+
+def _ft_app(g: dict) -> str:
+    """폴더 타일 안의 큰 앱 아이콘(바로 실행 링크)."""
     gid = html.escape(g["id"])
     title = html.escape(g.get("title", gid))
-    desc = html.escape(g.get("tagline", ""))
-    # NEW가 HOT보다 우선 (신선함이 더 강한 신호)
-    if g.get("new"):
-        hot = '<span class="hot new">NEW</span>'
-    elif g.get("hot"):
-        hot = '<span class="hot">HOT</span>'
-    else:
-        hot = ""
-    card_cls = "card is-hot" if (g.get("hot") or g.get("new")) else "card"
     return (
-        f'<a class="{card_cls}" href="/{gid}/">'
-        f'<img src="/{gid}/icon-192.png" alt="" width="64" height="64" loading="lazy">'
-        f'<span class="meta"><span class="name">{title}{hot}</span>'
-        f'<span class="desc">{desc}</span></span>'
-        f'<span class="go" aria-hidden="true">&rarr;</span></a>'
+        f'<a class="ft-app" href="/{gid}/" aria-label="{title}">'
+        f'<img src="/{gid}/icon-192.png" alt="{title}" loading="lazy">'
+        f'{_dot_html(g)}</a>'
+    )
+
+
+def _fs_app(g: dict) -> str:
+    """열린 폴더 시트 안의 앱(아이콘 + 이름, 바로 실행 링크)."""
+    gid = html.escape(g["id"])
+    title = html.escape(g.get("title", gid))
+    return (
+        f'<a class="fs-app" href="/{gid}/">'
+        f'<span class="fs-ic"><img src="/{gid}/icon-192.png" alt="" loading="lazy">{_dot_html(g)}</span>'
+        f'<span class="fs-nm">{title}</span></a>'
     )
 
 
 def _render_cards() -> str:
-    """index.html의 게임 카드 목록을 카테고리(폴더)별 접기/펼치기 섹션으로 서버 렌더.
+    """홈 게임 목록을 iOS '앱 보관함(App Library)' UI로 서버 렌더.
 
+    카테고리 = 폴더. 각 폴더 타일은 2×2 미리보기(앞 3개는 큰 아이콘 = 바로 실행,
+    나머지는 우하단 클러스터에 작게). 타일/이름을 탭하면 폴더 시트가 열려 전체 게임을 보여줌.
     클라 fetch 카드는 OG 프리뷰/초기 페인트에 안 잡히므로 서버에서 박는다.
-    기본 펼침(aria-expanded=true) — JS 없이도 전부 보임(발견성). JS가 헤더 탭 토글만 붙인다.
     """
-    sections = []
+    folders = []
+    sheets = []
     for cat, glist in games.home_games_by_category():
         cid = html.escape(cat["id"])
         ctitle = html.escape(cat["title"])
-        ctag = html.escape(cat.get("tagline", ""))
-        cards = "\n".join(_card_html(g) for g in glist)
-        tag_html = f'<span class="cat-tag">{ctag}</span>' if ctag else ""
-        sections.append(
-            f'<section class="cat" data-cat="{cid}">'
-            f'<button class="cat-head" type="button" aria-expanded="true">'
-            f'<span class="cat-label"><span class="cat-title">{ctitle}</span>{tag_html}</span>'
-            f'<span class="cat-count">{len(glist)}</span>'
-            f'<svg class="cat-chev" viewBox="0 0 256 256" aria-hidden="true">'
-            f'<path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/>'
-            f'</svg>'
-            f'</button>'
-            f'<div class="list">{cards}</div>'
-            f'</section>'
+        big = glist[:3]
+        rest = glist[3:]
+        cells = "".join(_ft_app(g) for g in big)
+        if rest:
+            tinies = "".join(
+                f'<img src="/{html.escape(g["id"])}/icon-192.png" alt="" loading="lazy">'
+                for g in rest[:4]
+            )
+            cells += (
+                f'<button class="ft-more" type="button" data-folder="{cid}" '
+                f'aria-label="{ctitle} 폴더 열기">{tinies}</button>'
+            )
+        folders.append(
+            f'<div class="folder">'
+            f'<div class="folder-tile" data-folder="{cid}">{cells}</div>'
+            f'<button class="folder-name" type="button" data-folder="{cid}">{ctitle}</button>'
+            f'</div>'
         )
-    return "\n".join(sections)
+        apps = "".join(_fs_app(g) for g in glist)
+        sheets.append(
+            f'<div class="folder-sheet" id="fs-{cid}" hidden>'
+            f'<div class="fs-panel" role="dialog" aria-modal="true" aria-label="{ctitle}">'
+            f'<h2 class="fs-title">{ctitle}</h2>'
+            f'<div class="fs-grid">{apps}</div>'
+            f'</div></div>'
+        )
+    return f'<div class="library">{"".join(folders)}</div>' + "".join(sheets)
 
 
 def _render_lab_cards() -> str:

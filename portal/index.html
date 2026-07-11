@@ -31,7 +31,7 @@
       <p class="sub">기록 세우고 친구랑 겨뤄요.</p>
     </header>
 
-    <div class="cats" aria-label="게임 목록">
+    <div class="lib-wrap" aria-label="게임 목록">
       {{CARDS}}
     </div>
 
@@ -50,23 +50,35 @@
       e.preventDefault(); if (window.GamePortal) GamePortal.openSupport();
     });
 
-    // 카테고리 폴더 접기/펼치기. 상태를 localStorage에 기억(기본 펼침).
+    // 앱 보관함(App Library) 폴더 — 타일/이름을 탭하면 폴더 시트가 열린다.
     (function () {
-      var KEY = 'portalCatCollapsed';
-      var collapsed = {};
-      try { collapsed = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) {}
-      document.querySelectorAll('.cat').forEach(function (sec) {
-        var id = sec.getAttribute('data-cat');
-        var head = sec.querySelector('.cat-head');
-        if (!head) return;
-        if (collapsed[id]) { sec.classList.add('is-collapsed'); head.setAttribute('aria-expanded', 'false'); }
-        head.addEventListener('click', function () {
-          var nowCollapsed = sec.classList.toggle('is-collapsed');
-          head.setAttribute('aria-expanded', nowCollapsed ? 'false' : 'true');
-          collapsed[id] = nowCollapsed;
-          try { localStorage.setItem(KEY, JSON.stringify(collapsed)); } catch (e) {}
-        });
+      var openSheet = null;
+      function open(id) {
+        var sheet = document.getElementById('fs-' + id);
+        if (!sheet) return;
+        if (openSheet) openSheet.hidden = true, openSheet.classList.remove('is-open');
+        sheet.hidden = false;
+        requestAnimationFrame(function () { sheet.classList.add('is-open'); });
+        document.body.classList.add('sheet-open');
+        openSheet = sheet;
+      }
+      function close() {
+        if (!openSheet) return;
+        var sheet = openSheet; openSheet = null;
+        sheet.classList.remove('is-open');
+        document.body.classList.remove('sheet-open');
+        var done = function () { sheet.hidden = true; sheet.removeEventListener('transitionend', done); };
+        sheet.addEventListener('transitionend', done);
+        setTimeout(function () { if (sheet.hidden === false && !sheet.classList.contains('is-open')) sheet.hidden = true; }, 300);
+      }
+      document.addEventListener('click', function (e) {
+        if (e.target.closest('.ft-app') || e.target.closest('.fs-app')) return; // 게임 실행 링크
+        var opener = e.target.closest('[data-folder]');
+        if (opener) { e.preventDefault(); open(opener.getAttribute('data-folder')); return; }
+        var sheet = e.target.closest('.folder-sheet');
+        if (sheet && !e.target.closest('.fs-panel')) close(); // 배경 탭 = 닫기
       });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
     })();
   </script>
   <script src="/account-widget.js"></script>
