@@ -163,14 +163,13 @@ def _dot_html(g: dict) -> str:
     return ""
 
 
-def _ft_app(g: dict) -> str:
-    """폴더 타일 안의 큰 앱 아이콘(바로 실행 링크)."""
+def _ft_cell(g: dict) -> str:
+    """폴더 타일 안의 큰 아이콘 미리보기(클릭 X — 타일 전체가 폴더 열기 버튼)."""
     gid = html.escape(g["id"])
-    title = html.escape(g.get("title", gid))
     return (
-        f'<a class="ft-app" href="/{gid}/" aria-label="{title}">'
-        f'<img src="/{gid}/icon-192.png" alt="{title}" loading="lazy">'
-        f'{_dot_html(g)}</a>'
+        f'<span class="ft-cell">'
+        f'<img src="/{gid}/icon-192.png" alt="" loading="lazy">'
+        f'{_dot_html(g)}</span>'
     )
 
 
@@ -186,11 +185,11 @@ def _fs_app(g: dict) -> str:
 
 
 def _render_cards() -> str:
-    """홈 게임 목록을 iOS '앱 보관함(App Library)' UI로 서버 렌더.
+    """홈 게임 목록을 iOS 홈 화면 '폴더' UI로 서버 렌더.
 
-    카테고리 = 폴더. 각 폴더 타일은 2×2 미리보기(앞 3개는 큰 아이콘 = 바로 실행,
-    나머지는 우하단 클러스터에 작게). 타일/이름을 탭하면 폴더 시트가 열려 전체 게임을 보여줌.
-    클라 fetch 카드는 OG 프리뷰/초기 페인트에 안 잡히므로 서버에서 박는다.
+    카테고리 = 폴더. 폴더 타일(네모) 전체가 하나의 버튼 = 탭하면 폴더 시트가 열린다.
+    타일 안 아이콘은 미리보기일 뿐(클릭 안 먹음) — 앞 3개는 크게, 나머지는 우하단 클러스터.
+    게임 실행은 열린 폴더 시트 안에서. 클라 fetch는 OG/초기 페인트에 안 잡히므로 서버 렌더.
     """
     folders = []
     sheets = []
@@ -199,19 +198,17 @@ def _render_cards() -> str:
         ctitle = html.escape(cat["title"])
         big = glist[:3]
         rest = glist[3:]
-        cells = "".join(_ft_app(g) for g in big)
+        cells = "".join(_ft_cell(g) for g in big)
         if rest:
             tinies = "".join(
                 f'<img src="/{html.escape(g["id"])}/icon-192.png" alt="" loading="lazy">'
                 for g in rest[:4]
             )
-            cells += (
-                f'<button class="ft-more" type="button" data-folder="{cid}" '
-                f'aria-label="{ctitle} 폴더 열기">{tinies}</button>'
-            )
+            cells += f'<span class="ft-more">{tinies}</span>'
         folders.append(
             f'<div class="folder">'
-            f'<div class="folder-tile" data-folder="{cid}">{cells}</div>'
+            f'<button class="folder-tile" type="button" data-folder="{cid}" '
+            f'aria-label="{ctitle} 폴더 열기">{cells}</button>'
             f'<button class="folder-name" type="button" data-folder="{cid}">{ctitle}</button>'
             f'</div>'
         )

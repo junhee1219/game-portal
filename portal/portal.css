@@ -103,6 +103,7 @@ body {
 }
 
 /* 폴더 타일 — 2×2 미리보기가 담기는 둥근 프로스티드 판 */
+/* 폴더 타일 = 네모 전체가 하나의 버튼(탭하면 폴더 열림). 안 아이콘은 미리보기(클릭 통과). */
 .folder-tile {
   width: 100%;
   aspect-ratio: 1 / 1;
@@ -116,24 +117,30 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.6);
   box-shadow: var(--shadow);
   cursor: pointer;
+  font: inherit;
+  color: inherit;
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.14s ease, box-shadow 0.2s ease;
 }
 
-.folder-tile:active { transform: scale(0.97); }
+.folder-tile:active { transform: scale(0.96); }
+.folder-tile:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
 
-/* 큰 앱 아이콘 (바로 실행) */
-.ft-app {
+/* 타일 안 요소는 전부 클릭을 타일 버튼으로 흘려보냄 */
+.folder-tile * { pointer-events: none; }
+
+/* 큰 아이콘 미리보기 */
+.ft-cell {
   position: relative;
   display: block;
-  border-radius: 22%;
-  overflow: visible;
-  transition: transform 0.12s ease;
+  min-width: 0;      /* 그리드 셀이 이미지 원본 크기로 부풀어 타일 밖으로 넘치는 것 방지 */
+  min-height: 0;
 }
 
-.ft-app img {
+.ft-cell img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -142,19 +149,14 @@ body {
   box-shadow: 0 2px 6px -3px rgba(120, 90, 50, 0.5);
 }
 
-.ft-app:active { transform: scale(0.9); }
-
 /* 우하단 클러스터 — 나머지 게임을 작게 2×2로 */
 .ft-more {
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
   gap: 4px;
-  padding: 0;
-  border: none;
-  background: none;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
+  min-width: 0;
+  min-height: 0;
 }
 
 .ft-more img {
@@ -210,6 +212,9 @@ body {
   opacity: 0;
   transition: opacity 0.22s ease;
 }
+
+/* hidden 속성이 CSS display:flex를 이기도록 명시 — 안 그러면 투명 오버레이가 클릭을 먹음 */
+.folder-sheet[hidden] { display: none; }
 
 .folder-sheet.is-open { opacity: 1; }
 

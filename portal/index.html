@@ -72,8 +72,8 @@
         setTimeout(function () { if (sheet.hidden === false && !sheet.classList.contains('is-open')) sheet.hidden = true; }, 300);
       }
       document.addEventListener('click', function (e) {
-        if (e.target.closest('.ft-app') || e.target.closest('.fs-app')) return; // 게임 실행 링크
-        var opener = e.target.closest('[data-folder]');
+        if (e.target.closest('.fs-app')) return; // 폴더 안 게임 실행 링크
+        var opener = e.target.closest('[data-folder]'); // 폴더 타일/이름 = 열기
         if (opener) { e.preventDefault(); open(opener.getAttribute('data-folder')); return; }
         var sheet = e.target.closest('.folder-sheet');
         if (sheet && !e.target.closest('.fs-panel')) close(); // 배경 탭 = 닫기
