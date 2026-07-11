@@ -39,6 +39,25 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 GAMES_DIR = BASE_DIR / "games"
 PORTAL_DIR = BASE_DIR / "portal"
 
+
+def _css_ver() -> str:
+    """portal.css mtime 기반 캐시 버전. CSS가 바뀔 때만 값이 바뀐다."""
+    try:
+        return str(int((PORTAL_DIR / "portal.css").stat().st_mtime))
+    except OSError:
+        return "0"
+
+
+def _read_portal_html(name: str) -> str:
+    """포털 HTML을 읽어 portal.css 링크에 버전 쿼리(?v=mtime)를 주입해 반환.
+
+    설치된 PWA의 옛 서비스워커가 portal.css를 stale 캐시로 물고 있어도, 버전이 붙은
+    URL은 캐시 키가 달라 항상 새로 받는다 → HTML↔CSS 마크업 불일치(레이아웃 깨짐) 방지.
+    """
+    return (PORTAL_DIR / name).read_text(encoding="utf-8").replace(
+        'href="/portal.css"', f'href="/portal.css?v={_css_ver()}"'
+    )
+
 # 게임 원본은 공유 링크·OG 태그에 단독 배포처(github.io)를 하드코딩한다.
 # 포털로 서빙될 땐 그 origin이 틀리므로(친구가 mini-game.kr에서 했는데 공유는 github.io로 감)
 # 서빙 시점에 포털 origin으로 재작성한다. 원본은 손대지 않는다(sw.js NOOP 대체와 동일 원칙).
@@ -140,7 +159,7 @@ app.include_router(friends_router)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     """404는 브라우저(HTML) 요청에 한해 스타일 페이지로. 그 외(API JSON·401 등)는 기본 동작 유지."""
     if exc.status_code == 404 and "text/html" in request.headers.get("accept", ""):
-        page = (PORTAL_DIR / "404.html").read_text(encoding="utf-8")  # HTML 즉시 반영(no-cache)
+        page = _read_portal_html("404.html")  # HTML 즉시 반영(no-cache)
         return HTMLResponse(page, status_code=404, headers={"Cache-Control": "no-cache"})
     return JSONResponse(
         {"detail": exc.detail},
@@ -287,7 +306,7 @@ def _home_jsonld() -> str:
 
 @app.get("/", response_class=HTMLResponse)
 async def portal_index(request: Request):
-    page = (PORTAL_DIR / "index.html").read_text(encoding="utf-8")
+    page = _read_portal_html("index.html")
     base = str(request.base_url).rstrip("/")
     canonical = settings.base_url.rstrip("/")  # canonical 호스트는 고정 도메인
     head_extra = f'<link rel="canonical" href="{canonical}/">{_verification_meta()}{_home_jsonld()}'
@@ -470,19 +489,19 @@ async def sitemap_xml():
 
 @app.get("/rank", response_class=HTMLResponse)
 async def rank_page():
-    return (PORTAL_DIR / "rank.html").read_text(encoding="utf-8")
+    return _read_portal_html("rank.html")
 
 
 @app.get("/dash", response_class=HTMLResponse)
 async def dash_page():
     """운영 지표 대시보드 (noindex). 어느 게임이 사는지 보는 곳."""
-    return (PORTAL_DIR / "dash.html").read_text(encoding="utf-8")
+    return _read_portal_html("dash.html")
 
 
 @app.get("/lab", response_class=HTMLResponse)
 async def lab_page():
     """실험실(noindex). lab 프로토타입 게임만 목록. 홈/sitemap/rank엔 안 뜨지만 서빙·계측은 정상."""
-    page = (PORTAL_DIR / "lab.html").read_text(encoding="utf-8")
+    page = _read_portal_html("lab.html")
     page = page.replace("{{CARDS}}", _render_lab_cards())
     return HTMLResponse(page, headers={"Cache-Control": "no-cache"})
 
@@ -491,7 +510,7 @@ async def lab_page():
 async def account_page():
     """가입/로그인 화면 (vanilla JS)."""
     return HTMLResponse(
-        (PORTAL_DIR / "account.html").read_text(encoding="utf-8"),
+        _read_portal_html("account.html"),
         headers={"Cache-Control": "no-cache"},
     )
 
@@ -500,7 +519,7 @@ async def account_page():
 async def onboard_page():
     """카카오 신규 가입 닉네임 선택 화면 (nickname_set=0일 때 콜백이 보냄)."""
     return HTMLResponse(
-        (PORTAL_DIR / "onboard.html").read_text(encoding="utf-8"),
+        _read_portal_html("onboard.html"),
         headers={"Cache-Control": "no-cache"},
     )
 
@@ -509,7 +528,7 @@ async def onboard_page():
 async def follow_page(user_id: str):
     """친구 추가 동선 페이지 (로그인 분기/가입 next). 실제 follow는 JS가 /api/follow 호출."""
     return HTMLResponse(
-        (PORTAL_DIR / "follow.html").read_text(encoding="utf-8"),
+        _read_portal_html("follow.html"),
         headers={"Cache-Control": "no-cache"},
     )
 
@@ -541,7 +560,7 @@ async def share_page(score_id: int, request: Request):
     # 닉네임은 사용자 입력 — <title>/<meta content>에 raw로 박으면 저장형 XSS.
     # 나머지 값(게임 제목·점수)도 함께 escape해 일관 처리 (출처 무관 안전).
     og_title = html.escape(og_title)
-    page = (PORTAL_DIR / "share.html").read_text(encoding="utf-8")
+    page = _read_portal_html("share.html")
     for key, value in {
         "{{TITLE}}": og_title,
         "{{OG_TITLE}}": og_title,

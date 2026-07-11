@@ -2,7 +2,7 @@
 // ★원칙: 게임 경로(/{game}/*)는 SW가 절대 손대지 않는다 (stale-game 캐시 사고 재발 0).
 //   게임은 오늘과 동일하게 순수 네트워크 + 서버 Cache-Control로만 동작.
 //   포털 shell만 network-first (캐시는 오프라인 fallback 전용, correctness 영향 X).
-const PORTAL_CACHE = 'portal-v1';
+const PORTAL_CACHE = 'portal-v2';
 const SHELL = ['/', '/portal.css', '/rank', '/icons/portal-192.png'];
 const GAME_RE = /^\/({{GAME_RE}})(\/|$)/;
 
