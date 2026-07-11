@@ -103,13 +103,14 @@ body {
 }
 
 /* 폴더 타일 — 2×2 미리보기가 담기는 둥근 프로스티드 판 */
-/* 폴더 타일 = 네모 전체가 하나의 버튼(탭하면 폴더 열림). 안 아이콘은 미리보기(클릭 통과). */
+/* 폴더 타일 = 네모 전체가 하나의 버튼(탭하면 폴더 열림). 안 아이콘은 미리보기(클릭 통과).
+   ★높이는 aspect-ratio에 의존하지 않는다 — iOS PWA(WKWebView)에서 그게 붕괴하면
+   이미지가 원본 크기로 세로로 겹쳐 쌓였다. 정사각 원본 아이콘을 width:100%/height:auto로
+   두면 두 행 높이가 자연히 잡혀 모든 브라우저에서 안전하게 정사각 그리드가 된다. */
 .folder-tile {
   width: 100%;
-  aspect-ratio: 1 / 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
   gap: 9px;
   padding: 12px;
   border-radius: 26px;
@@ -135,15 +136,13 @@ body {
 .ft-cell {
   position: relative;
   display: block;
-  min-width: 0;      /* 그리드 셀이 이미지 원본 크기로 부풀어 타일 밖으로 넘치는 것 방지 */
-  min-height: 0;
+  min-width: 0;
 }
 
 .ft-cell img {
   display: block;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;      /* 정사각 원본 → 렌더도 정사각 (aspect-ratio 불필요) */
   border-radius: 22%;
   background: #F4ECDE;
   box-shadow: 0 2px 6px -3px rgba(120, 90, 50, 0.5);
@@ -153,16 +152,15 @@ body {
 .ft-more {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
   gap: 4px;
   min-width: 0;
-  min-height: 0;
+  align-content: start;
 }
 
 .ft-more img {
+  display: block;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
   border-radius: 26%;
   background: #F4ECDE;
 }
