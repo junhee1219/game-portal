@@ -24,6 +24,18 @@ SYNTHETIC_SOURCES = {"portal"}
 
 _cache: dict = {"mtime": None, "games": []}
 
+# 홈 카테고리(폴더) 정의 — 표시 순서 = 이 리스트 순서.
+# 게임은 games.json 엔트리의 `category` 필드로 소속을 선언한다(범용 인터페이스 + 데이터 선언 원칙).
+# 매칭 안 되는 category(또는 필드 누락)는 맨 끝 "그 외"로 떨어져 새 게임도 항상 노출된다.
+CATEGORIES = [
+    {"id": "merge", "title": "합치기·키우기", "tagline": "합치고 먹어서 점점 커져요"},
+    {"id": "arcade", "title": "순발력·아케이드", "tagline": "순간 반응과 타이밍"},
+    {"id": "puzzle", "title": "느긋한 두뇌 퍼즐", "tagline": "시간제한 없이 한 수 한 수"},
+    {"id": "board", "title": "맞추기·보드", "tagline": "규칙으로 겨루는 한 판"},
+    {"id": "logic", "title": "추리·기억", "tagline": "단서를 읽고 알아맞혀요"},
+]
+_ETC = {"id": "etc", "title": "그 외", "tagline": ""}
+
 
 def load_games() -> list[dict]:
     """games.json을 읽어 게임 목록 반환. 파일이 바뀌었을 때만 재파싱.
@@ -73,6 +85,27 @@ def home_games() -> list[dict]:
 def lab_games() -> list[dict]:
     """실험실(/lab)에만 노출하는 프로토타입 게임."""
     return [g for g in load_games() if is_lab(g)]
+
+
+def home_games_by_category() -> list[tuple[dict, list[dict]]]:
+    """홈 게임을 카테고리(폴더)별로 묶어 (카테고리 메타, 게임들) 순서대로 반환.
+
+    - 카테고리 순서 = CATEGORIES 순서. 각 카테고리 안 게임 순서 = games.json 순서(대략 hot 우선).
+    - 게임이 하나도 없는 카테고리는 건너뛴다.
+    - 알 수 없는 category / 필드 누락 게임은 맨 끝 "그 외"로 모은다.
+    """
+    grouped: dict[str, list[dict]] = {c["id"]: [] for c in CATEGORIES}
+    etc: list[dict] = []
+    for g in home_games():
+        cid = g.get("category")
+        if cid in grouped:
+            grouped[cid].append(g)
+        else:
+            etc.append(g)
+    out = [(c, grouped[c["id"]]) for c in CATEGORIES if grouped[c["id"]]]
+    if etc:
+        out.append((_ETC, etc))
+    return out
 
 
 def public_games() -> list[dict]:

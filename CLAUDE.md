@@ -134,6 +134,7 @@
 - 프론트는 정적 — 빌드 단계 없음. shadcn/Vite 같은 거 도입 금지(이 프로젝트 철학).
 - 크레딧은 **골격만**: `app/credits.py`의 `award_if_under_cap()`는 `NotImplementedError` + TODO. 적립 규칙 spec은 `DESIGN.md §4`. "크레딧 적립 구현해줘" 하면 거기 + ping/score 핸들러를 채우면 됨.
 - 커밋+푸시 **한 세트**. 커밋 전 브라우저(playwright/puppeteer) 스크린샷으로 렌더 확인.
+- **커밋·배포는 말 안 해도 알아서 한다.** 작업을 끝내고 검증까지 마치면 별도 요청 없이 커밋 후 main에 푸시한다(= GitHub Actions 자동 배포 트리거, 수동 ssh 불필요). 되돌리기 어렵거나 위험한 변경만 먼저 확인.
 
 ---
 

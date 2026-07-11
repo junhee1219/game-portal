@@ -154,32 +154,54 @@ async def health():
     return {"ok": True}
 
 
+def _card_html(g: dict) -> str:
+    """게임 카드 1개 마크업."""
+    gid = html.escape(g["id"])
+    title = html.escape(g.get("title", gid))
+    desc = html.escape(g.get("tagline", ""))
+    # NEW가 HOT보다 우선 (신선함이 더 강한 신호)
+    if g.get("new"):
+        hot = '<span class="hot new">NEW</span>'
+    elif g.get("hot"):
+        hot = '<span class="hot">HOT</span>'
+    else:
+        hot = ""
+    card_cls = "card is-hot" if (g.get("hot") or g.get("new")) else "card"
+    return (
+        f'<a class="{card_cls}" href="/{gid}/">'
+        f'<img src="/{gid}/icon-192.png" alt="" width="64" height="64" loading="lazy">'
+        f'<span class="meta"><span class="name">{title}{hot}</span>'
+        f'<span class="desc">{desc}</span></span>'
+        f'<span class="go" aria-hidden="true">&rarr;</span></a>'
+    )
+
+
 def _render_cards() -> str:
-    """index.html의 게임 카드 목록을 레지스트리로 서버사이드 렌더.
+    """index.html의 게임 카드 목록을 카테고리(폴더)별 접기/펼치기 섹션으로 서버 렌더.
 
     클라 fetch 카드는 OG 프리뷰/초기 페인트에 안 잡히므로 서버에서 박는다.
+    기본 펼침(aria-expanded=true) — JS 없이도 전부 보임(발견성). JS가 헤더 탭 토글만 붙인다.
     """
-    cards = []
-    for g in games.home_games():
-        gid = html.escape(g["id"])
-        title = html.escape(g.get("title", gid))
-        desc = html.escape(g.get("tagline", ""))
-        # NEW가 HOT보다 우선 (신선함이 더 강한 신호)
-        if g.get("new"):
-            hot = '<span class="hot new">NEW</span>'
-        elif g.get("hot"):
-            hot = '<span class="hot">HOT</span>'
-        else:
-            hot = ""
-        card_cls = "card is-hot" if (g.get("hot") or g.get("new")) else "card"
-        cards.append(
-            f'<a class="{card_cls}" href="/{gid}/">'
-            f'<img src="/{gid}/icon-192.png" alt="" width="64" height="64" loading="lazy">'
-            f'<span class="meta"><span class="name">{title}{hot}</span>'
-            f'<span class="desc">{desc}</span></span>'
-            f'<span class="go" aria-hidden="true">&rarr;</span></a>'
+    sections = []
+    for cat, glist in games.home_games_by_category():
+        cid = html.escape(cat["id"])
+        ctitle = html.escape(cat["title"])
+        ctag = html.escape(cat.get("tagline", ""))
+        cards = "\n".join(_card_html(g) for g in glist)
+        tag_html = f'<span class="cat-tag">{ctag}</span>' if ctag else ""
+        sections.append(
+            f'<section class="cat" data-cat="{cid}">'
+            f'<button class="cat-head" type="button" aria-expanded="true">'
+            f'<span class="cat-label"><span class="cat-title">{ctitle}</span>{tag_html}</span>'
+            f'<span class="cat-count">{len(glist)}</span>'
+            f'<svg class="cat-chev" viewBox="0 0 256 256" aria-hidden="true">'
+            f'<path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/>'
+            f'</svg>'
+            f'</button>'
+            f'<div class="list">{cards}</div>'
+            f'</section>'
         )
-    return "\n".join(cards)
+    return "\n".join(sections)
 
 
 def _render_lab_cards() -> str:

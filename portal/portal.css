@@ -87,6 +87,88 @@ body {
   font-weight: 600;
 }
 
+/* 카테고리(폴더) — 접기/펼치기 섹션 */
+.cats {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.cat-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 6px 10px;
+  margin-bottom: 4px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cat-label {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.cat-title {
+  font-family: var(--display);
+  font-size: 19px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.cat-tag {
+  font-size: var(--fs-3);
+  color: var(--dim);
+}
+
+.cat-count {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--dim);
+  background: #F4ECDE;
+  border-radius: 9999px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cat-chev {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  fill: var(--dim);
+  transition: transform 0.2s ease;
+}
+
+.cat.is-collapsed .cat-chev { transform: rotate(-90deg); }
+
+.cat-head:hover .cat-title { color: var(--accent); }
+
+.cat .list {
+  overflow: hidden;
+  transition: opacity 0.15s ease;
+}
+
+.cat.is-collapsed .list {
+  display: none;
+}
+
 .list {
   display: flex;
   flex-direction: column;

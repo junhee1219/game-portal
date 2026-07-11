@@ -2,6 +2,7 @@
   "games": [
     {
       "id": "planet",
+      "category": "merge",
       "shell_mode": "fullscreen",
       "title": "행성 키우기",
       "tagline": "톡톡 깨워 생명을 불어넣어요. 자리를 비운 사이에도 무럭무럭 — 먼지에서 빛나는 문명까지!",
@@ -27,6 +28,7 @@
     },
     {
       "id": "hoop",
+      "category": "arcade",
       "shell_mode": "panel",
       "title": "옥상 농구",
       "tagline": "공을 당겼다 놓으면 슛! 바람을 읽고 림에 꽂아요. 콤보를 이으면 공이 은·금·불꽃으로 진화해요.",
@@ -49,6 +51,7 @@
     },
     {
       "id": "twos",
+      "category": "merge",
       "shell_mode": "panel",
       "title": "2048",
       "tagline": "같은 수가 만나면 두 배! 한 방향으로 쓱 밀어 2048 타일에 도전하세요.",
@@ -70,6 +73,7 @@
     },
     {
       "id": "merge",
+      "category": "merge",
       "shell_mode": "panel",
       "title": "동물 합치기",
       "tagline": "동그란 동물을 떨어뜨려 합치는 중독성 드롭 퍼즐 — 넘치기 전에 최고 점수에!",
@@ -91,6 +95,7 @@
     },
     {
       "id": "candy",
+      "category": "merge",
       "shell_mode": "panel",
       "title": "사탕 폭포",
       "tagline": "열을 톡 — 같은 사탕이 만나면 합쳐져요. 잘 쌓아 한 방에 연쇄로 쾅쾅, 대왕 솜사탕까지!",
@@ -112,6 +117,7 @@
     },
     {
       "id": "vase",
+      "category": "puzzle",
       "shell_mode": "panel",
       "title": "물병 정렬",
       "tagline": "알록달록 물을 옮겨 담는 퍼즐. 봇보다 적게 움직이면 별 셋.",
@@ -144,6 +150,7 @@
     },
     {
       "id": "cube",
+      "category": "arcade",
       "shell_mode": "fullscreen",
       "title": "Cube Snake",
       "tagline": "3D 큐브 표면을 기어다니는 스네이크. 모서리를 넘으면 세상이 돌아간다.",
@@ -164,6 +171,7 @@
     },
     {
       "id": "village",
+      "category": "puzzle",
       "shell_mode": "fullscreen",
       "title": "오순도순 마을",
       "tagline": "빈 칸을 톡 — 집·숲·꽃밭을 어울리게 놓아요. 아늑한 집엔 동물 주민이 이사 와요. 시간제한 없이 가장 행복한 마을을 가꿔요!",
@@ -184,6 +192,7 @@
     },
     {
       "id": "hop",
+      "category": "arcade",
       "shell_mode": "panel",
       "title": "삐약이 건널목",
       "tagline": "내가 멈추면 세상도 멈춰요. 길을 읽고 한 칸씩 폴짝 — 안개보다 멀리!",
@@ -203,6 +212,7 @@
     },
     {
       "id": "marble",
+      "category": "arcade",
       "shell_mode": "panel",
       "title": "구슬 광산",
       "tagline": "튕기는 구슬로 내려오는 바위를 부숴요. 조준은 느긋하게, 한 발은 짜릿하게!",
@@ -223,6 +233,7 @@
     },
     {
       "id": "escape",
+      "category": "puzzle",
       "shell_mode": "panel",
       "title": "차 빼주세요",
       "tagline": "앞뒤로 밀어 길을 터주는 슬라이드 탈출 퍼즐. 막힌 주차장에서 내 차를 빼내요.",
@@ -250,6 +261,7 @@
     },
     {
       "id": "rail",
+      "category": "puzzle",
       "shell_mode": "panel",
       "title": "철길 배달부",
       "tagline": "철로를 톡톡 돌려 화물차 길을 만들어요. 시간제한 없이 생각하고, 준비되면 보내기!",
@@ -277,6 +289,7 @@
     },
     {
       "id": "lamp",
+      "category": "puzzle",
       "shell_mode": "panel",
       "title": "빛 공방",
       "tagline": "전등을 누르면 주변까지 바뀌어요. 시간제한 없이 모든 공방을 환하게 밝히는 스위치 퍼즐.",
@@ -304,6 +317,7 @@
     },
     {
       "id": "tiles",
+      "category": "arcade",
       "shell_mode": "panel",
       "title": "리듬 타일",
       "tagline": "내려오는 타일을 순서대로 톡! 탭마다 음이 울려 멜로디가 돼요 — 점점 빨라져요.",
@@ -324,6 +338,7 @@
     },
     {
       "id": "block",
+      "category": "board",
       "shell_mode": "compact",
       "title": "블록 팡",
       "tagline": "조각을 드래그해 줄을 꽉 채우면 팡! 콤보와 폭탄 블록까지.",
@@ -344,6 +359,7 @@
     },
     {
       "id": "pang",
+      "category": "board",
       "shell_mode": "compact",
       "title": "과일 팡팡",
       "tagline": "과일을 모아 목표 달성! 레벨이 오를수록 짜릿한 매치 퍼즐.",
@@ -364,6 +380,7 @@
     },
     {
       "id": "stack",
+      "category": "arcade",
       "shell_mode": "panel",
       "title": "탑 쌓기",
       "tagline": "좌우로 움직이는 블록을 톡! 어긋난 만큼 깎여요 — 몇 층까지 쌓을까?",
@@ -384,6 +401,7 @@
     },
     {
       "id": "crate",
+      "category": "puzzle",
       "shell_mode": "panel",
       "title": "창고 정리",
       "tagline": "상자를 밀어 빛나는 자리에 쏙. 시간제한 없이 생각하고, 막히면 되돌리기!",
@@ -411,6 +429,7 @@
     },
     {
       "id": "hive",
+      "category": "logic",
       "shell_mode": "panel",
       "title": "꿀 따기",
       "tagline": "숫자는 이웃 칸에 잠든 벌의 수! 추리로 벌을 깨우지 않고 꿀을 모두 따세요.",
@@ -434,6 +453,7 @@
     },
     {
       "id": "memory",
+      "category": "logic",
       "shell_mode": "panel",
       "title": "기억 실험실",
       "tagline": "카드 두 장을 톡 — 같은 기억을 찾아 실험 단계를 올려요. 시간제한 없이 천천히 외우고, 집중 힌트로 회복하세요.",
@@ -466,6 +486,7 @@
     },
     {
       "id": "flip",
+      "category": "board",
       "shell_mode": "panel",
       "title": "냥멍 땅따먹기",
       "tagline": "사이에 끼우면 내 돌로 휙! 강아지 봇을 이기고 연승을 쌓아요.",
@@ -489,6 +510,7 @@
     },
     {
       "id": "dig",
+      "category": "logic",
       "shell_mode": "panel",
       "title": "유물 발굴",
       "tagline": "숫자는 묻힌 보물의 지도! 행과 열을 읽어 콕콕 파면 흙 속에서 유물이 드러나요.",
@@ -516,6 +538,7 @@
     },
     {
       "id": "gateway",
+      "category": "arcade",
       "shell_mode": "fullscreen",
       "title": "라면집 사장님",
       "tagline": "세 줄로 밀려드는 손님, 서빙은 한 줄씩. 줄이 터지면 가게도 끝.",
@@ -536,6 +559,7 @@
     },
     {
       "id": "frenzy",
+      "category": "merge",
       "shell_mode": "fullscreen",
       "title": "물고기 대난투",
       "tagline": "이름 달린 물고기들이 가득한 바다. 작은 놈은 꿀꺽, 큰 놈은 피하고 — 먹을수록 커져 1등 포식자로!",
@@ -556,6 +580,7 @@
     },
     {
       "id": "peak",
+      "category": "board",
       "shell_mode": "fullscreen",
       "title": "달빛 봉우리",
       "tagline": "지금 달과 이어지는 달을 톡톡 — 봉우리에 걸린 달을 모두 걷어내는 밤하늘 카드 퍼즐.",
@@ -584,6 +609,7 @@
     },
     {
       "id": "dice",
+      "category": "board",
       "shell_mode": "panel",
       "title": "원석 세공",
       "tagline": "원석 다섯 알을 굴리고 남길 알을 톡 — 열두 칸에 세공해 넣어 최고 총점에 도전!",
@@ -609,6 +635,7 @@
     },
     {
       "id": "flow",
+      "category": "puzzle",
       "shell_mode": "panel",
       "title": "무지개 잇기",
       "tagline": "같은 색 구슬을 선으로 쓱— 이어요. 길이 겹치지 않게 보드를 가득 채우면 클리어!",

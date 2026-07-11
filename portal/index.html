@@ -31,9 +31,9 @@
       <p class="sub">기록 세우고 친구랑 겨뤄요.</p>
     </header>
 
-    <section class="list" aria-label="게임 목록">
+    <div class="cats" aria-label="게임 목록">
       {{CARDS}}
-    </section>
+    </div>
 
     <footer class="foot">
       <p><a href="/rank" class="foot-link">기록실 보기</a> · <a href="/lab" class="foot-link">실험실 (개발 중 새 게임)</a></p>
@@ -49,6 +49,25 @@
     document.getElementById('support-link').addEventListener('click', function (e) {
       e.preventDefault(); if (window.GamePortal) GamePortal.openSupport();
     });
+
+    // 카테고리 폴더 접기/펼치기. 상태를 localStorage에 기억(기본 펼침).
+    (function () {
+      var KEY = 'portalCatCollapsed';
+      var collapsed = {};
+      try { collapsed = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) {}
+      document.querySelectorAll('.cat').forEach(function (sec) {
+        var id = sec.getAttribute('data-cat');
+        var head = sec.querySelector('.cat-head');
+        if (!head) return;
+        if (collapsed[id]) { sec.classList.add('is-collapsed'); head.setAttribute('aria-expanded', 'false'); }
+        head.addEventListener('click', function () {
+          var nowCollapsed = sec.classList.toggle('is-collapsed');
+          head.setAttribute('aria-expanded', nowCollapsed ? 'false' : 'true');
+          collapsed[id] = nowCollapsed;
+          try { localStorage.setItem(KEY, JSON.stringify(collapsed)); } catch (e) {}
+        });
+      });
+    })();
   </script>
   <script src="/account-widget.js"></script>
 </body>
