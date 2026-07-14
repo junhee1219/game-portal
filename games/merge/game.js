@@ -54,12 +54,16 @@
   // 떨어뜨릴 때 등장 가능한 티어 (작은 5종만 — 검증된 진행)
   const SPAWN_MAX = 4;
 
-  // ── 특수아이템(블랙홀/소용돌이) 밸런스 ──
-  // 행성합치기 블랙홀 흡수: 닿은 동물과 같은 종류 전부 흡수. "아주 가끔만" → 보장 간격 + 낮은 확률.
-  const SPECIAL_FIRST_GAP = 22;   // 첫 특수는 이만큼 드롭한 뒤부터 후보 (일반 한 판 안에 한 번은 볼 수 있게)
-  const SPECIAL_MIN_GAP = 40;     // 특수가 나온 뒤엔 이만큼 지나야 다음 후보 (재등장은 더 드물게)
-  const SPECIAL_CHANCE = 0.03;    // 게이트 통과 후 매 드롭 3% → 첫 특수 평균 ~drop 55, 이후 ~70드롭당 1회
-  const SPECIAL_R = 0.088;        // 통 폭 대비 반지름 (동물 축소에 맞춰 살짝 줄임)
+  // ── 소용돌이 폭탄: 충전 게이지 + 조준(RNG 폐기, 벌어서 조준해 쓰는 배출구) ──
+  // ▼▼▼ 튜닝 상수 (다음 플레이 후 조정) ▼▼▼
+  const CHARGE_FULL = 100;          // 게이지 만충 값
+  // 합체 1회당 충전량: (생성티어+1) × (콤보≥2면 1.5). 저티어 잔챙이 합체는 조금, 고티어·콤보는 많이
+  //  → 잔챙이 파밍으로 폭탄 무한 스팸 불가(반-지배전략). 괜찮게 플레이해 ~20-30합체면 만충.
+  const chargeGain = (newTier, combo) => (newTier + 1) * (combo >= 2 ? 1.5 : 1);
+  const CLUTTER_MAX_TIER = 1;       // 폭탄이 지우는 최대 티어 (0=mouse,1=hamster까지 = 잔챙이만)
+  const BLAST_R = 0.40;             // 착탄 반경 (통 폭 W 대비 비율)
+  // ▲▲▲ 튜닝 상수 ▲▲▲
+  const SPECIAL_R = 0.088;        // 소용돌이 글리프(착탄 마커/게이지) 반지름 (통 폭 대비)
   // ── 콤보(연쇄) ──
   const COMBO_WINDOW = 520;       // ms 안에 다음 합체가 나면 콤보 유지
   // ── 잭팟(최상위 티어) 보너스 ──
@@ -84,6 +88,9 @@
   const againBtn = document.getElementById('btn-again');
   const comboEl = document.getElementById('combo');
   const comboXEl = document.getElementById('combo-x');
+  const chargeEl = document.getElementById('charge');
+  const chargeFillEl = document.getElementById('charge-fill');
+  const chargeLabelEl = document.getElementById('charge-label');
 
   // 동물 이미지를 담은 작은 HTML (HTML 칩/미리보기/진화표용)
   function glyphSvg(tier, px) {
@@ -105,7 +112,7 @@
   const WALL = 0;                // 벽 두께(시각상 0, 캔버스 가장자리)
   const DROP_Y = W * 0.13;       // 드롭 라인 y
   const DEATH_Y = W * 0.20;      // 위험선 y (이 위로 오래 머물면 게임오버)
-  let aimX = W / 2;              // 현재 조준 x
+  let aimX = W / 2;              // 현재 조준 x (드롭용)
   let nextTier = rndSpawn();     // 다음 떨어뜨릴 티어
   let curTier = rndSpawn();      // 지금 손에 든(조준 중) 티어
   let canDrop = true;            // 드롭 쿨다운
@@ -120,11 +127,11 @@
   // 콤보
   let comboCount = 0;            // 현재 연쇄 수
   let comboTimer = 0;            // 콤보 만료 타이머(ms)
-  // 특수아이템
-  let dropsSinceStart = 0;       // 시작 후 누적 드롭 수 (첫 특수 게이트)
-  let dropsSinceSpecial = 999;   // 특수 나온 뒤 드롭 수 (첫 특수는 이 게이트 무시되도록 크게 시작)
-  let curSpecial = false;        // 지금 손에 든 게 특수인가
-  let nextSpecial = false;       // 다음이 특수인가
+  // 소용돌이 폭탄 (충전 게이지 + 조준)
+  let charge = 0;               // 0 → CHARGE_FULL
+  let aimMode = false;          // 만충 후 발사 → 조준 모드
+  let aimBlastX = W / 2;        // 착탄 조준 x (자유)
+  let aimBlastY = W * 0.6;      // 착탄 조준 y (자유)
   // 화면 흔들림 (canvas translate — 레이아웃 건드리지 않음)
   let shakeAmt = 0;              // 남은 흔들림 강도(px, 가상)
   // 진행 단계 (최고 동물 티어 기준) — 배경/배경음/효과음이 함께 진화 → "다음엔 뭐가?" 기대감
@@ -132,13 +139,24 @@
   let stageBanner = null, stageFlash = null;
 
   function rndSpawn() { return Math.floor(Math.random() * SPAWN_MAX); }
-  // 다음 손패가 특수가 될지 결정 (게이트 통과 + 낮은 확률)
-  function rollSpecial() {
-    if (dropsSinceStart < SPECIAL_FIRST_GAP) return false;   // 너무 이른 등장 방지
-    if (dropsSinceSpecial < SPECIAL_MIN_GAP) return false;   // 직전 특수 후 충분히 지나야
-    return Math.random() < SPECIAL_CHANCE;
-  }
   function addShake(px) { shakeAmt = Math.min(26, shakeAmt + px); }
+
+  // ── 충전 게이지 UI ──
+  function refreshCharge() {
+    const pct = Math.max(0, Math.min(100, (charge / CHARGE_FULL) * 100));
+    chargeFillEl.style.width = pct + '%';
+    const ready = charge >= CHARGE_FULL;
+    chargeEl.classList.toggle('ready', ready && !aimMode);
+    chargeEl.classList.toggle('aiming', aimMode);
+    if (aimMode) chargeLabelEl.textContent = '착탄 지점 탭 · 다시 탭 취소';
+    else if (ready) chargeLabelEl.textContent = '탭! 소용돌이 발사';
+    else chargeLabelEl.textContent = '충전 ' + Math.floor(pct) + '%';
+  }
+  function addCharge(n) {
+    if (charge >= CHARGE_FULL) return;   // 이미 만충 — 넘침·과충전 방지
+    charge = Math.min(CHARGE_FULL, charge + n);
+    refreshCharge();
+  }
 
   // ── 진행 단계: 최고 동물이 오를수록 풍경(배경)·배경음(코드)·효과음이 진화 ──
   const STAGES = [
@@ -233,41 +251,11 @@
     return b;
   }
 
-  // ── 특수아이템(소용돌이) 바디 — tier 없음. merge 시스템 밖. ──
-  function makeSpecial(x, y) {
-    const r = SPECIAL_R * W;
-    const b = Bodies.circle(x, y, r, {
-      restitution: 0.1, friction: 0.6, frictionStatic: 0.8, density: 0.0014,
-    });
-    b.tier = undefined;   // 사다리 밖
-    b.special = true;
-    b.consumed = false;   // 한 번 흡수하면 소멸
-    b.merged = false;
-    b.born = performance.now();
-    b.spawnAt = b.born;
-    b.squash = 0;
-    b.spin = 0;           // 회전 각도(렌더용 소용돌이)
-    bodies.add(b);
-    World.add(world, b);
-    return b;
-  }
-
   // ── 충돌: 같은 티어끼리 머지 (dedup 큐) ──
   const mergeQueue = [];
-  const vacuumQueue = [];   // [특수바디, 흡수할 티어]
   function onCollide(ev) {
     for (const pair of ev.pairs) {
       const a = pair.bodyA, b = pair.bodyB;
-      // 특수아이템: tier 있는 동물과 닿으면 그 티어 전부 흡수
-      const sp = a.special ? a : (b.special ? b : null);
-      if (sp) {
-        const other = sp === a ? b : a;
-        if (!sp.consumed && other.tier !== undefined && !other.special) {
-          sp.consumed = true;          // 즉시 소비 플래그 (재트리거 방지)
-          vacuumQueue.push([sp, other.tier]);
-        }
-        continue;
-      }
       if (a.tier === undefined || b.tier === undefined) continue; // 벽
       if (a.tier !== b.tier) continue;
       if (a.merged || b.merged) continue;       // 이미 소비됨 → 스킵 (THE 수박게임 버그 방어)
@@ -295,6 +283,8 @@
       const base = TIER_SCORE[nt];
       const gain = base * mult;
       addScore(gain);
+      // 소용돌이 게이지 충전: 고티어·콤보일수록 많이, 저티어 잔챙이는 조금
+      addCharge(chargeGain(nt, comboCount));
 
       // 최고 동물 갱신 → 새 단계면 풍경/배경음/효과음 진화 + 배너
       if (nt > maxTierEver) { maxTierEver = nt; const ns = stageForTier(nt); if (ns > stageIdx) setStage(ns, true); }
@@ -357,45 +347,47 @@
     haptic([20,40,20,40,40]);
   }
 
-  // ── 특수아이템 흡수 처리 ──
-  function processVacuum() {
-    while (vacuumQueue.length) {
-      const [sp, tier] = vacuumQueue.shift();
-      if (!bodies.has(sp)) continue;
-      const cx = sp.position.x, cy = sp.position.y;
-      // 같은 티어 동물 전부 수집
-      const victims = [];
-      for (const o of bodies) {
-        if (o === sp || o.special || o.tier !== tier) continue;
-        victims.push(o);
-      }
-      // 흡수 연출: 큰 소용돌이 링 + 파티클이 중심으로 빨려듦
-      removeBody(sp);
-      let total = 0;
-      for (const v of victims) {
-        const vx = v.position.x, vy = v.position.y;
-        removeBody(v);
-        total += TIER_SCORE[Math.min(tier + 1, MAX_TIER)];
-        // 빨려드는 파티클 (중심 방향)
-        for (let i = 0; i < 6; i++) {
-          const dx = cx - vx, dy = cy - vy;
-          particles.push({ x: vx, y: vy, vx: dx*0.04, vy: dy*0.04, r:2+Math.random()*3, life:0.9, color:LADDER[tier].c });
-        }
-      }
-      const gain = Math.max(total, TIER_SCORE[tier] * 2);
-      addScore(gain);
-      // 큰 흡수 링 2겹 + 텍스트 + 강한 흔들림
-      popRings.push({ x:cx, y:cy, r:SPECIAL_R*W, t:0, kind:'expand', c:'#7b5cff' });
-      popRings.push({ x:cx, y:cy, r:SPECIAL_R*W*0.5, t:-6, kind:'expand', c:'#b89bff' });
-      for (let i = 0; i < 40; i++) {
-        const a = Math.random()*Math.PI*2, s = 2+Math.random()*6;
-        particles.push({ x:cx, y:cy, vx:Math.cos(a)*s, vy:Math.sin(a)*s-1.5, r:2+Math.random()*3.5, life:1.1, color:i%2?'#b89bff':LADDER[tier].c });
-      }
-      floatTexts.push({ x:cx, y:cy, t:0, txt:'흡수! +'+gain+' (' + (victims.length+0) + ')', big:true, c:'#7b5cff' });
-      addShake(14 + Math.min(victims.length, 8));
-      sfxVacuum(victims.length);
-      haptic([15,30,15,30,20]);
+  // ── 소용돌이 폭탄 착탄: 반경 내 저티어(≤CLUTTER_MAX_TIER)만 소거 ──
+  // 조준=에이전시, 저티어 한정=내 큰 진행은 안 날림. 배출구지 지우개 아님(near-miss 유지).
+  function detonate(cx, cy) {
+    cx = Math.max(0, Math.min(W, cx));
+    cy = Math.max(0, Math.min(H, cy));
+    const R = BLAST_R * W;
+    const R2 = R * R;
+    // 반경 내 저티어 동물만 수집 (물리 정합: 수집 후 일괄 removeBody)
+    const victims = [];
+    for (const o of bodies) {
+      if (o.special || o.tier === undefined) continue;   // 벽/비동물 제외
+      if (o.tier > CLUTTER_MAX_TIER) continue;           // 큰 동물은 안 건드림
+      const dx = o.position.x - cx, dy = o.position.y - cy;
+      if (dx * dx + dy * dy <= R2) victims.push(o);
     }
+    let total = 0;
+    for (const v of victims) {
+      const vx = v.position.x, vy = v.position.y;
+      // 중심으로 빨려드는 파티클
+      for (let i = 0; i < 6; i++) {
+        particles.push({ x: vx, y: vy, vx: (cx - vx) * 0.04, vy: (cy - vy) * 0.04, r: 2 + Math.random() * 3, life: 0.9, color: LADDER[v.tier].c });
+      }
+      removeBody(v);
+      total += Math.max(1, TIER_SCORE[v.tier]);          // 소량 점수
+    }
+    const gain = Math.round(total);
+    if (gain > 0) addScore(gain);
+    // 강한 버스트 연출 (흡수 이펙트 재사용)
+    popRings.push({ x: cx, y: cy, r: R * 0.5, t: 0, kind: 'expand', c: '#7b5cff' });
+    popRings.push({ x: cx, y: cy, r: R * 0.28, t: -6, kind: 'expand', c: '#b89bff' });
+    for (let i = 0; i < 44; i++) {
+      const a = Math.random() * Math.PI * 2, s = 2 + Math.random() * 6;
+      particles.push({ x: cx, y: cy, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1.5, r: 2 + Math.random() * 3.5, life: 1.1, color: i % 2 ? '#b89bff' : '#ffd089' });
+    }
+    floatTexts.push({ x: cx, y: cy, t: 0, txt: victims.length ? ('소용돌이! +' + gain + ' (' + victims.length + ')') : '허탕!', big: true, c: '#7b5cff' });
+    addShake(14 + Math.min(victims.length, 8));
+    sfxVacuum(victims.length);
+    haptic([15, 30, 15, 30, 20]);
+    // 게이지 리셋 + 조준 해제
+    charge = 0; aimMode = false;
+    refreshCharge();
   }
 
   function removeBody(b) {
@@ -416,30 +408,17 @@
 
   // ── 드롭 ──
   function dropAt(x) {
-    if (!running || gameOver || !canDrop) return;
-    if (curSpecial) {
-      const r = SPECIAL_R * W;
-      const cx = Math.max(r + 4, Math.min(W - r - 4, x));
-      const b = makeSpecial(cx, DROP_Y);
-      Body.setVelocity(b, { x: 0, y: 0 });
-      sfxDrop(0);
-      haptic(10);
-      dropsSinceSpecial = 0;
-    } else {
-      const r = LADDER[curTier].r * W;
-      const cx = Math.max(r + 4, Math.min(W - r - 4, x));
-      const b = makeAnimal(curTier, cx, DROP_Y);
-      Body.setVelocity(b, { x: 0, y: 0 });
-      sfxDrop(curTier);
-      haptic(8);
-      dropsSinceSpecial++;
-    }
-    dropsSinceStart++;
+    if (!running || gameOver || !canDrop || aimMode) return;
+    const r = LADDER[curTier].r * W;
+    const cx = Math.max(r + 4, Math.min(W - r - 4, x));
+    const b = makeAnimal(curTier, cx, DROP_Y);
+    Body.setVelocity(b, { x: 0, y: 0 });
+    sfxDrop(curTier);
+    haptic(8);
     // 다음으로 회전
-    curTier = nextTier; curSpecial = nextSpecial;
+    curTier = nextTier;
     nextTier = rndSpawn();
-    nextSpecial = rollSpecial();
-    setNextGlyph(nextSpecial ? null : nextTier);
+    setNextGlyph(nextTier);
     // 쿨다운: 다음 동물이 스폰존을 통과할 시간 확보 (스팸 드롭 → 즉시 오버 방지)
     canDrop = false;
     dropCooldownUntil = performance.now() + 420;
@@ -468,6 +447,7 @@
     if (gameOver) return;
     gameOver = true;
     running = false;
+    aimMode = false; refreshCharge();   // 조준 중 사망해도 게이지 UI 잠기지 않게
     const isRecord = scoreVal >= best && scoreVal > 0;
     // best는 addScore에서 이미 갱신·저장됨. 신기록 배지는 이번 판이 best와 같을 때.
     overScoreEl.textContent = scoreVal;
@@ -490,17 +470,16 @@
     overEl.classList.remove('show');
     if (world) { World.clear(world, false); Engine.clear(engine); }
     bodies.clear(); particles.length = 0; popRings.length = 0; mergeQueue.length = 0;
-    vacuumQueue.length = 0; floatTexts.length = 0;
+    floatTexts.length = 0;
     scoreVal = 0; scoreEl.textContent = '0';
     bestEl.textContent = best;
     overflowSince = 0; gameOver = false; canDrop = true;
     shakeAmt = 0; clearCombo();
-    dropsSinceStart = 0; dropsSinceSpecial = 999;
-    curSpecial = false; nextSpecial = false;
+    charge = 0; aimMode = false; refreshCharge();
     maxTierEver = 0; stageBanner = null; stageFlash = null;
     setStage(0, false);
     curTier = rndSpawn(); nextTier = rndSpawn();
-    setNextGlyph(nextSpecial ? null : nextTier);
+    setNextGlyph(nextTier);
     buildWorld();
     running = true;
   }
@@ -531,7 +510,6 @@
       if (!canDrop && now >= dropCooldownUntil) canDrop = true;
       Engine.update(engine, 16.666);
       processMerges();
-      processVacuum();
       checkOver(now);
       // 콤보 만료
       if (comboTimer > 0) { comboTimer -= dt; if (comboTimer <= 0) clearCombo(); }
@@ -557,9 +535,9 @@
     ctx.beginPath(); ctx.moveTo(0, DEATH_Y); ctx.lineTo(W, DEATH_Y); ctx.stroke();
     ctx.restore();
 
-    // 조준 가이드 + 손에 든 동물 (떨어뜨리기 전)
-    if (running && !gameOver) {
-      const r = (curSpecial ? SPECIAL_R : LADDER[curTier].r) * W;
+    // 조준 가이드 + 손에 든 동물 (떨어뜨리기 전) — 조준 모드일 땐 숨김
+    if (running && !gameOver && !aimMode) {
+      const r = LADDER[curTier].r * W;
       const cx = Math.max(r + 4, Math.min(W - r - 4, aimX));
       // 가이드 라인
       ctx.save();
@@ -568,8 +546,38 @@
       ctx.beginPath(); ctx.moveTo(cx, DROP_Y + r); ctx.lineTo(cx, H); ctx.stroke();
       ctx.restore();
       const bob = canDrop ? Math.sin(now / 300) * 2 : 0;
-      if (curSpecial) drawSpecial(cx, DROP_Y + bob, now / 600, now);
-      else drawAnimal(cx, DROP_Y + bob, curTier, 0, canDrop ? 1 : 0.55, 0, now);
+      drawAnimal(cx, DROP_Y + bob, curTier, 0, canDrop ? 1 : 0.55, 0, now);
+    }
+
+    // 조준 모드: 착탄 반경 조준경 + 중심 소용돌이 마커
+    if (running && !gameOver && aimMode) {
+      const R = BLAST_R * W;
+      const cx = Math.max(0, Math.min(W, aimBlastX)), cy = Math.max(0, Math.min(H, aimBlastY));
+      const pulse = 0.5 + 0.5 * Math.sin(now / 220);
+      ctx.save();
+      // 반경 채움 (은은한 보라 틴트)
+      ctx.globalAlpha = 0.10 + pulse * 0.06;
+      ctx.fillStyle = '#7b5cff';
+      ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
+      // 반경 링 (점선, 맥동)
+      ctx.globalAlpha = 0.5 + pulse * 0.35;
+      ctx.strokeStyle = '#7b5cff'; ctx.lineWidth = 2.4; ctx.setLineDash([9, 7]);
+      ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+      // 반경 내 저티어 하이라이트 (지워질 대상 표시)
+      for (const b of bodies) {
+        if (b.special || b.tier === undefined || b.tier > CLUTTER_MAX_TIER) continue;
+        const dx = b.position.x - cx, dy = b.position.y - cy;
+        if (dx * dx + dy * dy > R * R) continue;
+        const br = LADDER[b.tier].r * W;
+        ctx.save();
+        ctx.globalAlpha = 0.5 + pulse * 0.4;
+        ctx.strokeStyle = '#7b5cff'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(b.position.x, b.position.y, br + 2, 0, Math.PI * 2); ctx.stroke();
+        ctx.restore();
+      }
+      // 중심 소용돌이 마커 (기존 글리프 재사용)
+      drawSpecial(cx, cy, now / 500, now);
     }
 
     // 동물들 + 특수
@@ -795,25 +803,48 @@
     const rect = canvas.getBoundingClientRect();
     return ((clientX - rect.left) / rect.width) * W;
   }
+  function toVirtY(clientY) {
+    const rect = canvas.getBoundingClientRect();
+    return ((clientY - rect.top) / rect.height) * H;
+  }
   canvas.addEventListener('pointerdown', (e) => {
     if (gameOver) return;
     audioInit();
     pointerDown = true;
     aimX = toVirtX(e.clientX);
+    if (aimMode) { aimBlastX = aimX; aimBlastY = toVirtY(e.clientY); }
     canvas.setPointerCapture(e.pointerId);
   });
   canvas.addEventListener('pointermove', (e) => {
-    if (!pointerDown) { aimX = toVirtX(e.clientX); return; }
     aimX = toVirtX(e.clientX);
+    if (aimMode) { aimBlastX = aimX; aimBlastY = toVirtY(e.clientY); }
   });
   function release(e) {
     if (!pointerDown) return;
     pointerDown = false;
     aimX = toVirtX(e.clientX);
-    dropAt(aimX);
+    if (aimMode) {
+      aimBlastX = aimX; aimBlastY = toVirtY(e.clientY);
+      detonate(aimBlastX, aimBlastY);
+    } else {
+      dropAt(aimX);
+    }
   }
   canvas.addEventListener('pointerup', release);
   canvas.addEventListener('pointercancel', () => { pointerDown = false; });
+
+  // 충전 게이지 탭 — 만충이면 조준 모드 진입, 조준 중이면 취소
+  chargeEl.addEventListener('click', () => {
+    if (gameOver || !running) return;
+    audioInit();
+    if (aimMode) { aimMode = false; refreshCharge(); return; }   // 취소 (게이지 유지)
+    if (charge >= CHARGE_FULL) {
+      aimMode = true;
+      aimBlastX = W / 2; aimBlastY = H * 0.55;
+      refreshCharge();
+      haptic(10);
+    }
+  });
 
   // ── 음소거 / 버튼 ── 스피커 글리프 swap (vase 패턴)
   function refreshMute() {
@@ -939,6 +970,7 @@
     buildEvoRow();
     buildEvo();
     refreshMute();
+    refreshCharge();
     bestEl.textContent = best;
     reset();
     requestAnimationFrame(frame);

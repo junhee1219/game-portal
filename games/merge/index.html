@@ -121,6 +121,41 @@
   #combo.pulse{animation:combo-pulse .42s cubic-bezier(.2,1.5,.4,1);}
   @keyframes combo-pulse{0%{transform:scale(.6)}45%{transform:scale(1.25)}100%{transform:scale(1)}}
 
+  /* ── 소용돌이 폭탄 충전 게이지 ── (포털 톤: 유리 pill + 하드섀도, 보라 소용돌이 색조) */
+  #charge{
+    display:flex;align-items:center;gap:9px;z-index:3;
+    width:100%;max-width:480px;flex:0 0 auto;margin-top:6px;
+    padding:6px 13px;border-radius:999px;
+    background:var(--glass);border:1px solid var(--glass-border);backdrop-filter:blur(10px);
+    box-shadow:0 3px 7px rgba(120,85,55,.12);
+    cursor:default;transition:transform .12s,box-shadow .2s,border-color .2s;
+  }
+  #charge .cg-glyph{width:20px;height:20px;fill:#7b5cff;flex:0 0 auto;opacity:.5;transition:opacity .2s;}
+  #charge .cg-track{
+    position:relative;flex:1 1 auto;height:10px;border-radius:999px;overflow:hidden;
+    background:rgba(123,92,255,.14);box-shadow:inset 0 1px 2px rgba(90,60,140,.18);
+  }
+  #charge .cg-fill{
+    position:absolute;top:0;left:0;bottom:0;width:0%;border-radius:999px;
+    background:linear-gradient(90deg,#9b7dff,#7b5cff);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.45);
+    transition:width .35s cubic-bezier(.3,1,.5,1);
+  }
+  #charge .cg-label{font-size:var(--fs-3);font-weight:700;color:var(--ink-soft);white-space:nowrap;flex:0 0 auto;min-width:118px;text-align:right;}
+  /* 만충 — 탭 가능 + 은은한 맥동(기대감) */
+  #charge.ready{cursor:pointer;border-color:rgba(123,92,255,.5);animation:cg-breathe 1.3s ease-in-out infinite;}
+  #charge.ready .cg-glyph{opacity:1;animation:cg-spin 3s linear infinite;}
+  #charge.ready .cg-fill{background:linear-gradient(90deg,#b89bff,#7b5cff);}
+  #charge.ready .cg-label{color:#6b46e0;}
+  #charge.ready:active{transform:scale(.98);}
+  @keyframes cg-breathe{0%,100%{box-shadow:0 4px 13px rgba(123,92,255,.3);}50%{box-shadow:0 4px 20px rgba(123,92,255,.6);}}
+  @keyframes cg-spin{to{transform:rotate(360deg);}}
+  /* 조준 중 */
+  #charge.aiming{cursor:pointer;border-color:rgba(123,92,255,.6);background:rgba(123,92,255,.12);}
+  #charge.aiming .cg-glyph{opacity:1;}
+  #charge.aiming .cg-label{color:#6b46e0;}
+  @media (prefers-reduced-motion:reduce){#charge.ready,#charge.ready .cg-glyph{animation:none;}}
+
   #credit{font-size:var(--fs-3);font-weight:600;color:var(--ink-soft);opacity:.7;z-index:2;margin-top:2px;flex:0 0 auto;}
 
   /* 진화 표 (항상 보임, 하단) — 작은→큰 순서로 "다음에 뭐가 되는지". flex-wrap 금지(한 줄 유지 → 높이 예측 가능) */
@@ -199,6 +234,14 @@
       <canvas id="game"></canvas>
     </div>
   </div>
+
+  <!-- 소용돌이 폭탄 충전 게이지 (만충 시 탭 → 조준 발사) -->
+  <div id="charge" role="button" aria-label="소용돌이 폭탄 게이지" tabindex="-1">
+    <svg class="ki cg-glyph"><use href="#g-vortex"/></svg>
+    <div class="cg-track"><div class="cg-fill" id="charge-fill"></div></div>
+    <span class="cg-label" id="charge-label">충전 0%</span>
+  </div>
+
   <div id="credit">손가락으로 조준 · 떼면 떨어져요</div>
 
   <!-- 진화 표 (항상 보임): 작은 동물 → 큰 동물 순서 -->
