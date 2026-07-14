@@ -121,40 +121,58 @@
   #combo.pulse{animation:combo-pulse .42s cubic-bezier(.2,1.5,.4,1);}
   @keyframes combo-pulse{0%{transform:scale(.6)}45%{transform:scale(1.25)}100%{transform:scale(1)}}
 
-  /* ── 소용돌이 폭탄 충전 게이지 ── (포털 톤: 유리 pill + 하드섀도, 보라 소용돌이 색조) */
-  #charge{
-    display:flex;align-items:center;gap:9px;z-index:3;
+  /* ── 아이템 트레이 + 충전 게이지 ── (포털 톤: 유리 pill + 하드섀도) */
+  #itembar{
+    display:flex;align-items:center;gap:8px;z-index:3;
     width:100%;max-width:480px;flex:0 0 auto;margin-top:6px;
+  }
+  /* 트레이 — 최대 3칸. 빈 칸=점선 원, 찬 칸=아이템 아이콘(색조별) */
+  #tray{display:flex;gap:6px;flex:0 0 auto;}
+  #tray .slot{
+    width:42px;height:42px;border-radius:14px;flex:0 0 auto;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--glass);border:1.5px dashed var(--glass-border);backdrop-filter:blur(10px);
+    box-shadow:0 3px 7px rgba(120,85,55,.10);
+    cursor:default;transition:transform .12s,box-shadow .2s,border-color .2s,background .2s;
+    color:var(--ink-soft);
+  }
+  #tray .slot svg{width:24px;height:24px;fill:currentColor;pointer-events:none;}
+  /* 채워진 칸 — 실선 테두리 + 아이템 색, 탭 가능 */
+  #tray .slot.filled{
+    cursor:pointer;border-style:solid;border-color:currentColor;
+    background:var(--card);box-shadow:0 3px 8px rgba(120,85,55,.16),inset 0 1px 0 rgba(255,255,255,.7);
+  }
+  #tray .slot.filled:active{transform:scale(.9);}
+  /* 조준 중인 아이템 — 맥동으로 "지금 조준 중" 표시 */
+  #tray .slot.aiming{animation:slot-breathe 1.1s ease-in-out infinite;}
+  @keyframes slot-breathe{0%,100%{box-shadow:0 3px 10px rgba(120,85,55,.16);transform:scale(1);}50%{box-shadow:0 4px 16px currentColor;transform:scale(1.06);}}
+  /* 방금 채워진 칸 — 등장 팝 */
+  #tray .slot.pop{animation:slot-pop .45s cubic-bezier(.2,1.5,.4,1);}
+  @keyframes slot-pop{0%{transform:scale(.4);}55%{transform:scale(1.18);}100%{transform:scale(1);}}
+  /* 게이지 */
+  #charge{
+    display:flex;align-items:center;gap:9px;flex:1 1 auto;min-width:0;
     padding:6px 13px;border-radius:999px;
     background:var(--glass);border:1px solid var(--glass-border);backdrop-filter:blur(10px);
     box-shadow:0 3px 7px rgba(120,85,55,.12);
-    cursor:default;transition:transform .12s,box-shadow .2s,border-color .2s;
   }
-  #charge .cg-glyph{width:20px;height:20px;fill:#7b5cff;flex:0 0 auto;opacity:.5;transition:opacity .2s;}
+  #charge .cg-glyph{width:20px;height:20px;fill:#c77dff;flex:0 0 auto;opacity:.6;transition:opacity .2s;}
   #charge .cg-track{
-    position:relative;flex:1 1 auto;height:10px;border-radius:999px;overflow:hidden;
-    background:rgba(123,92,255,.14);box-shadow:inset 0 1px 2px rgba(90,60,140,.18);
+    position:relative;flex:1 1 auto;min-width:0;height:10px;border-radius:999px;overflow:hidden;
+    background:rgba(160,110,220,.14);box-shadow:inset 0 1px 2px rgba(90,60,140,.18);
   }
   #charge .cg-fill{
     position:absolute;top:0;left:0;bottom:0;width:0%;border-radius:999px;
-    background:linear-gradient(90deg,#9b7dff,#7b5cff);
+    background:linear-gradient(90deg,#c9a0ff,#a06ee0);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.45);
     transition:width .35s cubic-bezier(.3,1,.5,1);
   }
-  #charge .cg-label{font-size:var(--fs-3);font-weight:700;color:var(--ink-soft);white-space:nowrap;flex:0 0 auto;min-width:118px;text-align:right;}
-  /* 만충 — 탭 가능 + 은은한 맥동(기대감) */
-  #charge.ready{cursor:pointer;border-color:rgba(123,92,255,.5);animation:cg-breathe 1.3s ease-in-out infinite;}
-  #charge.ready .cg-glyph{opacity:1;animation:cg-spin 3s linear infinite;}
-  #charge.ready .cg-fill{background:linear-gradient(90deg,#b89bff,#7b5cff);}
-  #charge.ready .cg-label{color:#6b46e0;}
-  #charge.ready:active{transform:scale(.98);}
-  @keyframes cg-breathe{0%,100%{box-shadow:0 4px 13px rgba(123,92,255,.3);}50%{box-shadow:0 4px 20px rgba(123,92,255,.6);}}
+  #charge .cg-label{font-size:var(--fs-3);font-weight:700;color:var(--ink-soft);white-space:nowrap;flex:0 0 auto;text-align:right;}
+  /* 만충 대기(트레이 가득) — 은은한 맥동 안내 */
+  #charge.full .cg-glyph{opacity:1;animation:cg-spin 4s linear infinite;}
+  #charge.full .cg-label{color:#8a4fd0;}
   @keyframes cg-spin{to{transform:rotate(360deg);}}
-  /* 조준 중 */
-  #charge.aiming{cursor:pointer;border-color:rgba(123,92,255,.6);background:rgba(123,92,255,.12);}
-  #charge.aiming .cg-glyph{opacity:1;}
-  #charge.aiming .cg-label{color:#6b46e0;}
-  @media (prefers-reduced-motion:reduce){#charge.ready,#charge.ready .cg-glyph{animation:none;}}
+  @media (prefers-reduced-motion:reduce){#charge.full .cg-glyph,#tray .slot.aiming,#tray .slot.pop{animation:none;}}
 
   #credit{font-size:var(--fs-3);font-weight:600;color:var(--ink-soft);opacity:.7;z-index:2;margin-top:2px;flex:0 0 auto;}
 
@@ -219,6 +237,10 @@
 <symbol id="p-speaker-high" viewBox="0 0 256 256"><path d="M160,32.25V223.69a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.57-51A4,4,0,0,1,80,176.16V79.84a4,4,0,0,1,1.55-3.15l65.57-51a8,8,0,0,1,10,.16A8.27,8.27,0,0,1,160,32.25ZM60,80H32A16,16,0,0,0,16,96v64a16,16,0,0,0,16,16H60a4,4,0,0,0,4-4V84A4,4,0,0,0,60,80Zm126.77,20.84a8,8,0,0,0-.72,11.3,24,24,0,0,1,0,31.72,8,8,0,1,0,12,10.58,40,40,0,0,0,0-52.88A8,8,0,0,0,186.74,100.84Zm40.89-26.17a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66Z"/></symbol>
 <symbol id="p-speaker-slash" viewBox="0 0 256 256"><path d="M213.92,210.62a8,8,0,1,1-11.84,10.76L160,175.09v48.6a8.29,8.29,0,0,1-3.91,7.18,8,8,0,0,1-9-.56l-65.55-51A4,4,0,0,1,80,176.18V87.09L42.08,45.38A8,8,0,1,1,53.92,34.62Zm-27.21-55.46a8,8,0,0,0,11.29-.7,40,40,0,0,0,0-52.88,8,8,0,1,0-12,10.57,24,24,0,0,1,0,31.72A8,8,0,0,0,186.71,155.16Zm40.92-80.49a8,8,0,1,0-11.92,10.66,64,64,0,0,1,0,85.34,8,8,0,1,0,11.92,10.66,80,80,0,0,0,0-106.66ZM153,119.87a4,4,0,0,0,7-2.7V32.25a8.27,8.27,0,0,0-2.88-6.4,8,8,0,0,0-10-.16L103.83,59.33a4,4,0,0,0-.5,5.85ZM60,80H32A16,16,0,0,0,16,96v64a16,16,0,0,0,16,16H60a4,4,0,0,0,4-4V84A4,4,0,0,0,60,80Z"/></symbol>
 <symbol id="g-vortex" viewBox="0 0 512 512"><path d="M256 32C132.3 32 32 132.3 32 256s100.3 224 224 224 224-100.3 224-224S379.7 32 256 32zm0 64c25.3 0 49.3 5.6 70.8 15.6-12.5 4.3-25.9 11.4-39.4 21.4-30.2 22.4-58.6 57.3-76.9 99.6-18.3 42.3-24.1 84.9-19.4 117.6 2.1 14.6 6.2 28.1 12.5 39.3C147.8 421 96 344.6 96 256c0-88.4 71.6-160 160-160zm106.7 53.3c25.5 28.4 41.3 65.9 41.3 106.7 0 88.4-71.6 160-160 160-8.9 0-17.7-.7-26.2-2.1 1.4-.9 2.8-1.9 4.2-2.9 30.2-22.4 58.6-57.3 76.9-99.6 18.3-42.3 24.1-84.9 19.4-117.6-2.1-14.6-6.2-28.1-12.5-39.3 19.5-6.9 38.6-9.3 56.9-5.2zM256 176c44.2 0 80 35.8 80 80s-35.8 80-80 80-80-35.8-80-80 35.8-80 80-80z"/></symbol>
+<symbol id="p-magnet" viewBox="0 0 256 256"><path d="M207,50.25A87.46,87.46,0,0,0,144.6,24h-.33A87.48,87.48,0,0,0,82,49.81L20.61,112a16,16,0,0,0,.06,22.56l28.66,28.66a15.92,15.92,0,0,0,11.32,4.69h.09a16,16,0,0,0,11.36-4.82L133,100.69a16.08,16.08,0,0,1,22.41-.21,15.6,15.6,0,0,1,4.73,11.19,16.89,16.89,0,0,1-4.85,12L93,183.88a16,16,0,0,0-.17,22.79l28.66,28.66a16.06,16.06,0,0,0,22.52.12L205.81,175C240.26,140.5,240.79,84.56,207,50.25ZM60.65,151.89,32,123.24,61.42,93.43,89.9,121.91ZM132.79,224l-28.68-28.65,30.13-29.13,28.49,28.48Z"/></symbol>
+<symbol id="p-arrows-out-cardinal" viewBox="0 0 256 256"><path d="M96,136H64v24a8,8,0,0,1-13.66,5.66l-32-32a8,8,0,0,1,0-11.32l32-32A8,8,0,0,1,64,96v24H96a8,8,0,0,1,0,16Zm0-72h24V96a8,8,0,0,0,16,0V64h24a8,8,0,0,0,5.66-13.66l-32-32a8,8,0,0,0-11.32,0l-32,32A8,8,0,0,0,96,64Zm141.66,58.34-32-32A8,8,0,0,0,192,96v24H160a8,8,0,0,0,0,16h32v24a8,8,0,0,0,13.66,5.66l32-32A8,8,0,0,0,237.66,122.34ZM160,192H136V160a8,8,0,0,0-16,0v32H96a8,8,0,0,0-5.66,13.66l32,32a8,8,0,0,0,11.32,0l32-32A8,8,0,0,0,160,192Z"/></symbol>
+<symbol id="p-hand-grabbing" viewBox="0 0 256 256"><path d="M216,104v48a88,88,0,0,1-176,0V136a16,16,0,0,1,32,0v8a8,8,0,0,0,16,0V88a16,16,0,0,1,32,0v16a8,8,0,0,0,16,0V88a16,16,0,0,1,32,0v16a8,8,0,0,0,16,0,16,16,0,0,1,32,0Z"/></symbol>
+<symbol id="p-gift" viewBox="0 0 256 256"><path d="M216,72H180.92c.39-.33.79-.65,1.17-1A29.53,29.53,0,0,0,192,49.57,32.62,32.62,0,0,0,158.44,16,29.53,29.53,0,0,0,137,25.91a54.94,54.94,0,0,0-9,14.48,54.94,54.94,0,0,0-9-14.48A29.53,29.53,0,0,0,97.56,16,32.62,32.62,0,0,0,64,49.57,29.53,29.53,0,0,0,73.91,71c.38.33.78.65,1.17,1H40A16,16,0,0,0,24,88v32a16,16,0,0,0,16,16v64a16,16,0,0,0,16,16h60a4,4,0,0,0,4-4V120H40V88h80v32h16V88h80v32H136v92a4,4,0,0,0,4,4h60a16,16,0,0,0,16-16V136a16,16,0,0,0,16-16V88A16,16,0,0,0,216,72ZM84.51,59a13.69,13.69,0,0,1-4.5-10A16.62,16.62,0,0,1,96.59,32h.49a13.69,13.69,0,0,1,10,4.5c8.39,9.48,11.35,25.2,12.39,34.92C109.71,70.39,94,67.43,84.51,59Zm87,0c-9.49,8.4-25.24,11.36-35,12.4C137.7,60.89,141,45.5,149,36.51a13.69,13.69,0,0,1,10-4.5h.49A16.62,16.62,0,0,1,176,49.08,13.69,13.69,0,0,1,171.49,59Z"/></symbol>
 </svg>
   <div class="topbar">
     <h1>동물 합치기</h1>
@@ -235,14 +257,21 @@
     </div>
   </div>
 
-  <!-- 소용돌이 폭탄 충전 게이지 (만충 시 탭 → 조준 발사) -->
-  <div id="charge" role="button" aria-label="소용돌이 폭탄 게이지" tabindex="-1">
-    <svg class="ki cg-glyph"><use href="#g-vortex"/></svg>
-    <div class="cg-track"><div class="cg-fill" id="charge-fill"></div></div>
-    <span class="cg-label" id="charge-label">충전 0%</span>
+  <!-- 아이템 트레이(최대 3) + 충전 게이지. 합체로 게이지를 채우면 랜덤 아이템 1개 획득. -->
+  <div id="itembar">
+    <div id="tray" aria-label="아이템 트레이">
+      <button class="slot" data-i="0" aria-label="아이템 칸 1" tabindex="-1"></button>
+      <button class="slot" data-i="1" aria-label="아이템 칸 2" tabindex="-1"></button>
+      <button class="slot" data-i="2" aria-label="아이템 칸 3" tabindex="-1"></button>
+    </div>
+    <div id="charge" aria-label="아이템 충전 게이지">
+      <svg class="ki cg-glyph"><use href="#p-gift"/></svg>
+      <div class="cg-track"><div class="cg-fill" id="charge-fill"></div></div>
+      <span class="cg-label" id="charge-label">충전 0%</span>
+    </div>
   </div>
 
-  <div id="credit">손가락으로 조준 · 떼면 떨어져요</div>
+  <div id="credit">손가락으로 조준 · 떼면 떨어져요 · 아이템 탭해서 사용</div>
 
   <!-- 진화 표 (항상 보임): 작은 동물 → 큰 동물 순서 -->
   <div class="evo" id="evo"></div>

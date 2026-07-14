@@ -54,16 +54,41 @@
   // 떨어뜨릴 때 등장 가능한 티어 (작은 5종만 — 검증된 진행)
   const SPAWN_MAX = 4;
 
-  // ── 소용돌이 폭탄: 충전 게이지 + 조준(RNG 폐기, 벌어서 조준해 쓰는 배출구) ──
+  // ── 아이템 시스템: 충전 게이지로 벌고(반-지배), 획득 종류는 랜덤, 트레이(3칸)에 쌓아 언제 쓸지 선택 ──
   // ▼▼▼ 튜닝 상수 (다음 플레이 후 조정) ▼▼▼
-  const CHARGE_FULL = 100;          // 게이지 만충 값
-  // 합체 1회당 충전량: (생성티어+1) × (콤보≥2면 1.5). 저티어 잔챙이 합체는 조금, 고티어·콤보는 많이
-  //  → 잔챙이 파밍으로 폭탄 무한 스팸 불가(반-지배전략). 괜찮게 플레이해 ~20-30합체면 만충.
+  const CHARGE_FULL = 50;           // 게이지 만충 값 (만충 시 랜덤 아이템 1개 트레이에 추가·게이지 0)
+  //   합체 1회당 충전 = (생성티어+1) × (콤보≥2면 1.5). 저티어 합체는 조금·고티어/콤보는 많이
+  //   → 잔챙이 파밍으론 여전히 느리게(반-스팸). 괜찮게 플레이해 ~15-18합체당 아이템 1개.
   const chargeGain = (newTier, combo) => (newTier + 1) * (combo >= 2 ? 1.5 : 1);
+  const TRAY_MAX = 3;               // 트레이 최대 칸 수 (가득이면 게이지는 만충에서 대기)
+  // 가중 랜덤 풀: 자석 35 · 폭탄 30 · 흔들기 20 · 집게 15
+  const ITEM_POOL = [
+    { kind:'magnet', w:35 },
+    { kind:'bomb',   w:30 },
+    { kind:'shake',  w:20 },
+    { kind:'tongs',  w:15 },
+  ];
+  // 아이템 정의: 아이콘(2층 시스템)·색조·조준형 여부·라벨
+  const ITEM_DEF = {
+    bomb:   { icon:'#g-vortex',              color:'#7b5cff', aim:true,  label:'소용돌이' },
+    magnet: { icon:'#p-magnet',              color:'#e5484d', aim:false, label:'자석'   },
+    shake:  { icon:'#p-arrows-out-cardinal', color:'#e8912a', aim:false, label:'흔들기' },
+    tongs:  { icon:'#p-hand-grabbing',       color:'#1f9e58', aim:true,  label:'집게'   },
+  };
+  // ── 폭탄(소용돌이) ──
   const CLUTTER_MAX_TIER = 1;       // 폭탄이 지우는 최대 티어 (0=mouse,1=hamster까지 = 잔챙이만)
   const BLAST_R = 0.40;             // 착탄 반경 (통 폭 W 대비 비율)
+  // ── 자석 ── 같은 티어끼리 서로 끌어당김 → 충돌 → 자연 합체
+  const MAGNET_DUR = 1300;          // 지속 시간(ms) — 낀 것이 짝까지 이동할 시간
+  const MAGNET_ACCEL = 2.4;         // 끌어당김 세기(중력 대비 배율, gravity.y=1.15) — 질량 무관(force=accel*mass*0.001). 쌓인 더미 뚫을 만큼 세게
+  const MAGNET_MAX_SPEED = 11;      // 자석 중 속도 상한(물리 폭주 방지)
+  const MAGNET_RANGE = 1.1;         // 끌어당김 유효 거리(통 폭 W 대비) — 판 전역 짝 탐색
+  // ── 흔들기 ── 판 전체에 짧은 임펄스 → 낀 것 재정착 → 우연 합체
+  const SHAKE_KICK_X = 4.0;         // 좌우 임펄스 최대(가상단위/frame)
+  const SHAKE_KICK_UP = 2.6;        // 위로 톡(가상단위/frame)
+  const SHAKE_SPEED_CAP = 9;        // 흔들기 후 속도 상한(통 밖 이탈 방지)
   // ▲▲▲ 튜닝 상수 ▲▲▲
-  const SPECIAL_R = 0.088;        // 소용돌이 글리프(착탄 마커/게이지) 반지름 (통 폭 대비)
+  const SPECIAL_R = 0.088;        // 소용돌이 글리프(착탄 마커) 반지름 (통 폭 대비)
   // ── 콤보(연쇄) ──
   const COMBO_WINDOW = 520;       // ms 안에 다음 합체가 나면 콤보 유지
   // ── 잭팟(최상위 티어) 보너스 ──
@@ -91,6 +116,7 @@
   const chargeEl = document.getElementById('charge');
   const chargeFillEl = document.getElementById('charge-fill');
   const chargeLabelEl = document.getElementById('charge-label');
+  const slotEls = Array.from(document.querySelectorAll('#tray .slot'));
 
   // 동물 이미지를 담은 작은 HTML (HTML 칩/미리보기/진화표용)
   function glyphSvg(tier, px) {
@@ -127,11 +153,14 @@
   // 콤보
   let comboCount = 0;            // 현재 연쇄 수
   let comboTimer = 0;            // 콤보 만료 타이머(ms)
-  // 소용돌이 폭탄 (충전 게이지 + 조준)
+  // 아이템 시스템 (충전 게이지 + 트레이 + 조준)
   let charge = 0;               // 0 → CHARGE_FULL
-  let aimMode = false;          // 만충 후 발사 → 조준 모드
-  let aimBlastX = W / 2;        // 착탄 조준 x (자유)
-  let aimBlastY = W * 0.6;      // 착탄 조준 y (자유)
+  let tray = [];                // 획득 아이템 kind[] (최대 TRAY_MAX)
+  let aimKind = null;           // 조준 중인 아이템 kind ('bomb'|'tongs') 또는 null
+  let aimIndex = -1;            // 조준 중인 트레이 인덱스
+  let aimPX = W / 2;            // 조준 포인터 x (자유)
+  let aimPY = W * 0.6;          // 조준 포인터 y (자유)
+  let magnetUntil = 0;          // 자석 효과 종료 시각(performance.now)
   // 화면 흔들림 (canvas translate — 레이아웃 건드리지 않음)
   let shakeAmt = 0;              // 남은 흔들림 강도(px, 가상)
   // 진행 단계 (최고 동물 티어 기준) — 배경/배경음/효과음이 함께 진화 → "다음엔 뭐가?" 기대감
@@ -141,21 +170,88 @@
   function rndSpawn() { return Math.floor(Math.random() * SPAWN_MAX); }
   function addShake(px) { shakeAmt = Math.min(26, shakeAmt + px); }
 
-  // ── 충전 게이지 UI ──
+  // ── 충전 게이지 + 트레이 UI ──
   function refreshCharge() {
     const pct = Math.max(0, Math.min(100, (charge / CHARGE_FULL) * 100));
     chargeFillEl.style.width = pct + '%';
-    const ready = charge >= CHARGE_FULL;
-    chargeEl.classList.toggle('ready', ready && !aimMode);
-    chargeEl.classList.toggle('aiming', aimMode);
-    if (aimMode) chargeLabelEl.textContent = '착탄 지점 탭 · 다시 탭 취소';
-    else if (ready) chargeLabelEl.textContent = '탭! 소용돌이 발사';
+    const trayFull = tray.length >= TRAY_MAX;
+    const full = charge >= CHARGE_FULL;
+    chargeEl.classList.toggle('full', full && trayFull);
+    if (aimKind) chargeLabelEl.textContent = ITEM_DEF[aimKind].label + ' 조준 · 판을 탭';
+    else if (full && trayFull) chargeLabelEl.textContent = '칸 비우면 획득';
     else chargeLabelEl.textContent = '충전 ' + Math.floor(pct) + '%';
   }
   function addCharge(n) {
-    if (charge >= CHARGE_FULL) return;   // 이미 만충 — 넘침·과충전 방지
     charge = Math.min(CHARGE_FULL, charge + n);
+    tryGrantItem();       // 만충 & 빈 칸 있으면 즉시 아이템 지급
     refreshCharge();
+  }
+  // 만충 + 트레이 여유 → 가중 랜덤 아이템 1개 지급, 게이지 0. (트레이 가득이면 만충에서 대기)
+  function tryGrantItem() {
+    if (charge < CHARGE_FULL || tray.length >= TRAY_MAX) return;
+    charge = 0;
+    const kind = pickItem();
+    tray.push(kind);
+    renderTray(tray.length - 1);   // 방금 칸 pop 애니
+    floatTexts.push({ x: W / 2, y: DROP_Y + 30, t: 0, txt: ITEM_DEF[kind].label + ' 획득!', big: false, c: ITEM_DEF[kind].color });
+    sfxItem(); haptic([8, 24]);
+  }
+  function pickItem() {
+    let total = 0; for (const it of ITEM_POOL) total += it.w;
+    let r = Math.random() * total;
+    for (const it of ITEM_POOL) { if ((r -= it.w) < 0) return it.kind; }
+    return ITEM_POOL[0].kind;
+  }
+  // 트레이 렌더 (popIdx = 방금 채워진 칸이면 등장 애니)
+  function renderTray(popIdx) {
+    for (let i = 0; i < slotEls.length; i++) {
+      const el = slotEls[i];
+      const kind = tray[i];
+      el.classList.remove('pop');
+      if (kind) {
+        const d = ITEM_DEF[kind];
+        el.classList.add('filled');
+        el.classList.toggle('aiming', aimKind !== null && aimIndex === i);
+        el.style.color = d.color;
+        el.innerHTML = '<svg><use href="' + d.icon + '"/></svg>';
+        el.setAttribute('aria-label', d.label + ' 사용');
+        if (i === popIdx) { void el.offsetWidth; el.classList.add('pop'); }
+      } else {
+        el.classList.remove('filled', 'aiming');
+        el.style.color = '';
+        el.innerHTML = '';
+        el.setAttribute('aria-label', '빈 아이템 칸');
+      }
+    }
+  }
+  // 트레이 아이템 사용: 조준형이면 조준 모드 진입, 즉발형이면 즉시 실행
+  function useItem(idx) {
+    if (gameOver || !running) return;
+    const kind = tray[idx];
+    if (!kind) return;
+    audioInit();
+    if (aimKind !== null) {          // 이미 조준 중
+      if (aimIndex === idx) { cancelAim(); return; }   // 같은 칸 다시 탭 → 취소
+      cancelAim();                    // 다른 칸 → 조준 전환
+    }
+    if (ITEM_DEF[kind].aim) {
+      aimKind = kind; aimIndex = idx;
+      aimPX = W / 2; aimPY = H * 0.55;
+      haptic(10);
+    } else {
+      if (kind === 'magnet') activateMagnet();
+      else if (kind === 'shake') activateShake();
+      removeItem(idx);
+    }
+    renderTray(); refreshCharge();
+  }
+  function cancelAim() { aimKind = null; aimIndex = -1; renderTray(); refreshCharge(); }
+  // 트레이에서 아이템 소비 → 조준 해제 → 대기 중 만충 지급 반영
+  function removeItem(idx) {
+    tray.splice(idx, 1);
+    aimKind = null; aimIndex = -1;
+    tryGrantItem();
+    renderTray(); refreshCharge();
   }
 
   // ── 진행 단계: 최고 동물이 오를수록 풍경(배경)·배경음(코드)·효과음이 진화 ──
@@ -385,9 +481,95 @@
     addShake(14 + Math.min(victims.length, 8));
     sfxVacuum(victims.length);
     haptic([15, 30, 15, 30, 20]);
-    // 게이지 리셋 + 조준 해제
-    charge = 0; aimMode = false;
-    refreshCharge();
+  }
+
+  // ── 자석: MAGNET_DUR 동안 같은 티어끼리 서로 끌어당김 → 충돌 → 자연 합체 ──
+  function activateMagnet() {
+    magnetUntil = performance.now() + MAGNET_DUR;
+    popRings.push({ x: W / 2, y: H * 0.5, r: W * 0.2, t: 0, kind: 'expand', c: ITEM_DEF.magnet.color });
+    floatTexts.push({ x: W / 2, y: H * 0.32, t: 0, txt: '자석!', big: true, c: ITEM_DEF.magnet.color });
+    sfxMagnet(); haptic([10, 20, 10]);
+  }
+  // 매 틱 호출: 같은 티어 바디쌍에게 서로를 향한 가속. 질량무관·속도상한으로 폭주 방지.
+  function applyMagnet() {
+    // 티어별 그룹핑 (MAX_TIER·벽 제외)
+    const groups = {};
+    for (const o of bodies) {
+      if (o.tier === undefined || o.tier >= MAX_TIER || o.merged) continue;
+      (groups[o.tier] || (groups[o.tier] = [])).push(o);
+    }
+    const range2 = (MAGNET_RANGE * W) * (MAGNET_RANGE * W);
+    for (const t in groups) {
+      const g = groups[t];
+      if (g.length < 2) continue;
+      for (const a of g) {
+        // 가장 가까운 같은 티어 짝을 향해 당김
+        let best = null, bd2 = Infinity;
+        for (const b of g) {
+          if (b === a) continue;
+          const dx = b.position.x - a.position.x, dy = b.position.y - a.position.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < bd2) { bd2 = d2; best = b; }
+        }
+        if (!best || bd2 > range2) continue;
+        const dx = best.position.x - a.position.x, dy = best.position.y - a.position.y;
+        const dist = Math.sqrt(bd2) || 1;
+        const f = MAGNET_ACCEL * a.mass;   // accel = f/mass = MAGNET_ACCEL (질량 무관)
+        Body.applyForce(a, a.position, { x: (dx / dist) * f * 0.001, y: (dy / dist) * f * 0.001 });
+      }
+    }
+    // 속도 상한 (폭주·통 밖 이탈·NaN 방지)
+    for (const o of bodies) {
+      if (o.tier === undefined) continue;
+      const v = o.velocity, sp = Math.hypot(v.x, v.y);
+      if (sp > MAGNET_MAX_SPEED) { const k = MAGNET_MAX_SPEED / sp; Body.setVelocity(o, { x: v.x * k, y: v.y * k }); }
+    }
+  }
+
+  // ── 흔들기: 판 전체에 짧은 임펄스(좌우+살짝 위) → 낀 것 재정착 → 우연 합체 ──
+  function activateShake() {
+    for (const o of bodies) {
+      if (o.tier === undefined) continue;
+      const nx = o.velocity.x + (Math.random() - 0.5) * 2 * SHAKE_KICK_X;
+      const ny = o.velocity.y - Math.random() * SHAKE_KICK_UP;
+      // 속도 상한으로 통 밖 이탈 방지
+      const cx = Math.max(-SHAKE_SPEED_CAP, Math.min(SHAKE_SPEED_CAP, nx));
+      const cy = Math.max(-SHAKE_SPEED_CAP, Math.min(SHAKE_SPEED_CAP, ny));
+      Body.setVelocity(o, { x: cx, y: cy });
+      if (o.spawnAt) o.spawnAt = performance.now();   // 재정착 유예 — 흔든 직후 오판정 방지
+    }
+    addShake(22);
+    floatTexts.push({ x: W / 2, y: H * 0.32, t: 0, txt: '흔들기!', big: true, c: ITEM_DEF.shake.color });
+    sfxShake(); haptic([12, 18, 12, 18]);
+  }
+
+  // ── 집게: 조준한 동물 하나 제거(티어 무관, 최종 포함). 명중 시 true ──
+  function pluckAt(px, py) {
+    const target = bodyAt(px, py);
+    if (!target) return false;
+    const tx = target.position.x, ty = target.position.y;
+    const col = LADDER[target.tier] ? LADDER[target.tier].c : '#fff';
+    removeBody(target);
+    // 팡 연출
+    popRings.push({ x: tx, y: ty, r: (LADDER[target.tier] ? LADDER[target.tier].r * W : 20), t: 0, kind: 'pop' });
+    for (let i = 0; i < 16; i++) {
+      const a = Math.random() * Math.PI * 2, s = 2 + Math.random() * 5;
+      particles.push({ x: tx, y: ty, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1.5, r: 2 + Math.random() * 3, life: 1, color: i % 2 ? col : ITEM_DEF.tongs.color });
+    }
+    floatTexts.push({ x: tx, y: ty, t: 0, txt: '집게!', big: false, c: ITEM_DEF.tongs.color });
+    addShake(6); sfxPluck(); haptic([12, 20]);
+    return true;
+  }
+  // 좌표를 포함하는 최상위(가장 위) 동물 바디 찾기 — 겹치면 가장 나중(위) 것 우선
+  function bodyAt(px, py) {
+    let found = null;
+    for (const o of bodies) {
+      if (o.tier === undefined) continue;
+      const dx = o.position.x - px, dy = o.position.y - py;
+      const r = LADDER[o.tier].r * W;
+      if (dx * dx + dy * dy <= r * r) found = o;   // 나중 순회(위 레이어) 우선
+    }
+    return found;
   }
 
   function removeBody(b) {
@@ -408,7 +590,7 @@
 
   // ── 드롭 ──
   function dropAt(x) {
-    if (!running || gameOver || !canDrop || aimMode) return;
+    if (!running || gameOver || !canDrop || aimKind) return;
     const r = LADDER[curTier].r * W;
     const cx = Math.max(r + 4, Math.min(W - r - 4, x));
     const b = makeAnimal(curTier, cx, DROP_Y);
@@ -447,7 +629,7 @@
     if (gameOver) return;
     gameOver = true;
     running = false;
-    aimMode = false; refreshCharge();   // 조준 중 사망해도 게이지 UI 잠기지 않게
+    aimKind = null; aimIndex = -1; renderTray(); refreshCharge();   // 조준 중 사망해도 UI 잠기지 않게
     const isRecord = scoreVal >= best && scoreVal > 0;
     // best는 addScore에서 이미 갱신·저장됨. 신기록 배지는 이번 판이 best와 같을 때.
     overScoreEl.textContent = scoreVal;
@@ -475,7 +657,8 @@
     bestEl.textContent = best;
     overflowSince = 0; gameOver = false; canDrop = true;
     shakeAmt = 0; clearCombo();
-    charge = 0; aimMode = false; refreshCharge();
+    charge = 0; tray = []; aimKind = null; aimIndex = -1; magnetUntil = 0;
+    renderTray(); refreshCharge();
     maxTierEver = 0; stageBanner = null; stageFlash = null;
     setStage(0, false);
     curTier = rndSpawn(); nextTier = rndSpawn();
@@ -508,6 +691,7 @@
     if (running) {
       // 쿨다운 해제
       if (!canDrop && now >= dropCooldownUntil) canDrop = true;
+      if (now < magnetUntil) applyMagnet();   // 자석 지속 중: 같은 티어 끌어당김
       Engine.update(engine, 16.666);
       processMerges();
       checkOver(now);
@@ -536,7 +720,7 @@
     ctx.restore();
 
     // 조준 가이드 + 손에 든 동물 (떨어뜨리기 전) — 조준 모드일 땐 숨김
-    if (running && !gameOver && !aimMode) {
+    if (running && !gameOver && !aimKind) {
       const r = LADDER[curTier].r * W;
       const cx = Math.max(r + 4, Math.min(W - r - 4, aimX));
       // 가이드 라인
@@ -549,10 +733,10 @@
       drawAnimal(cx, DROP_Y + bob, curTier, 0, canDrop ? 1 : 0.55, 0, now);
     }
 
-    // 조준 모드: 착탄 반경 조준경 + 중심 소용돌이 마커
-    if (running && !gameOver && aimMode) {
+    // 조준 모드(폭탄): 착탄 반경 조준경 + 중심 소용돌이 마커
+    if (running && !gameOver && aimKind === 'bomb') {
       const R = BLAST_R * W;
-      const cx = Math.max(0, Math.min(W, aimBlastX)), cy = Math.max(0, Math.min(H, aimBlastY));
+      const cx = Math.max(0, Math.min(W, aimPX)), cy = Math.max(0, Math.min(H, aimPY));
       const pulse = 0.5 + 0.5 * Math.sin(now / 220);
       ctx.save();
       // 반경 채움 (은은한 보라 틴트)
@@ -578,6 +762,35 @@
       }
       // 중심 소용돌이 마커 (기존 글리프 재사용)
       drawSpecial(cx, cy, now / 500, now);
+    }
+
+    // 조준 모드(집게): 손가락 아래 동물 하이라이트 → 릴리즈 시 그놈 제거
+    if (running && !gameOver && aimKind === 'tongs') {
+      const cx = Math.max(0, Math.min(W, aimPX)), cy = Math.max(0, Math.min(H, aimPY));
+      const target = bodyAt(cx, cy);
+      const pulse = 0.5 + 0.5 * Math.sin(now / 200);
+      if (target) {
+        const br = LADDER[target.tier].r * W;
+        ctx.save();
+        ctx.globalAlpha = 0.55 + pulse * 0.4;
+        ctx.strokeStyle = ITEM_DEF.tongs.color; ctx.lineWidth = 3; ctx.setLineDash([8, 6]);
+        ctx.beginPath(); ctx.arc(target.position.x, target.position.y, br + 4, 0, Math.PI * 2); ctx.stroke();
+        // X 표식(제거 대상)
+        ctx.setLineDash([]); ctx.globalAlpha = 0.85; ctx.lineWidth = 3.5;
+        const m = br * 0.5, tx = target.position.x, ty = target.position.y;
+        ctx.beginPath(); ctx.moveTo(tx - m, ty - m); ctx.lineTo(tx + m, ty + m);
+        ctx.moveTo(tx + m, ty - m); ctx.lineTo(tx - m, ty + m); ctx.stroke();
+        ctx.restore();
+      }
+      // 손가락 위치 십자선 (대상 없어도 조준 중임을 표시)
+      ctx.save();
+      ctx.globalAlpha = 0.4 + pulse * 0.3;
+      ctx.strokeStyle = ITEM_DEF.tongs.color; ctx.lineWidth = 1.6; ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(cx - 16, cy); ctx.lineTo(cx + 16, cy);
+      ctx.moveTo(cx, cy - 16); ctx.lineTo(cx, cy + 16);
+      ctx.stroke();
+      ctx.restore();
     }
 
     // 동물들 + 특수
@@ -812,20 +1025,24 @@
     audioInit();
     pointerDown = true;
     aimX = toVirtX(e.clientX);
-    if (aimMode) { aimBlastX = aimX; aimBlastY = toVirtY(e.clientY); }
+    if (aimKind) { aimPX = aimX; aimPY = toVirtY(e.clientY); }
     canvas.setPointerCapture(e.pointerId);
   });
   canvas.addEventListener('pointermove', (e) => {
     aimX = toVirtX(e.clientX);
-    if (aimMode) { aimBlastX = aimX; aimBlastY = toVirtY(e.clientY); }
+    if (aimKind) { aimPX = aimX; aimPY = toVirtY(e.clientY); }
   });
   function release(e) {
     if (!pointerDown) return;
     pointerDown = false;
     aimX = toVirtX(e.clientX);
-    if (aimMode) {
-      aimBlastX = aimX; aimBlastY = toVirtY(e.clientY);
-      detonate(aimBlastX, aimBlastY);
+    if (aimKind === 'bomb') {
+      aimPX = aimX; aimPY = toVirtY(e.clientY);
+      detonate(aimPX, aimPY);
+      removeItem(aimIndex);           // 폭탄은 항상 소비(허탕 포함)
+    } else if (aimKind === 'tongs') {
+      aimPX = aimX; aimPY = toVirtY(e.clientY);
+      if (pluckAt(aimPX, aimPY)) removeItem(aimIndex);   // 명중 시에만 소비, 허탕이면 조준 유지
     } else {
       dropAt(aimX);
     }
@@ -833,17 +1050,9 @@
   canvas.addEventListener('pointerup', release);
   canvas.addEventListener('pointercancel', () => { pointerDown = false; });
 
-  // 충전 게이지 탭 — 만충이면 조준 모드 진입, 조준 중이면 취소
-  chargeEl.addEventListener('click', () => {
-    if (gameOver || !running) return;
-    audioInit();
-    if (aimMode) { aimMode = false; refreshCharge(); return; }   // 취소 (게이지 유지)
-    if (charge >= CHARGE_FULL) {
-      aimMode = true;
-      aimBlastX = W / 2; aimBlastY = H * 0.55;
-      refreshCharge();
-      haptic(10);
-    }
+  // 트레이 칸 탭 — 아이템 사용(조준형이면 조준 모드 진입)
+  slotEls.forEach((el) => {
+    el.addEventListener('click', () => { useItem(parseInt(el.dataset.i, 10)); });
   });
 
   // ── 음소거 / 버튼 ── 스피커 글리프 swap (vase 패턴)
@@ -961,6 +1170,29 @@
     if (!actx || muted) return;
     [60, 56, 51].forEach((m, i) => setTimeout(() => tone(mtof(m), 0.32, 'sawtooth', 0.16, mtof(m - 5)), i * 110));
   }
+  // 아이템 획득 — 밝게 올라가는 2음(선물 도착)
+  function sfxItem() {
+    if (!actx || muted) return;
+    tone(mtof(72), 0.12, 'triangle', 0.18, mtof(76));
+    setTimeout(() => tone(mtof(79), 0.16, 'sine', 0.14, mtof(84)), 90);
+  }
+  // 자석 — 붕- 하는 저역 험 + 위로 스윕(끌어당김)
+  function sfxMagnet() {
+    if (!actx || muted) return;
+    tone(120, 0.5, 'sine', 0.16, 300);
+    tone(180, 0.4, 'triangle', 0.08, 360);
+  }
+  // 흔들기 — 짧은 러블(덜덜)
+  function sfxShake() {
+    if (!actx || muted) return;
+    for (let i = 0; i < 5; i++) setTimeout(() => tone(90 + Math.random() * 60, 0.06, 'square', 0.08), i * 45);
+  }
+  // 집게 — 톡! 하고 뽑는 소리
+  function sfxPluck() {
+    if (!actx || muted) return;
+    tone(mtof(84), 0.08, 'triangle', 0.16, mtof(72));
+    setTimeout(() => tone(mtof(64), 0.1, 'sine', 0.1), 40);
+  }
   function haptic(p) { if (navigator.vibrate && !muted) { try { navigator.vibrate(p); } catch (_) {} } }
 
   // ── 부팅 ──
@@ -970,6 +1202,7 @@
     buildEvoRow();
     buildEvo();
     refreshMute();
+    renderTray();
     refreshCharge();
     bestEl.textContent = best;
     reset();
