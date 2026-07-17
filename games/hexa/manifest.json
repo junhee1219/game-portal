@@ -1,0 +1,15 @@
+{
+  "name": "마카롱 트레이 — 헥사 스택 소팅",
+  "short_name": "마카롱 트레이",
+  "description": "마카롱 스택을 접시에 톡 — 같은 색끼리 흘러 모여 열 개가 되면 상자에 포장!",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f3ecdf",
+  "theme_color": "#f3ecdf",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

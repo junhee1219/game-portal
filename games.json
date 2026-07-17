@@ -720,6 +720,26 @@
           "merge": "lww"
         }
       ]
+    },
+    {
+      "id": "hexa",
+      "shell_mode": "panel",
+      "lab": true,
+      "title": "마카롱 트레이",
+      "tagline": "마카롱 스택을 접시에 톡 — 같은 색끼리 흘러 모여 열 개가 되면 상자에 포장!",
+      "unit": "점",
+      "score_key": "hexaBest",
+      "score_metric": "score",
+      "state_keys": [
+        {
+          "key": "hexaBest",
+          "merge": "max"
+        },
+        {
+          "key": "hexaMuted",
+          "merge": "lww"
+        }
+      ]
     }
   ]
 }
