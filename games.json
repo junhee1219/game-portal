@@ -89,6 +89,10 @@
         {
           "key": "mergeMuted",
           "merge": "lww"
+        },
+        {
+          "key": "mergeLegends",
+          "merge": "max"
         }
       ],
       "hot": true

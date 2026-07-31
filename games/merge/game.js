@@ -111,7 +111,44 @@
   const SURGE_DUR2 = 12000;         // 대연장 지속 (+ 콤보 배율 2부터 시작)
   // ── 귀속 연출 ── 아이템이 유발한 합체에 원인 라벨을 띄워 인과를 읽히게
   const SHAKE_CAUSE_MS = 2000;      // 흔들기 후 이 시간 내 합체는 흔들기 공로로 표시
+  // ── 특성(Trait): 판 지속형 변형기 ── 아이템(1회성)과 달리 이번 판 내내 규칙을 비튼다.
+  //   트리거는 점수가 아니라 "이 동물이 이 판에서 처음 태어난 순간"(= 진행 문턱) → 판당 최대 5회.
+  //   전부 휘발(세이브·동기화 대상 아님). 판 시작 시 리셋.
+  const TRAIT_TIERS = [4, 5, 6, 7, 8];   // 개·여우·호랑이·소·돼지 (판다·곰은 클라이맥스라 방해 금지)
+  const TRAIT_PICKS = 3;                 // 제시 장수
+  const T_MOUSE_MULT = 5;                // 쥐부자: 쥐끼리 합체 점수 배율
+  const T_TRIPLE_BONUS = 1.5;            // 삼중합체: 점수 배율
+  const T_TRIPLE_REACH = 1.30;           // 삼중합체: 세 번째를 끌어오는 접촉 판정 여유(반지름 합 대비)
+  const T_FOX_CHARGE = 15;               // 여우공장: 여우 탄생당 게이지
+  const T_MINI_SCALE = 0.92, T_MINI_SCORE = 0.8;   // 미니멀
+  const T_HEAVY_SCALE = 1.10, T_HEAVY_SCORE = 1.6; // 헤비
+  const T_COMBO_WINDOW = 1.5, T_COMBO_CHARGE = 0.7; // 콤보장인
+  const T_WILD_EVERY = 25;               // 별비: N드롭마다 와일드 1개
+  const T_BOMB_R = 1.3;                  // 폭파광: 폭탄 반경 배율
+  const T_MAGNET_DUR = 1.6;              // 자석광: 자석 지속 배율
+  const T_TRICKLE_MS = 4000, T_TRICKLE_GAIN = 1;   // 느긋충전
+  const T_ELITE_HI = 2, T_ELITE_LO_TIER = 2;       // 귀족: 티어≥6 ×2 / 티어≤2(쥐·햄스터 합체) 0점
+  const T_RECYCLE_PER_TIER = 2;          // 재활용: 제거된 동물 티어+1당 게이지
+  const LEGEND_SCORE = 10000;            // 전설의 합체(곰+곰) 보너스
   // ▲▲▲ 튜닝 상수 ▲▲▲
+  // 특성 12종 — 전부 "최적 플레이를 뒤집거나 아이템과 곱해지는" 것. 단순 점수+%는 넣지 않는다.
+  // 이름 ≤5자 / 효과 한 줄 ≤20자 (발라트로식 저텍스트 규칙).
+  const TRAITS = [
+    { id:'t_mouse_gold', name:'쥐부자',   icon:'#p-coins',               c:'#c98a17', d:'쥐끼리 합체 점수 ×5' },
+    { id:'t_triple',     name:'삼중합체', icon:'#p-circles-three',       c:'#1f9e58', d:'같은 셋이 닿으면 한 번에' },
+    { id:'t_fox_charge', name:'여우공장', icon:'#p-gift',                c:'#8a4fd0', d:'여우 탄생마다 충전 +15' },
+    { id:'t_mini',       name:'미니멀',   icon:'#p-arrows-in-cardinal',  c:'#2f80ed', d:'8% 작아짐 · 점수 ×0.8' },
+    { id:'t_heavy',      name:'헤비',     icon:'#p-arrows-out-cardinal', c:'#e8912a', d:'10% 커짐 · 점수 ×1.6' },
+    { id:'t_combo',      name:'콤보장인', icon:'#p-lightning',           c:'#c2298a', d:'콤보창 ×1.5 · 충전 ×0.7' },
+    { id:'t_wild_drop',  name:'별비',     icon:'#p-sparkle',             c:'#e0a020', d:'25드롭마다 별 동물' },
+    { id:'t_bomb_pro',   name:'폭파광',   icon:'#g-vortex',              c:'#7b5cff', d:'폭탄 반경 +30%' },
+    { id:'t_magnet_pro', name:'자석광',   icon:'#p-magnet',              c:'#e5484d', d:'자석 지속 +60%' },
+    { id:'t_trickle',    name:'느긋충전', icon:'#p-hourglass-high',      c:'#3d9a8b', d:'4초마다 충전 +1' },
+    { id:'t_elite',      name:'귀족',     icon:'#p-crown',               c:'#b07d10', d:'호랑이+ ×2 · 잔챙이 0' },
+    { id:'t_recycle',    name:'재활용',   icon:'#p-recycle',             c:'#4a8f3c', d:'없앤 동물이 충전으로' },
+  ];
+  const TRAIT_BY_ID = {};
+  TRAITS.forEach((t) => { TRAIT_BY_ID[t.id] = t; });
   const SPECIAL_R = 0.088;        // 소용돌이 글리프(착탄 마커) 반지름 (통 폭 대비)
   // ── 콤보(연쇄) ──
   const COMBO_WINDOW = 520;       // ms 안에 다음 합체가 나면 콤보 유지
@@ -144,6 +181,14 @@
   const fuseChipEl = document.getElementById('fuse-chip');
   const fuseIcoEl = fuseChipEl.querySelector('.fc-ico svg use');
   const fuseTxtEl = fuseChipEl.querySelector('.fc-t');
+  const traitBarEl = document.getElementById('traitbar');
+  const traitPickEl = document.getElementById('traitpick');
+  const tpListEl = document.getElementById('tp-list');
+  const tpTitleEl = document.getElementById('tp-title');
+  const tpSubEl = document.getElementById('tp-sub');
+  const traitToastEl = document.getElementById('trait-toast');
+  const overLegendEl = document.getElementById('over-legend');
+  const overLegendNEl = document.getElementById('over-legend-n');
 
   // 동물 이미지를 담은 작은 HTML (HTML 칩/미리보기/진화표용)
   function glyphSvg(tier, px) {
@@ -198,6 +243,19 @@
   let wildDrops = 0;            // 앞으로 별 동물로 나갈 드롭 수
   let surgeUntil = 0;           // 콤보연장 종료 시각
   let surgeLv = 1;              // 이번 콤보연장 단계 (2면 콤보 배율 2부터)
+  // 특성 (판 지속형 변형기 — 전부 휘발)
+  const activeTraits = new Set();  // 이번 판에 보유한 특성 id
+  const traitTiersDone = new Set();// 이미 트리거된 티어 (같은 티어 재탄생 시 재제시 금지)
+  let traitOffer = null;           // 지금 제시 중인 후보 배열 또는 null
+  let pendingOffers = 0;           // 대기 중인 제시 횟수 (낙하 중 합체가 겹칠 때)
+  let paused = false;              // 특성 선택 중 물리·입력 정지
+  let pauseStart = 0;              // 정지 시작 시각 (아이템 타이머 보정용)
+  let trickleAcc = 0;              // 느긋충전 누적 ms
+  let dropCount = 0;              // 이번 판 드롭 수 (별비)
+  let toastTimer = 0;
+  // 전설의 합체(곰+곰) 누적 — 판을 넘어 남는 유일한 수집 지표. localStorage 'mergeLegends'(max 병합).
+  let legends = parseInt(localStorage.getItem('mergeLegends') || '0', 10) || 0;
+  let legendFlash = null;
   // 화면 흔들림 (canvas translate — 레이아웃 건드리지 않음)
   let shakeAmt = 0;              // 남은 흔들림 강도(px, 가상)
   // 진행 단계 (최고 동물 티어 기준) — 배경/배경음/효과음이 함께 진화 → "다음엔 뭐가?" 기대감
@@ -205,7 +263,118 @@
   let stageBanner = null, stageFlash = null;
 
   function rndSpawn() { return Math.floor(Math.random() * SPAWN_MAX); }
-  function addShake(px) { shakeAmt = Math.min(26, shakeAmt + px); }
+  function addShake(px) { shakeAmt = Math.min(34, shakeAmt + px); }
+
+  // ── 특성 효과 훅 ── 계산부는 전부 여기를 지나간다 (효과가 코드 곳곳에 흩어지지 않게)
+  const hasT = (id) => activeTraits.has(id);
+  // 반지름 배율: 미니멀/헤비는 LADDER를 건드리지 않고 런타임 배율로만 (둘 다 들면 곱해짐)
+  function radMult() {
+    let m = 1;
+    if (hasT('t_mini')) m *= T_MINI_SCALE;
+    if (hasT('t_heavy')) m *= T_HEAVY_SCALE;
+    return m;
+  }
+  // 새로 태어날 동물의 반지름(가상 단위). 이미 존재하는 바디는 b.rad(생성 시각 값)를 쓴다.
+  const RAD = (tier) => LADDER[tier].r * W * radMult();
+  // 합체 점수 배율 — nt = 새로 생긴 동물의 티어
+  function traitScoreMult(nt) {
+    let m = 1;
+    if (hasT('t_mouse_gold') && nt === 1) m *= T_MOUSE_MULT;      // 쥐+쥐 → 햄스터
+    if (hasT('t_mini')) m *= T_MINI_SCORE;
+    if (hasT('t_heavy')) m *= T_HEAVY_SCORE;
+    if (hasT('t_elite')) m *= (nt >= 6 ? T_ELITE_HI : (nt <= T_ELITE_LO_TIER ? 0 : 1));
+    return m;
+  }
+  const traitChargeMult = () => (hasT('t_combo') ? T_COMBO_CHARGE : 1);
+  const comboWindow = (surging) => (surging ? COMBO_WINDOW_SURGE : COMBO_WINDOW) * (hasT('t_combo') ? T_COMBO_WINDOW : 1);
+  const blastR = (lv) => (lv === 2 ? BLAST_R2 : BLAST_R) * W * (hasT('t_bomb_pro') ? T_BOMB_R : 1);
+  // 재활용: 폭탄·집게로 없앤 동물이 게이지로 환급
+  const recycleGain = (tier) => (hasT('t_recycle') ? (tier + 1) * T_RECYCLE_PER_TIER : 0);
+
+  // 이번 판 특성 아이콘 행 (상시 표시). fresh = 방금 고른 것 pop 애니
+  function renderTraitBar(freshId) {
+    if (!traitBarEl) return;
+    if (!activeTraits.size) { traitBarEl.hidden = true; traitBarEl.innerHTML = ''; return; }
+    traitBarEl.hidden = false;
+    traitBarEl.innerHTML = '<span class="tb-lab">특성</span>' + TRAITS.filter((t) => activeTraits.has(t.id)).map((t) =>
+      '<button class="tb' + (t.id === freshId ? ' fresh' : '') + '" data-t="' + t.id + '" style="color:' + t.c +
+      '" aria-label="' + t.name + ' — ' + t.d + '"><svg><use href="' + t.icon + '"/></svg></button>'
+    ).join('');
+  }
+  function showTraitToast(t) {
+    if (!traitToastEl) return;
+    traitToastEl.innerHTML = '<b style="color:' + t.c + '">' + t.name + '</b> — ' + t.d;
+    traitToastEl.hidden = false;
+    void traitToastEl.offsetWidth;
+    traitToastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      traitToastEl.classList.remove('show');
+      setTimeout(() => { traitToastEl.hidden = true; }, 220);
+    }, 1900);
+  }
+  traitBarEl.addEventListener('click', (e) => {
+    const b = e.target.closest('.tb');
+    if (b && TRAIT_BY_ID[b.dataset.t]) showTraitToast(TRAIT_BY_ID[b.dataset.t]);
+  });
+
+  // 트리거: 이 티어가 이번 판에서 처음 태어났다 → 특성 제시 1회 예약
+  function maybeOfferTrait(nt) {
+    if (TRAIT_TIERS.indexOf(nt) < 0 || traitTiersDone.has(nt)) return;
+    traitTiersDone.add(nt);
+    if (activeTraits.size >= TRAITS.length) return;   // 다 모았으면 더 안 띄움
+    pendingOffers++;
+  }
+  // 제시: 미보유 중 랜덤 3종. 물리·입력 정지(전부 이득형이므로 건너뛰기 없음)
+  function openTraitPick() {
+    const pool = TRAITS.filter((t) => !activeTraits.has(t.id));
+    if (!pool.length) { pendingOffers = 0; return; }
+    const pick = [];
+    while (pick.length < TRAIT_PICKS && pool.length) pick.push(pool.splice((Math.random() * pool.length) | 0, 1)[0]);
+    traitOffer = pick;
+    paused = true;
+    pauseStart = performance.now();
+    tpTitleEl.textContent = activeTraits.size ? '특성 하나 더 고르기' : '특성 하나 고르기';
+    tpSubEl.textContent = '이번 판 동안 계속 적용돼요 · ' + (activeTraits.size + 1) + '번째';
+    tpListEl.innerHTML = pick.map((t) =>
+      '<button class="tp-item" data-t="' + t.id + '" style="color:' + t.c + '">' +
+        '<span class="ti"><svg><use href="' + t.icon + '"/></svg></span>' +
+        '<span class="tt"><span class="tn">' + t.name + '</span><span class="td">' + t.d + '</span></span>' +
+      '</button>'
+    ).join('');
+    traitPickEl.hidden = false;
+    sfxTraitOffer();
+    haptic([8, 26, 8]);
+  }
+  function chooseTrait(id) {
+    if (!traitOffer || !TRAIT_BY_ID[id]) return;
+    const t = TRAIT_BY_ID[id];
+    activeTraits.add(id);
+    traitOffer = null;
+    traitPickEl.hidden = true;
+    pendingOffers = Math.max(0, pendingOffers - 1);
+    // 정지 동안 흐른 시간만큼 진행 중 아이템 타이머를 밀어준다 (자석/연장이 정지 중 소진되지 않게).
+    // 정지 시작 전에 이미 끝난 타이머는 건드리지 않는다 — 밀면 죽은 효과가 되살아난다.
+    const now = performance.now();
+    const d = now - pauseStart;
+    if (magnetUntil > pauseStart) magnetUntil += d;
+    if (surgeUntil > pauseStart) surgeUntil += d;
+    if (shakeCauseUntil > pauseStart) shakeCauseUntil += d;
+    if (dropCooldownUntil > pauseStart) dropCooldownUntil += d;
+    for (const b of bodies) if (b.spawnAt) b.spawnAt += d;   // 정착 판정 유예
+    overflowSince = 0;                                        // 정지 중 위험선 체류로 즉사 방지
+    paused = false;
+    renderTraitBar(id);
+    refreshCharge(); renderTray();
+    floatTexts.push({ x: W / 2, y: H * 0.34, t: 0, txt: t.name + '!', big: true, c: t.c });
+    floatTexts.push({ x: W / 2, y: H * 0.34 + 30, t: 0, txt: t.d, big: false, c: t.c });
+    popRings.push({ x: W / 2, y: H * 0.5, r: W * 0.18, t: 0, kind: 'expand', c: t.c });
+    sfxTraitPick(); haptic([10, 20, 10, 30]);
+  }
+  tpListEl.addEventListener('click', (e) => {
+    const b = e.target.closest('.tp-item');
+    if (b) { audioInit(); chooseTrait(b.dataset.t); }
+  });
 
   // ── 충전 게이지 + 트레이 UI ──
   function refreshCharge() {
@@ -294,7 +463,7 @@
   }
   // 융합 실행: 같은 종류 낱개 2개 → 강화판 1개 (2칸 → 1칸)
   function fuseItems() {
-    if (gameOver || !running) return;
+    if (gameOver || !running || paused) return;
     const k = fusableKind();
     if (!k) return;
     audioInit();
@@ -314,7 +483,7 @@
   }
   // 트레이 아이템 사용: 조준형이면 조준 모드 진입, 즉발형이면 즉시 실행
   function useItem(idx) {
-    if (gameOver || !running) return;
+    if (gameOver || !running || paused) return;
     const it = tray[idx];
     if (!it) return;
     audioInit();
@@ -417,7 +586,9 @@
 
   // ── 동물 바디 생성 ──
   function makeAnimal(tier, x, y, opts = {}) {
-    const r = LADDER[tier].r * W;
+    // 반지름은 생성 시각의 특성 배율(미니멀/헤비)로 굳힌다 → b.rad. 이후 렌더·판정·조준은 전부 b.rad를
+    // 쓴다(도중에 특성을 얻어도 이미 놓인 동물의 물리 크기와 그림이 어긋나지 않게).
+    const r = RAD(tier);
     const b = Bodies.circle(x, y, r, {
       restitution: 0.18,
       friction: 0.55,
@@ -426,9 +597,11 @@
       ...opts,
     });
     b.tier = tier;
+    b.rad = r;          // 이 바디의 실제 반지름 (특성 배율 반영, 생성 후 불변)
     b.special = false;
     b.wild = false;     // 별 동물(와일드) — 처음 닿은 동물과 무조건 합체
     b.merged = false;
+    b.gone = false;     // removeBody 후 큐에 남은 항목 재처리 방지
     b.born = performance.now();
     b.spawnAt = b.born;
     b.squash = 0;     // 머지 직후 통통 스쿼시(0~1, 감쇠)
@@ -445,7 +618,7 @@
       const a = pair.bodyA, b = pair.bodyB;
       if (a.tier === undefined || b.tier === undefined) continue; // 벽
       if (a.merged || b.merged) continue;       // 이미 소비됨 → 스킵 (THE 수박게임 버그 방어)
-      let nt, cause = null;
+      let nt, cause = null, sameTier = false, legend = false;
       if (a.wild || b.wild) {
         const host = a.wild ? b : a;             // 별이 닿은 상대 (둘 다 별이면 b 기준)
         if (host.tier >= MAX_TIER) continue;     // 최종 동물과는 합쳐지지 않음 → 별은 그대로 대기
@@ -453,27 +626,77 @@
         cause = '와일드!';
       } else {
         if (a.tier !== b.tier) continue;
-        if (a.tier >= MAX_TIER) continue;        // 최종 동물은 더 안 합쳐짐
-        nt = a.tier + 1;
+        if (a.tier >= MAX_TIER) {
+          // 곰 + 곰 = 전설의 합체. 둘 다 소멸(판 해방) + 대형 보너스 — 사다리 정점 위의 정점.
+          legend = true; nt = MAX_TIER;
+        } else {
+          nt = a.tier + 1;
+          sameTier = true;
+        }
       }
       a.merged = true; b.merged = true;          // 즉시 플래그 → 같은 틱 다른 페어가 재사용 못함
-      mergeQueue.push({ a, b, nt, cause });
+      mergeQueue.push({ a, b, nt, cause, sameTier, legend });
     }
   }
 
   function processMerges() {
     while (mergeQueue.length) {
       const m = mergeQueue.shift();
+      if (m.a.gone || m.b.gone) continue;        // 삼중합체 등으로 이미 소비된 바디
       const mx = (m.a.position.x + m.b.position.x) / 2;
       const my = (m.a.position.y + m.b.position.y) / 2;
+      if (m.legend) { removeBody(m.a); removeBody(m.b); legendMerge(mx, my); continue; }
+      // 삼중합체(특성): 같은 티어 세 번째가 접촉 거리에 있으면 함께 소비 → 점수 +50%, 자리도 한 칸 더 빔
+      let scoreMult = 1, triple = false;
+      if (m.sameTier && hasT('t_triple')) {
+        let third = null, bd = Infinity;
+        for (const o of bodies) {
+          if (o === m.a || o === m.b || o.merged || o.gone || o.wild || o.tier !== m.a.tier) continue;
+          const d = Math.hypot(o.position.x - mx, o.position.y - my);
+          if (d < (o.rad + m.a.rad) * T_TRIPLE_REACH && d < bd) { bd = d; third = o; }
+        }
+        if (third) { third.merged = true; removeBody(third); scoreMult = T_TRIPLE_BONUS; triple = true; }
+      }
       removeBody(m.a); removeBody(m.b);
-      doMerge(m.nt, mx, my, m.cause, ITEM_DEF.wild.color);
+      if (triple) doMerge(m.nt, mx, my, '삼중합체!', TRAIT_BY_ID.t_triple.c, scoreMult);
+      else doMerge(m.nt, mx, my, m.cause, ITEM_DEF.wild.color);
     }
+  }
+
+  // ── 전설의 합체: 곰(최종) 2마리가 만나면 둘 다 사라지고 대형 보너스 ──
+  // 사다리 정점에 "그 다음"을 만들어 준다 + 가장 큰 두 자리를 비워 판을 되살린다.
+  function legendMerge(x, y) {
+    addScore(LEGEND_SCORE);
+    // 누적은 판을 넘어 남는다. portal이 max로 병합하므로 저장 직전 현재값과 비교해 되돌림 방지.
+    const stored = parseInt(localStorage.getItem('mergeLegends') || '0', 10) || 0;
+    legends = Math.max(legends, stored) + 1;
+    try { localStorage.setItem('mergeLegends', String(legends)); } catch (_) {}
+    legendFlash = { t: 0 };
+    addShake(34);
+    floatTexts.push({ x: W / 2, y: H * 0.40, t: 0, txt: '전설의 합체!', big: true, c: '#b0740a' });
+    floatTexts.push({ x: W / 2, y: H * 0.40 + 36, t: 0, txt: '+' + LEGEND_SCORE, big: true, c: '#ff5a2a' });
+    for (let i = 0; i < 3; i++) {
+      popRings.push({ x, y, r: LADDER[MAX_TIER].r * W * (0.4 + i * 0.35), t: -i * 7, kind: 'expand', c: i % 2 ? '#ffd089' : '#fff3cf' });
+    }
+    // 화면 가득 컨페티 (잭팟보다 더 큰 규모 — 이게 최상위 사건임을 몸으로 알게)
+    const cols = ['#ffd089', '#ff9a6b', '#ffe2a6', '#b79bff', '#ff7a59', '#fff3cf'];
+    for (let i = 0; i < 96; i++) {
+      const a = Math.random() * Math.PI * 2, sp = 3 + Math.random() * 9;
+      particles.push({
+        x: W * 0.5 + (Math.random() - 0.5) * W * 0.7,
+        y: H * 0.5 + (Math.random() - 0.5) * H * 0.5,
+        vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 2.5,
+        r: 2.5 + Math.random() * 4.5, life: 1.6,
+        color: cols[(Math.random() * cols.length) | 0], star: Math.random() < 0.5,
+      });
+    }
+    sfxLegend();
+    haptic([30, 50, 30, 50, 30, 90]);
   }
 
   // 합체 성사 처리 — 일반 합체·와일드·승급이 공유(점수·콤보·충전·연출·사운드).
   // cause 를 주면 그 원인 라벨을, 없으면 진행 중인 아이템 효과를 귀속 표시한다.
-  function doMerge(nt, mx, my, cause, causeColor) {
+  function doMerge(nt, mx, my, cause, causeColor, scoreMult) {
     const nb = makeAnimal(nt, mx, my);
     nb.squash = 1;                              // 통통 튀는 스쿼시 시작
     // 살짝 위로 톡 — 손맛
@@ -482,20 +705,22 @@
     // 콤보: 직전 합체로부터 콤보 창 안이면 누적
     bumpCombo();
     const mult = comboCount >= 2 ? comboCount : 1;  // 2연쇄부터 배율
-    const gain = TIER_SCORE[nt] * mult;
-    addScore(gain);
+    // 특성 배율이 여기 곱해진다 (쥐부자·미니멀·헤비·귀족·삼중합체) — 0이 될 수도 있다(귀족의 잔챙이)
+    const gain = Math.round(TIER_SCORE[nt] * mult * traitScoreMult(nt) * (scoreMult || 1));
+    if (gain > 0) addScore(gain);
     // 아이템 게이지 충전: 고티어·콤보일수록 많이, 저티어 잔챙이는 조금
-    addCharge(chargeGain(nt, comboCount));
+    addCharge(chargeGain(nt, comboCount) * traitChargeMult());
+    if (hasT('t_fox_charge') && nt === 5) addCharge(T_FOX_CHARGE);   // 여우공장
 
-    // 최고 동물 갱신 → 새 단계면 풍경/배경음/효과음 진화 + 배너
-    if (nt > maxTierEver) { maxTierEver = nt; const ns = stageForTier(nt); if (ns > stageIdx) setStage(ns, true); }
+    // 최고 동물 갱신 → 새 단계면 풍경/배경음/효과음 진화 + 배너, 진화표 강조 이동
+    if (nt > maxTierEver) { maxTierEver = nt; refreshEvo(); const ns = stageForTier(nt); if (ns > stageIdx) setStage(ns, true); }
 
     // 이펙트 — 티어 클수록 화려: 파티클·링·흔들림 비례
     burst(mx, my, LADDER[nt].c, nt);
-    popRings.push({ x:mx, y:my, r:LADDER[nt].r*W, t:0, kind:'pop' });
-    if (nt >= 5) popRings.push({ x:mx, y:my, r:LADDER[nt].r*W*0.6, t:0, kind:'expand', c:LADDER[nt].c });
+    popRings.push({ x:mx, y:my, r:nb.rad, t:0, kind:'pop' });
+    if (nt >= 5) popRings.push({ x:mx, y:my, r:nb.rad*0.6, t:0, kind:'expand', c:LADDER[nt].c });
     addShake(2 + nt * 0.9);
-    floatTexts.push({ x:mx, y:my, t:0, txt:'+'+gain, big: nt>=6, c:'#ff7a59' });
+    if (gain > 0) floatTexts.push({ x:mx, y:my, t:0, txt:'+'+gain, big: nt>=6, c:'#ff7a59' });
     // 귀속 라벨 — "왜 이게 합쳐졌는지"를 한 줄로 (인과 판독성)
     const at = cause ? { txt: cause, c: causeColor } : attribution();
     if (at) floatTexts.push({ x:mx, y:my - 20, t:0, txt:at.txt, big:false, c:at.c });
@@ -506,6 +731,8 @@
 
     // 잭팟: 최종 동물(bear) 탄생 → 대형 보너스 + 화면 가득 축하
     if (nt === MAX_TIER) jackpot(mx, my);
+    // 이 동물이 이번 판에서 처음 태어났다면 특성 선택을 예약 (프레임 루프가 띄운다)
+    maybeOfferTrait(nt);
     return nb;
   }
   // 지금 합체의 공로자 — 자석 지속 중이면 누적 카운트, 흔들기 직후면 흔들기
@@ -522,7 +749,7 @@
     const surging = now < surgeUntil;
     if (comboTimer > 0) comboCount++;
     else comboCount = (surging && surgeLv === 2) ? 2 : 1;   // 대연장: 배율 2부터 시작
-    comboTimer = surging ? COMBO_WINDOW_SURGE : COMBO_WINDOW;
+    comboTimer = comboWindow(surging);          // 콤보장인이면 ×1.5
     if (comboCount >= 2) {
       comboXEl.textContent = 'x' + comboCount;
       comboEl.classList.add('show');
@@ -568,7 +795,7 @@
     cx = Math.max(0, Math.min(W, cx));
     cy = Math.max(0, Math.min(H, cy));
     const big = lv === 2;
-    const R = (big ? BLAST_R2 : BLAST_R) * W;
+    const R = blastR(lv);                              // 폭파광이면 +30%
     const maxT = big ? CLUTTER_MAX_TIER2 : CLUTTER_MAX_TIER;
     const R2 = R * R;
     // 반경 내 저티어 동물만 수집 (물리 정합: 수집 후 일괄 removeBody)
@@ -580,18 +807,20 @@
       const dx = o.position.x - cx, dy = o.position.y - cy;
       if (dx * dx + dy * dy <= R2) victims.push(o);
     }
-    let total = 0;
+    let total = 0, refund = 0;
     for (const v of victims) {
       const vx = v.position.x, vy = v.position.y;
       // 중심으로 빨려드는 파티클
       for (let i = 0; i < 6; i++) {
         particles.push({ x: vx, y: vy, vx: (cx - vx) * 0.04, vy: (cy - vy) * 0.04, r: 2 + Math.random() * 3, life: 0.9, color: LADDER[v.tier].c });
       }
+      refund += recycleGain(v.tier);                     // 재활용(특성): 게이지 환급
       removeBody(v);
       total += Math.max(1, TIER_SCORE[v.tier]);          // 소량 점수
     }
     const gain = Math.round(total);
     if (gain > 0) addScore(gain);
+    if (refund > 0) { addCharge(refund); floatTexts.push({ x: cx, y: cy - 34, t: 0, txt: '재활용 +' + refund, big: false, c: TRAIT_BY_ID.t_recycle.c }); }
     // 강한 버스트 연출 (흡수 이펙트 재사용)
     popRings.push({ x: cx, y: cy, r: R * 0.5, t: 0, kind: 'expand', c: '#7b5cff' });
     popRings.push({ x: cx, y: cy, r: R * 0.28, t: -6, kind: 'expand', c: '#b89bff' });
@@ -609,7 +838,7 @@
   // ── 자석: MAGNET_DUR 동안 같은 티어끼리 서로 끌어당김 → 충돌 → 자연 합체 ──
   function activateMagnet(lv) {
     const big = lv === 2;
-    magnetUntil = performance.now() + (big ? MAGNET_DUR2 : MAGNET_DUR);
+    magnetUntil = performance.now() + (big ? MAGNET_DUR2 : MAGNET_DUR) * (hasT('t_magnet_pro') ? T_MAGNET_DUR : 1);
     magnetAccel = big ? MAGNET_ACCEL2 : MAGNET_ACCEL;
     magnetMerges = 0;                            // 귀속 라벨 "자석 ×N" 카운트 리셋
     popRings.push({ x: W / 2, y: H * 0.5, r: W * 0.2, t: 0, kind: 'expand', c: ITEM_DEF.magnet.color });
@@ -699,7 +928,7 @@
     const nt = Math.min(MAX_TIER, target.tier + (lv === 2 ? PROMOTE_STEP2 : 1));
     const tx = target.position.x, ty = target.position.y;
     removeBody(target);
-    popRings.push({ x: tx, y: ty, r: LADDER[nt].r * W * 0.7, t: 0, kind: 'expand', c: ITEM_DEF.promote.color });
+    popRings.push({ x: tx, y: ty, r: RAD(nt) * 0.7, t: 0, kind: 'expand', c: ITEM_DEF.promote.color });
     doMerge(nt, tx, ty, lv === 2 ? '특급 승급!' : '승급!', ITEM_DEF.promote.color);
     sfxPromote();
     return true;
@@ -711,9 +940,11 @@
     if (!target) return false;
     const tx = target.position.x, ty = target.position.y;
     const col = LADDER[target.tier] ? LADDER[target.tier].c : '#fff';
+    const refund = recycleGain(target.tier);            // 재활용(특성)
     removeBody(target);
+    if (refund > 0) { addCharge(refund); floatTexts.push({ x: tx, y: ty - 30, t: 0, txt: '재활용 +' + refund, big: false, c: TRAIT_BY_ID.t_recycle.c }); }
     // 팡 연출
-    popRings.push({ x: tx, y: ty, r: (LADDER[target.tier] ? LADDER[target.tier].r * W : 20), t: 0, kind: 'pop' });
+    popRings.push({ x: tx, y: ty, r: target.rad || 20, t: 0, kind: 'pop' });
     for (let i = 0; i < 16; i++) {
       const a = Math.random() * Math.PI * 2, s = 2 + Math.random() * 5;
       particles.push({ x: tx, y: ty, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1.5, r: 2 + Math.random() * 3, life: 1, color: i % 2 ? col : ITEM_DEF.tongs.color });
@@ -728,13 +959,14 @@
     for (const o of bodies) {
       if (o.tier === undefined) continue;
       const dx = o.position.x - px, dy = o.position.y - py;
-      const r = LADDER[o.tier].r * W;
+      const r = o.rad;
       if (dx * dx + dy * dy <= r * r) found = o;   // 나중 순회(위 레이어) 우선
     }
     return found;
   }
 
   function removeBody(b) {
+    b.gone = true;
     bodies.delete(b);
     World.remove(world, b);
   }
@@ -752,12 +984,20 @@
 
   // ── 드롭 ──
   function dropAt(x) {
-    if (!running || gameOver || !canDrop || aimKind) return;
-    const r = LADDER[curTier].r * W;
+    if (!running || gameOver || paused || !canDrop || aimKind) return;
+    const r = RAD(curTier);
     const cx = Math.max(r + 4, Math.min(W - r - 4, x));
     const b = makeAnimal(curTier, cx, DROP_Y);
     Body.setVelocity(b, { x: 0, y: 0 });
     if (wildDrops > 0) { b.wild = true; wildDrops--; refreshCharge(); }   // 이번 드롭은 별 동물
+    // 별비(특성): N드롭마다 다음 드롭이 별 동물
+    dropCount++;
+    if (hasT('t_wild_drop') && dropCount % T_WILD_EVERY === 0) {
+      wildDrops = Math.max(wildDrops, 1);
+      floatTexts.push({ x: W / 2, y: DROP_Y + 34, t: 0, txt: '별비!', big: false, c: TRAIT_BY_ID.t_wild_drop.c });
+      refreshCharge();          // 게이지 라벨에 "별 동물 N개 대기" — 받은 걸 모르면 못 쓴다
+      sfxWild();
+    }
     sfxDrop(curTier);
     haptic(8);
     // 다음으로 회전
@@ -775,8 +1015,7 @@
     for (const b of bodies) {
       if (b.merged || b.special) continue;          // 특수는 곧 사라짐 → 게임오버 판정 제외
       if (now - b.spawnAt < 700) continue;          // 갓 떨어진 건 통과 중 → 무시
-      const r = LADDER[b.tier].r * W;
-      const top = b.position.y - r;
+      const top = b.position.y - b.rad;
       const settled = Math.abs(b.velocity.y) < 1.4 && Math.abs(b.velocity.x) < 1.4;
       if (top < DEATH_Y && settled) { danger = true; break; }
     }
@@ -792,12 +1031,18 @@
     if (gameOver) return;
     gameOver = true;
     running = false;
+    paused = false; traitOffer = null; pendingOffers = 0; traitPickEl.hidden = true;  // 선택 중 사망 방어
     aimKind = null; aimIndex = -1; renderTray(); refreshCharge();   // 조준 중 사망해도 UI 잠기지 않게
     const isRecord = scoreVal >= best && scoreVal > 0;
     // best는 addScore에서 이미 갱신·저장됨. 신기록 배지는 이번 판이 best와 같을 때.
     overScoreEl.textContent = scoreVal;
     overBestEl.textContent = best;
     overRecEl.classList.toggle('show', isRecord && scoreVal === best);
+    // 전설의 합체 누적 (한 번이라도 해봤을 때만)
+    if (overLegendEl) {
+      overLegendEl.hidden = legends < 1;
+      if (overLegendNEl) overLegendNEl.textContent = '×' + legends;
+    }
     // 최고 도달 티어 표시
     let topTier = 0;
     for (const b of bodies) if (b.tier > topTier) topTier = b.tier;
@@ -823,8 +1068,14 @@
     charge = 0; tray = []; aimKind = null; aimIndex = -1; aimLv = 1; magnetUntil = 0;
     magnetAccel = MAGNET_ACCEL; magnetMerges = 0; shakeCauseUntil = 0;
     wildDrops = 0; surgeUntil = 0; surgeLv = 1;
+    // 특성은 전부 휘발 — 매 판 새 빌드
+    activeTraits.clear(); traitTiersDone.clear();
+    traitOffer = null; pendingOffers = 0; paused = false; traitPickEl.hidden = true;
+    trickleAcc = 0; dropCount = 0; legendFlash = null;
+    renderTraitBar();
     renderTray(); refreshCharge();
     maxTierEver = 0; stageBanner = null; stageFlash = null;
+    refreshEvo();
     setStage(0, false);
     curTier = rndSpawn(); nextTier = rndSpawn();
     setNextGlyph(nextTier);
@@ -853,7 +1104,8 @@
     requestAnimationFrame(frame);
     const dt = Math.min(33, now - lastT); lastT = now;
 
-    if (running) {
+    // paused = 특성 선택 오버레이 중. 물리·판정·타이머 전부 정지(시간 압박 금지 원칙과 동일).
+    if (running && !paused) {
       // 쿨다운 해제
       if (!canDrop && now >= dropCooldownUntil) canDrop = true;
       if (now < magnetUntil) applyMagnet();   // 자석 지속 중: 같은 티어 끌어당김
@@ -862,6 +1114,13 @@
       checkOver(now);
       // 콤보 만료
       if (comboTimer > 0) { comboTimer -= dt; if (comboTimer <= 0) clearCombo(); }
+      // 느긋충전(특성): 합체 없이도 게이지가 조금씩 찬다
+      if (hasT('t_trickle')) {
+        trickleAcc += dt;
+        while (trickleAcc >= T_TRICKLE_MS) { trickleAcc -= T_TRICKLE_MS; addCharge(T_TRICKLE_GAIN); }
+      }
+      // 새 티어 탄생으로 예약된 특성 선택을 여기서 띄운다 (물리 스텝이 끝난 뒤 = 낙하 중 동물 정착 후)
+      if (pendingOffers > 0 && !traitOffer) openTraitPick();
     }
     // 흔들림 감쇠 (running 여부와 무관 — 잭팟 후 부드럽게)
     if (shakeAmt > 0) { shakeAmt *= Math.pow(0.82, dt / 16.666); if (shakeAmt < 0.3) shakeAmt = 0; }
@@ -886,7 +1145,7 @@
 
     // 조준 가이드 + 손에 든 동물 (떨어뜨리기 전) — 조준 모드일 땐 숨김
     if (running && !gameOver && !aimKind) {
-      const r = LADDER[curTier].r * W;
+      const r = RAD(curTier);
       const cx = Math.max(r + 4, Math.min(W - r - 4, aimX));
       // 가이드 라인
       ctx.save();
@@ -895,13 +1154,13 @@
       ctx.beginPath(); ctx.moveTo(cx, DROP_Y + r); ctx.lineTo(cx, H); ctx.stroke();
       ctx.restore();
       const bob = canDrop ? Math.sin(now / 300) * 2 : 0;
-      if (wildDrops > 0) drawWild(cx, DROP_Y + bob, curTier, 0, canDrop ? 1 : 0.55, now);
-      else drawAnimal(cx, DROP_Y + bob, curTier, 0, canDrop ? 1 : 0.55, 0, now);
+      if (wildDrops > 0) drawWild(cx, DROP_Y + bob, curTier, 0, canDrop ? 1 : 0.55, now, r);
+      else drawAnimal(cx, DROP_Y + bob, curTier, 0, canDrop ? 1 : 0.55, 0, now, r);
     }
 
     // 조준 모드(폭탄): 착탄 반경 조준경 + 중심 소용돌이 마커
     if (running && !gameOver && aimKind === 'bomb') {
-      const R = (aimLv === 2 ? BLAST_R2 : BLAST_R) * W;
+      const R = blastR(aimLv);
       const maxT = aimLv === 2 ? CLUTTER_MAX_TIER2 : CLUTTER_MAX_TIER;
       const cx = Math.max(0, Math.min(W, aimPX)), cy = Math.max(0, Math.min(H, aimPY));
       const pulse = 0.5 + 0.5 * Math.sin(now / 220);
@@ -920,7 +1179,7 @@
         if (b.special || b.wild || b.tier === undefined || b.tier > maxT) continue;
         const dx = b.position.x - cx, dy = b.position.y - cy;
         if (dx * dx + dy * dy > R * R) continue;
-        const br = LADDER[b.tier].r * W;
+        const br = b.rad;
         ctx.save();
         ctx.globalAlpha = 0.5 + pulse * 0.4;
         ctx.strokeStyle = '#7b5cff'; ctx.lineWidth = 2;
@@ -936,8 +1195,8 @@
       if (b.squash > 0) b.squash *= Math.pow(0.86, dt / 16.666);
       if (b.squash < 0.02) b.squash = 0;
       if (b.special) { b.spin += dt / 16.666 * 0.16; drawSpecial(b.position.x, b.position.y, b.spin, now); }
-      else if (b.wild) drawWild(b.position.x, b.position.y, b.tier, b.squash, 1, now);
-      else drawAnimal(b.position.x, b.position.y, b.tier, b.angle, 1, b.squash, now);
+      else if (b.wild) drawWild(b.position.x, b.position.y, b.tier, b.squash, 1, now, b.rad);
+      else drawAnimal(b.position.x, b.position.y, b.tier, b.angle, 1, b.squash, now, b.rad);
     }
 
     // 조준 모드(집게·승급): 손가락 아래 동물 하이라이트 → 릴리즈 시 제거/승급.
@@ -948,7 +1207,7 @@
       const target = bodyAt(cx, cy);
       const pulse = 0.5 + 0.5 * Math.sin(now / 200);
       if (target) {
-        const br = LADDER[target.tier].r * W;
+        const br = target.rad;
         const tx = target.position.x, ty = target.position.y;
         ctx.save();
         ctx.globalAlpha = 0.55 + pulse * 0.4;
@@ -969,7 +1228,7 @@
           ctx.moveTo(tx - m * 0.7, ty - m * 0.35); ctx.lineTo(tx, ty - m); ctx.lineTo(tx + m * 0.7, ty - m * 0.35);
           ctx.stroke();
           ctx.globalAlpha = 0.35 + pulse * 0.25; ctx.lineWidth = 2; ctx.setLineDash([5, 6]);
-          ctx.beginPath(); ctx.arc(tx, ty, LADDER[nt].r * W, 0, Math.PI * 2); ctx.stroke();
+          ctx.beginPath(); ctx.arc(tx, ty, RAD(nt), 0, Math.PI * 2); ctx.stroke();
         }
         ctx.restore();
       }
@@ -1067,6 +1326,22 @@
       ctx.restore();
     }
 
+    // 전설의 합체 — 화면 가득 금빛 플래시 (이 게임에서 가장 큰 사건)
+    if (legendFlash) {
+      legendFlash.t += dt / 16.666; const p = legendFlash.t / 60;
+      if (p >= 1) legendFlash = null;
+      else {
+        ctx.save();
+        // 앞부분은 흰빛 번쩍, 뒤로 갈수록 금빛 잔광
+        ctx.globalAlpha = p < 0.12 ? 0.85 * (p / 0.12) : (1 - p) * 0.6;
+        const gr = ctx.createRadialGradient(W / 2, H * 0.45, 0, W / 2, H * 0.45, W * 1.1);
+        gr.addColorStop(0, p < 0.25 ? 'rgba(255,255,255,1)' : '#ffe9b0');
+        gr.addColorStop(0.55, '#ffd089');
+        gr.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+        ctx.restore();
+      }
+    }
     // 단계 진입 — 풍경이 바뀌는 색 플래시
     if (stageFlash) {
       stageFlash.t += dt / 16.666; const p = stageFlash.t / 42;
@@ -1136,8 +1411,8 @@
   }
 
   // 별 동물(와일드) — 금색 원 + 5각 별. 무엇에든 붙는다는 걸 모양만으로 알게.
-  function drawWild(x, y, tier, squash, alpha, now) {
-    const r = LADDER[tier].r * W;
+  function drawWild(x, y, tier, squash, alpha, now, rad) {
+    const r = rad || LADDER[tier].r * W;
     const sq = squash > 0 ? Math.sin(squash * Math.PI) * 0.30 : 0;
     const breathe = Math.sin(now / 480) * 0.02;
     ctx.save();
@@ -1178,9 +1453,9 @@
     ctx.restore();
   }
 
-  function drawAnimal(x, y, tier, angle, alpha, squash = 0, now = 0) {
+  function drawAnimal(x, y, tier, angle, alpha, squash = 0, now = 0, rad = 0) {
     const def = LADDER[tier];
-    const r = def.r * W;
+    const r = rad || def.r * W;
     // 스쿼시: 잠깐 가로로 납작했다 통통 (탄성 — 더 말랑하게)
     const sq = squash > 0 ? Math.sin(squash * Math.PI) * 0.30 : 0;
     // 살아있는 느낌: 미세한 숨쉬기 (티어별 위상 다르게)
@@ -1271,7 +1546,7 @@
     return ((clientY - rect.top) / rect.height) * H;
   }
   canvas.addEventListener('pointerdown', (e) => {
-    if (gameOver) return;
+    if (gameOver || paused) return;
     audioInit();
     pointerDown = true;
     aimX = toVirtX(e.clientX);
@@ -1341,6 +1616,19 @@
         '</span></div>';
     }).join('');
   })();
+  // 특성 도감 — TRAITS 한 곳에서 이름·효과·아이콘을 그대로 가져온다(선택 카드와 문구 싱크 보장)
+  (function buildTraitGuide() {
+    const list = document.getElementById('guide-traits');
+    if (!list) return;
+    list.innerHTML = TRAITS.map((t) =>
+      '<div class="g-item">' +
+        '<span class="gi" style="color:' + t.c + '"><svg><use href="' + t.icon + '"/></svg></span>' +
+        '<span class="gt">' +
+          '<div class="gname">' + t.name + '</div>' +
+          '<div class="gdesc">' + t.d + '</div>' +
+        '</span></div>'
+    ).join('');
+  })();
   helpBtn.addEventListener('click', () => { guideEl.hidden = false; });
   document.getElementById('guide-close').addEventListener('click', () => { guideEl.hidden = true; });
   guideEl.addEventListener('click', (e) => { if (e.target === guideEl) guideEl.hidden = true; }); // 바깥 탭으로 닫기
@@ -1382,6 +1670,19 @@
     evoEl.innerHTML = LADDER.map((d, i) =>
       `<div class="e${i === MAX_TIER ? ' top' : ''}" title="티어 ${i + 1}" style="background:${d.c}">${glyphSvg(i, 15)}</div>`
     ).join('');
+    refreshEvo();
+  }
+  // 이번 판 최고 도달까지 선명 / 바로 다음 1칸 맥동 / 그 뒤는 실루엣.
+  // = "지금 목표는 이거"를 점수가 아니라 그림으로 (미탐색 잔여를 남긴다)
+  function refreshEvo() {
+    if (!evoEl) return;
+    const nodes = evoEl.children;
+    for (let i = 0; i < nodes.length; i++) {
+      const el = nodes[i];
+      el.classList.toggle('on', i <= maxTierEver);
+      el.classList.toggle('nextup', i === maxTierEver + 1);
+      el.classList.toggle('dim', i > maxTierEver + 1);
+    }
   }
 
   // ── 사운드 (Web Audio 합성, 외부 에셋 없음) ──
@@ -1506,6 +1807,22 @@
     tone(300, 0.28, 'sawtooth', 0.12, 900);
     setTimeout(() => tone(mtof(83), 0.2, 'triangle', 0.14, mtof(88)), 140);
   }
+  // 특성 제시 — 열리는 느낌의 3음 (선택지가 펼쳐진다)
+  function sfxTraitOffer() {
+    if (!actx || muted) return;
+    [64, 68, 71].forEach((m, i) => setTimeout(() => tone(mtof(m), 0.2, 'triangle', 0.15), i * 80));
+  }
+  // 특성 획득 — 자리 잡는 상승 4음 (판 규칙이 바뀌었다)
+  function sfxTraitPick() {
+    if (!actx || muted) return;
+    [67, 74, 79, 86].forEach((m, i) => setTimeout(() => tone(mtof(m), 0.22, 'triangle', 0.18, mtof(m + 4)), i * 75));
+  }
+  // 전설의 합체 — 팡파레(잭팟보다 길고 높게)
+  function sfxLegend() {
+    if (!actx || muted) return;
+    [72, 76, 79, 84, 88, 91, 96].forEach((m, i) => setTimeout(() => tone(mtof(m), 0.42, 'triangle', 0.22), i * 85));
+    setTimeout(() => { tone(mtof(48), 0.9, 'sine', 0.2); tone(mtof(60), 0.8, 'triangle', 0.12); }, 120);
+  }
   function haptic(p) { if (navigator.vibrate && !muted) { try { navigator.vibrate(p); } catch (_) {} } }
 
   // ── 부팅 ──
@@ -1516,6 +1833,7 @@
     buildEvo();
     refreshMute();
     renderTray();
+    renderTraitBar();
     refreshCharge();
     bestEl.textContent = best;
     reset();

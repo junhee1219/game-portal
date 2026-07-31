@@ -84,6 +84,26 @@
   /* 단색 글리프 아이콘 (sprite <use>) — vase .ki 규칙 */
   .ki{width:22px;height:22px;fill:currentColor;flex:0 0 auto;}
 
+  /* ── 이번 판 특성 행 (상시 표시, 최대 5개) ── */
+  #traitbar{
+    display:flex;align-items:center;gap:5px;z-index:3;
+    width:100%;max-width:480px;flex:0 0 auto;margin-top:5px;
+  }
+  #traitbar[hidden]{display:none;}   /* display:flex가 hidden을 덮지 않게 */
+  #traitbar .tb-lab{font-size:11px;font-weight:700;color:var(--ink-soft);opacity:.75;flex:0 0 auto;}
+  #traitbar .tb{
+    width:26px;height:26px;border-radius:9px;flex:0 0 auto;padding:0;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--card);border:1.5px solid currentColor;
+    box-shadow:0 2px 5px rgba(120,85,55,.14),inset 0 1px 0 rgba(255,255,255,.7);
+    transition:transform .12s;
+  }
+  #traitbar .tb svg{width:16px;height:16px;fill:currentColor;pointer-events:none;}
+  #traitbar .tb:active{transform:scale(.9);}
+  #traitbar .tb.fresh{animation:tb-pop .5s cubic-bezier(.2,1.5,.4,1);}
+  @keyframes tb-pop{0%{transform:scale(.3);}55%{transform:scale(1.22);}100%{transform:scale(1);}}
+  @media (prefers-reduced-motion:reduce){#traitbar .tb.fresh{animation:none;}}
+
   /* ── 보드(게임 영역) ── */
   /* flex:1 1 auto + min-height:0 → 남는 세로 공간을 보드가 흡수, 진화표는 항상 자리 확보 */
   #stage{
@@ -214,13 +234,23 @@
   /* 진화 표 (항상 보임, 하단) — 작은→큰 순서로 "다음에 뭐가 되는지". flex-wrap 금지(한 줄 유지 → 높이 예측 가능) */
   .evo{display:flex;gap:3px;z-index:2;margin-top:4px;justify-content:center;max-width:480px;flex:0 0 auto;}
   .evo .e{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:0 0 auto;
-    box-shadow:inset 0 1px 2px rgba(255,255,255,.6),0 1px 3px rgba(120,85,55,.18);}
+    box-shadow:inset 0 1px 2px rgba(255,255,255,.6),0 1px 3px rgba(120,85,55,.18);
+    transition:opacity .35s,filter .35s;}
   .evo .e svg{width:15px;height:15px;display:block;}
-  /* 최상위(잭팟) 동물엔 은은한 반짝임 — 기대감 */
-  .evo .e.top{animation:evo-shimmer 2.4s ease-in-out infinite;box-shadow:inset 0 1px 2px rgba(255,255,255,.7),0 0 0 1.5px rgba(255,200,90,.55),0 0 8px rgba(255,190,80,.5);}
+  .evo .e img{transition:opacity .35s;}
+  /* 아직 못 만든 동물 = 실루엣 (미탐색 잔여). 바로 다음 1칸만 은은히 맥동 = "다음은 이거" */
+  .evo .e.dim{opacity:.3;filter:saturate(.3);}
+  .evo .e.dim img{opacity:.45;}
+  .evo .e.nextup{
+    box-shadow:inset 0 1px 2px rgba(255,255,255,.7),0 0 0 1.6px rgba(255,154,107,.65),0 0 7px rgba(255,140,100,.42);
+    animation:evo-next 1.7s ease-in-out infinite;
+  }
+  @keyframes evo-next{0%,100%{transform:scale(1);}50%{transform:scale(1.13);}}
+  /* 최상위(잭팟) 동물엔 은은한 반짝임 — 도달한 뒤에만 (도달 전엔 실루엣) */
+  .evo .e.top.on{animation:evo-shimmer 2.4s ease-in-out infinite;box-shadow:inset 0 1px 2px rgba(255,255,255,.7),0 0 0 1.5px rgba(255,200,90,.55),0 0 8px rgba(255,190,80,.5);}
   @keyframes evo-shimmer{0%,100%{filter:brightness(1)}50%{filter:brightness(1.18)}}
   #icredit{font-size:11px;color:var(--ink-soft);opacity:.5;z-index:2;margin-top:2px;flex:0 0 auto;}  /* 아이콘 크레딧 = 미세 fine-print(한 줄 유지), 본문 스케일 예외 */
-  @media (prefers-reduced-motion:reduce){.evo .e.top,#combo.pulse{animation:none;}}
+  @media (prefers-reduced-motion:reduce){.evo .e.top.on,.evo .e.nextup,#combo.pulse{animation:none;}}
 
   /* ── 게임오버 / 시작 오버레이 ── */
   #over{
@@ -251,6 +281,15 @@
     background:linear-gradient(135deg,#ffe2a6,#ffba7a);border-radius:999px;padding:4px 14px;margin-top:10px;
   }
   #over-record.show{display:inline-flex;align-items:center;gap:5px;animation:pop .5s ease;}
+  /* 전설의 합체 누적 (곰+곰) — 판을 넘어 남는 유일한 수집 지표 */
+  #over-legend{
+    display:flex;align-items:center;justify-content:center;gap:5px;margin-top:9px;
+    font-size:var(--fs-3);font-weight:800;color:#8a6300;
+    background:linear-gradient(135deg,#fff3d6,#ffe9b8);border-radius:999px;padding:5px 13px;
+  }
+  #over-legend[hidden]{display:none;}
+  #over-legend svg{fill:#c99a1e;}
+  #over-legend b{font-size:var(--fs-2);}
   @keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.12)}100%{transform:scale(1)}}
   #btn-again{
     margin-top:16px;width:100%;font-size:var(--fs-2);font-weight:800;padding:13px 0;
@@ -290,6 +329,15 @@
     background:linear-gradient(135deg,#fff3d6,#ffe9b8);border-radius:12px;padding:7px 10px;margin-bottom:10px;
   }
   .guide-card .g-fuse svg{vertical-align:-3px;fill:#c99a1e;width:15px;height:15px;}
+  .guide-card .g-combo{
+    font-size:var(--fs-3);color:#8a3a6a;font-weight:700;text-align:center;line-height:1.45;
+    background:linear-gradient(135deg,#ffe4f2,#ffd4ea);border-radius:12px;padding:7px 10px;margin-bottom:8px;
+  }
+  .guide-card .g-combo svg{vertical-align:-3px;fill:#c2298a;width:15px;height:15px;}
+  .guide-card .g-sec{
+    font-size:var(--fs-3);font-weight:800;color:var(--ink);letter-spacing:-.3px;line-height:1.4;
+    margin:14px 0 2px;padding-top:2px;
+  }
   .g-item{display:flex;gap:10px;align-items:flex-start;padding:8px 4px;border-top:1px solid var(--glass-border);}
   .g-item .gi{
     flex:0 0 auto;width:34px;height:34px;border-radius:12px;display:flex;align-items:center;justify-content:center;
@@ -308,6 +356,54 @@
     background:linear-gradient(135deg,#ff9a6b,#ff7a59);box-shadow:0 6px 16px rgba(255,120,80,.4);
   }
   #guide-close:active{transform:scale(.97);}
+  /* ── 특성 선택 오버레이 (3택1, 물리 일시정지) ── */
+  #traitpick{
+    position:fixed;inset:0;z-index:85;display:flex;align-items:center;justify-content:center;
+    background:var(--scrim);backdrop-filter:blur(6px);
+  }
+  #traitpick[hidden]{display:none;}
+  .tp-card{
+    background:var(--card);border:1px solid var(--glass-border);
+    border-radius:26px;padding:20px 18px 18px;width:min(340px,90vw);
+    max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    box-shadow:0 24px 60px rgba(70,48,32,.28), inset 0 1px 0 rgba(255,255,255,.9);
+    animation:tp-in .32s cubic-bezier(.2,1.4,.4,1);
+  }
+  @keyframes tp-in{0%{transform:scale(.86);opacity:0;}100%{transform:scale(1);opacity:1;}}
+  @media (prefers-reduced-motion:reduce){.tp-card{animation:none;}}
+  .tp-card h2{font-size:var(--fs-2);font-weight:800;color:var(--ink);letter-spacing:-.5px;text-align:center;}
+  .tp-card .tp-sub{font-size:var(--fs-3);font-weight:600;color:var(--ink-soft);text-align:center;margin:3px 0 13px;}
+  .tp-list{display:flex;flex-direction:column;gap:9px;}
+  .tp-item{
+    display:flex;align-items:center;gap:11px;text-align:left;cursor:pointer;
+    padding:11px 12px;border-radius:16px;font-family:inherit;
+    background:var(--glass);border:1.5px solid currentColor;
+    box-shadow:0 3px 8px rgba(120,85,55,.14),inset 0 1px 0 rgba(255,255,255,.7);
+    transition:transform .12s;
+  }
+  .tp-item:active{transform:scale(.97);}
+  .tp-item .ti{
+    flex:0 0 auto;width:38px;height:38px;border-radius:13px;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--card);border:1px solid var(--glass-border);
+  }
+  .tp-item .ti svg{width:22px;height:22px;fill:currentColor;}
+  .tp-item .tt{flex:1;min-width:0;}
+  /* 이름/효과는 각자 한 줄 — span이라 display:block 명시 필요 */
+  .tp-item .tn{display:block;font-size:var(--fs-2);font-weight:800;color:var(--ink);letter-spacing:-.3px;}
+  .tp-item .td{display:block;font-size:var(--fs-3);font-weight:600;color:var(--ink-soft);line-height:1.4;margin-top:1px;}
+  /* 특성 토스트 (아이콘 탭 시) */
+  #trait-toast{
+    position:fixed;left:50%;top:60px;transform:translateX(-50%);z-index:90;
+    max-width:min(320px,88vw);padding:8px 15px;border-radius:14px;text-align:center;
+    background:var(--card);border:1px solid var(--glass-border);
+    box-shadow:0 8px 20px rgba(70,48,32,.22),inset 0 1px 0 rgba(255,255,255,.85);
+    font-size:var(--fs-3);font-weight:700;color:var(--ink);line-height:1.4;
+    opacity:0;transition:opacity .2s;pointer-events:none;
+  }
+  #trait-toast.show{opacity:1;}
+  #trait-toast[hidden]{display:none;}
+  #trait-toast b{font-weight:800;}
 </style>
 </head>
 <body>
@@ -322,6 +418,13 @@
 <symbol id="p-arrow-fat-up" viewBox="0 0 256 256"><path d="M231.39,123.06A8,8,0,0,1,224,128H184v80a16,16,0,0,1-16,16H88a16,16,0,0,1-16-16V128H32a8,8,0,0,1-5.66-13.66l96-96a8,8,0,0,1,11.32,0l96,96A8,8,0,0,1,231.39,123.06Z"/></symbol>
 <symbol id="p-lightning" viewBox="0 0 256 256"><path d="M213.85,125.46l-112,120a8,8,0,0,1-13.69-7l14.66-73.33L45.19,143.49a8,8,0,0,1-3-13l112-120a8,8,0,0,1,13.69,7L153.18,90.9l57.63,21.61a8,8,0,0,1,3,12.95Z"/></symbol>
 <symbol id="p-question" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,168a12,12,0,1,1,12-12A12,12,0,0,1,128,192Zm8-48.72V144a8,8,0,0,1-16,0v-8a8,8,0,0,1,8-8c13.23,0,24-9,24-20s-10.77-20-24-20-24,9-24,20v4a8,8,0,0,1-16,0v-4c0-19.85,17.94-36,40-36s40,16.15,40,36C168,125.38,154.24,139.93,136,143.28Z"/></symbol>
+<symbol id="p-coins" viewBox="0 0 256 256"><path d="M184,89.57V84c0-25.08-37.83-44-88-44S8,58.92,8,84v40c0,20.89,26.25,37.49,64,42.46V172c0,25.08,37.83,44,88,44s88-18.92,88-44V132C248,111.3,222.58,94.68,184,89.57ZM56,146.87C36.41,141.4,24,132.39,24,124V109.93c8.16,5.78,19.09,10.44,32,13.57Zm80-23.37c12.91-3.13,23.84-7.79,32-13.57V124c0,8.39-12.41,17.4-32,22.87Zm-16,71.37C100.41,189.4,88,180.39,88,172v-4.17c2.63.1,5.29.17,8,.17,3.88,0,7.67-.13,11.39-.35A121.92,121.92,0,0,0,120,171.41Zm0-44.62A163,163,0,0,1,96,152a163,163,0,0,1-24-1.75V126.46A183.74,183.74,0,0,0,96,128a183.74,183.74,0,0,0,24-1.54Zm64,48a165.45,165.45,0,0,1-48,0V174.4a179.48,179.48,0,0,0,24,1.6,183.74,183.74,0,0,0,24-1.54ZM232,172c0,8.39-12.41,17.4-32,22.87V171.5c12.91-3.13,23.84-7.79,32-13.57Z"/></symbol>
+<symbol id="p-circles-three" viewBox="0 0 256 256"><path d="M128,120a44,44,0,1,1,44-44A44.05,44.05,0,0,1,128,120Zm60,8a44,44,0,1,0,44,44A44.05,44.05,0,0,0,188,128ZM68,128a44,44,0,1,0,44,44A44.05,44.05,0,0,0,68,128Z"/></symbol>
+<symbol id="p-arrows-in-cardinal" viewBox="0 0 256 256"><path d="M101.66,133.66l-32,32A8,8,0,0,1,56,160V136H24a8,8,0,0,1,0-16H56V96a8,8,0,0,1,13.66-5.66l32,32A8,8,0,0,1,101.66,133.66Zm20.68-32a8,8,0,0,0,11.32,0l32-32A8,8,0,0,0,160,56H136V24a8,8,0,0,0-16,0V56H96a8,8,0,0,0-5.66,13.66Zm11.32,52.68a8,8,0,0,0-11.32,0l-32,32A8,8,0,0,0,96,200h24v32a8,8,0,0,0,16,0V200h24a8,8,0,0,0,5.66-13.66ZM232,120H200V96a8,8,0,0,0-13.66-5.66l-32,32a8,8,0,0,0,0,11.32l32,32A8,8,0,0,0,200,160V136h32a8,8,0,0,0,0-16Z"/></symbol>
+<symbol id="p-crown" viewBox="0 0 256 256"><path d="M248,80a28,28,0,1,0-51.12,15.77l-26.79,33L146,73.4a28,28,0,1,0-36.06,0L85.91,128.74l-26.79-33a28,28,0,1,0-26.6,12L47,194.63A16,16,0,0,0,62.78,208H193.22A16,16,0,0,0,209,194.63l14.47-86.85A28,28,0,0,0,248,80ZM128,40a12,12,0,1,1-12,12A12,12,0,0,1,128,40ZM24,80A12,12,0,1,1,36,92,12,12,0,0,1,24,80ZM220,92a12,12,0,1,1,12-12A12,12,0,0,1,220,92Z"/></symbol>
+<symbol id="p-recycle" viewBox="0 0 256 256"><path d="M96,208a8,8,0,0,1-8,8H40a24,24,0,0,1-20.77-36l28-48.3-13.82-8A8,8,0,0,1,35.33,109l32.77-8.77a8,8,0,0,1,9.8,5.66l8.79,32.77a8,8,0,0,1-11.73,9l-13.88-8L33.11,188A8,8,0,0,0,40,200H88A8,8,0,0,1,96,208ZM128,32a7.85,7.85,0,0,1,6.92,4l28,48.3-13.82,8A8,8,0,0,0,151,106.92l32.78,8.79a8.23,8.23,0,0,0,2.07.27,8,8,0,0,0,7.72-5.93l8.79-32.79a8,8,0,0,0-11.72-9l-13.89,8L148.77,28a24,24,0,0,0-41.54,0L84.07,68a8,8,0,0,0,13.85,8l23.16-40A7.85,7.85,0,0,1,128,32ZM236.73,180l-23.14-40a8,8,0,0,0-13.84,8l23.14,40A8,8,0,0,1,216,200H160V184a8,8,0,0,0-13.66-5.66l-24,24a8,8,0,0,0,0,11.32l24,24A8,8,0,0,0,160,232V216h56a24,24,0,0,0,20.77-36Z"/></symbol>
+<symbol id="p-hourglass-high" viewBox="0 0 256 256"><path d="M200,75.64V40a16,16,0,0,0-16-16H72A16,16,0,0,0,56,40V76a16.07,16.07,0,0,0,6.4,12.8L114.67,128,62.4,167.2A16.07,16.07,0,0,0,56,180v36a16,16,0,0,0,16,16H184a16,16,0,0,0,16-16V180.36a16.09,16.09,0,0,0-6.35-12.77L141.27,128l52.38-39.59A16.09,16.09,0,0,0,200,75.64ZM184,40V64H72V40Zm0,176H72V180l56-42,56,42.35Z"/></symbol>
+<symbol id="p-sparkle" viewBox="0 0 256 256"><path d="M208.9,114.63,152.39,93.8,131.56,37.29a19.92,19.92,0,0,0-37.12,0L73.61,93.8,17.1,114.63a19.92,19.92,0,0,0,0,37.12l56.51,20.83,20.83,56.51a19.92,19.92,0,0,0,37.12,0l20.83-56.51,56.51-20.83a19.92,19.92,0,0,0,0-37.12Z"/></symbol>
 <symbol id="p-gift" viewBox="0 0 256 256"><path d="M216,72H180.92c.39-.33.79-.65,1.17-1A29.53,29.53,0,0,0,192,49.57,32.62,32.62,0,0,0,158.44,16,29.53,29.53,0,0,0,137,25.91a54.94,54.94,0,0,0-9,14.48,54.94,54.94,0,0,0-9-14.48A29.53,29.53,0,0,0,97.56,16,32.62,32.62,0,0,0,64,49.57,29.53,29.53,0,0,0,73.91,71c.38.33.78.65,1.17,1H40A16,16,0,0,0,24,88v32a16,16,0,0,0,16,16v64a16,16,0,0,0,16,16h60a4,4,0,0,0,4-4V120H40V88h80v32h16V88h80v32H136v92a4,4,0,0,0,4,4h60a16,16,0,0,0,16-16V136a16,16,0,0,0,16-16V88A16,16,0,0,0,216,72ZM84.51,59a13.69,13.69,0,0,1-4.5-10A16.62,16.62,0,0,1,96.59,32h.49a13.69,13.69,0,0,1,10,4.5c8.39,9.48,11.35,25.2,12.39,34.92C109.71,70.39,94,67.43,84.51,59Zm87,0c-9.49,8.4-25.24,11.36-35,12.4C137.7,60.89,141,45.5,149,36.51a13.69,13.69,0,0,1,10-4.5h.49A16.62,16.62,0,0,1,176,49.08,13.69,13.69,0,0,1,171.49,59Z"/></symbol>
 </svg>
   <div class="topbar">
@@ -330,6 +433,9 @@
     <div class="pill"><span class="lab">최고</span> <b id="best">0</b></div>
     <button class="sq" id="mute" aria-label="소리 켜기/끄기"><svg class="ki" id="mute-icon"><use href="#p-speaker-high"/></svg></button>
   </div>
+
+  <!-- 이번 판에 고른 특성 (휘발) — 큰 동물이 처음 태어날 때 3택1로 붙는다. 탭하면 효과 토스트 -->
+  <div id="traitbar" hidden aria-label="이번 판 특성"></div>
 
   <div id="stage">
     <div id="wrap">
@@ -360,15 +466,31 @@
     <button id="help-btn" aria-label="아이템 설명 보기"><svg class="ki"><use href="#p-question"/></svg></button>
   </div>
 
-  <!-- 아이템 도감 오버레이 (내용은 game.js가 ITEM_DEF에서 생성 — 라벨 싱크 유지) -->
+  <!-- 아이템 도감 오버레이 (내용은 game.js가 ITEM_DEF / TRAITS에서 생성 — 라벨 싱크 유지) -->
   <div id="guide" hidden>
     <div class="guide-card">
-      <h2>아이템 도감</h2>
+      <h2>도감</h2>
+      <p class="g-combo"><svg class="ki sm"><use href="#p-lightning"/></svg> <b>콤보</b>: 0.5초 안에 연쇄 합체 — 점수가 콤보 수만큼 곱해지고 게이지도 1.5배</p>
       <p class="g-fuse"><svg class="ki sm"><use href="#p-star"/></svg> 같은 아이템 2개를 모으면 <b>합치기</b> — 더 강한 아이템이 돼요</p>
+      <h3 class="g-sec">아이템</h3>
       <div id="guide-list"></div>
+      <h3 class="g-sec">특성 — 큰 동물이 처음 태어날 때 3택1, 이번 판 내내 적용</h3>
+      <div id="guide-traits"></div>
       <button id="guide-close">닫기</button>
     </div>
   </div>
+
+  <!-- 특성 선택 오버레이 (물리 일시정지). 내용은 game.js가 TRAITS에서 생성 -->
+  <div id="traitpick" hidden>
+    <div class="tp-card">
+      <h2 id="tp-title">특성 하나 고르기</h2>
+      <p class="tp-sub" id="tp-sub">이번 판 동안 계속 적용돼요</p>
+      <div class="tp-list" id="tp-list"></div>
+    </div>
+  </div>
+
+  <!-- 특성 아이콘 탭 시 이름+효과 (자동 사라짐) -->
+  <div id="trait-toast" hidden></div>
 
   <div id="credit">손가락으로 조준 · 떼면 떨어져요 · 아이템 탭해서 사용</div>
 
@@ -386,6 +508,7 @@
         <div class="stat best"><div class="lab">최고</div><div class="val" id="over-best">0</div></div>
       </div>
       <span id="over-record">신기록!</span>
+      <div id="over-legend" hidden><svg class="ki sm"><use href="#p-crown"/></svg> 전설의 합체 <b id="over-legend-n">0</b></div>
       <button id="btn-again">다시 하기</button>
       <div class="evo-row" id="evo-row"></div>
     </div>
@@ -393,7 +516,7 @@
 
 <script src="matter.js"></script>
 <!-- v 쿼리 = 배포 캐시버스터: index.html은 no-cache라 새 버전이 즉시 새 game.js를 당긴다 (game.js max-age=600 함정 해소) -->
-<script src="game.js?v=r3.1"></script>
+<script src="game.js?v=r4"></script>
 <script>
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
     navigator.serviceWorker.register('./sw.js').catch(()=>{});
