@@ -1315,6 +1315,36 @@
   // 융합 칩 탭 — 같은 아이템 2개를 강화판 1개로 (자동 융합 없음)
   fuseChipEl.addEventListener('click', fuseItems);
 
+  // ── 아이템 도감 (opt-in 상세 설명 — 직관 우선, 파고들고 싶은 사람용) ──
+  // 효과 텍스트는 여기 한 곳에만. 이름/색/아이콘은 ITEM_DEF에서 가져와 싱크 유지.
+  const GUIDE_TEXT = {
+    bomb:    { d: '탭한 곳 주변의 잔챙이(쥐·햄스터)만 싹 지워요',            d2: '반경이 커지고 토끼까지 지워요' },
+    magnet:  { d: '잠깐 동안 같은 동물끼리 서로 끌려가 합쳐져요',             d2: '더 오래, 더 세게 끌어당겨요' },
+    shake:   { d: '판 전체를 흔들어 낀 동물이 자리를 다시 잡아요',            d2: '1.6배 세게 흔들어요' },
+    tongs:   { d: '탭한 동물 하나를 집어내요 (큰 동물도 가능)',               d2: '2마리를 연속으로 집어내요' },
+    wild:    { d: '다음에 떨어지는 별 동물은 처음 닿는 동물과 무조건 합쳐져요', d2: '다음 2번이 별 동물이 돼요' },
+    promote: { d: '탭한 동물이 한 단계 큰 동물로 변해요',                    d2: '두 단계 커져요' },
+    surge:   { d: '잠깐 동안 콤보가 훨씬 쉽게 이어져요',                     d2: '더 길게 + 콤보가 ×2부터 시작해요' },
+  };
+  const guideEl = document.getElementById('guide');
+  const helpBtn = document.getElementById('help-btn');
+  (function buildGuide() {
+    const list = document.getElementById('guide-list');
+    list.innerHTML = ITEM_POOL.map(({ kind }) => {
+      const def = ITEM_DEF[kind], t = GUIDE_TEXT[kind];
+      return '<div class="g-item">' +
+        '<span class="gi" style="color:' + def.color + '"><svg><use href="' + def.icon + '"/></svg></span>' +
+        '<span class="gt">' +
+          '<div class="gname">' + def.label + ' <span class="gaim">· ' + (def.aim ? '탭해서 조준' : '탭하면 바로 발동') + '</span></div>' +
+          '<div class="gdesc">' + t.d + '</div>' +
+          '<div class="glv2">×2 <b>' + def.label2 + '</b> — ' + t.d2 + '</div>' +
+        '</span></div>';
+    }).join('');
+  })();
+  helpBtn.addEventListener('click', () => { guideEl.hidden = false; });
+  document.getElementById('guide-close').addEventListener('click', () => { guideEl.hidden = true; });
+  guideEl.addEventListener('click', (e) => { if (e.target === guideEl) guideEl.hidden = true; }); // 바깥 탭으로 닫기
+
   // ── 음소거 / 버튼 ── 스피커 글리프 swap (vase 패턴)
   function refreshMute() {
     const u = muteBtn.querySelector('use');

@@ -265,6 +265,49 @@
   .evo-row .e svg{width:15px;height:15px;display:block;}
   .evo-row .arr{font-size:var(--fs-3);color:var(--ink-soft);align-self:center;}
   .over-card .face svg{width:54px;height:54px;display:block;margin:0 auto;}
+  /* ── 아이템 도감 (opt-in 상세 설명) ── */
+  #help-btn{
+    flex:0 0 auto;width:30px;height:30px;border:none;border-radius:50%;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;padding:0;
+    background:var(--glass);border:1px solid var(--glass-border);color:var(--ink-soft);
+  }
+  #help-btn svg{width:18px;height:18px;fill:currentColor;}
+  #help-btn:active{transform:scale(.92);}
+  #guide{
+    position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;
+    background:var(--scrim);backdrop-filter:blur(6px);
+  }
+  #guide[hidden]{display:none;}
+  .guide-card{
+    background:var(--card);border:1px solid var(--glass-border);
+    border-radius:26px;padding:20px 18px 16px;width:min(340px,90vw);
+    max-height:min(560px,82vh);overflow-y:auto;-webkit-overflow-scrolling:touch;
+    box-shadow:0 24px 60px rgba(70,48,32,.28), inset 0 1px 0 rgba(255,255,255,.9);
+  }
+  .guide-card h2{font-size:var(--fs-2);font-weight:800;color:var(--ink);letter-spacing:-.5px;text-align:center;margin-bottom:8px;}
+  .guide-card .g-fuse{
+    font-size:var(--fs-3);color:#8a6a20;font-weight:700;text-align:center;line-height:1.45;
+    background:linear-gradient(135deg,#fff3d6,#ffe9b8);border-radius:12px;padding:7px 10px;margin-bottom:10px;
+  }
+  .guide-card .g-fuse svg{vertical-align:-3px;fill:#c99a1e;width:15px;height:15px;}
+  .g-item{display:flex;gap:10px;align-items:flex-start;padding:8px 4px;border-top:1px solid var(--glass-border);}
+  .g-item .gi{
+    flex:0 0 auto;width:34px;height:34px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+    background:var(--glass);border:1px solid var(--glass-border);
+  }
+  .g-item .gi svg{width:20px;height:20px;fill:currentColor;}
+  .g-item .gt{flex:1;min-width:0;}
+  .g-item .gname{font-size:var(--fs-3);font-weight:800;color:var(--ink);}
+  .g-item .gname .gaim{font-weight:600;color:var(--ink-soft);}
+  .g-item .gdesc{font-size:var(--fs-3);color:var(--ink-soft);line-height:1.45;}
+  .g-item .glv2{font-size:var(--fs-3);color:#8a6a20;line-height:1.45;margin-top:2px;}
+  .g-item .glv2 b{font-weight:800;}
+  #guide-close{
+    margin-top:12px;width:100%;font-size:var(--fs-2);font-weight:800;padding:11px 0;
+    border:none;border-radius:14px;cursor:pointer;color:#fff;
+    background:linear-gradient(135deg,#ff9a6b,#ff7a59);box-shadow:0 6px 16px rgba(255,120,80,.4);
+  }
+  #guide-close:active{transform:scale(.97);}
 </style>
 </head>
 <body>
@@ -278,6 +321,7 @@
 <symbol id="p-star" viewBox="0 0 256 256"><path d="M234.29,114.85l-45,38.83L203,211.75a16.4,16.4,0,0,1-24.5,17.82L128,198.49,77.47,229.57A16.4,16.4,0,0,1,53,211.75l13.76-58.07-45-38.83A16.46,16.46,0,0,1,31.08,86l59-4.76,22.76-55.08a16.36,16.36,0,0,1,30.27,0l22.75,55.08,59,4.76a16.46,16.46,0,0,1,9.37,28.86Z"/></symbol>
 <symbol id="p-arrow-fat-up" viewBox="0 0 256 256"><path d="M231.39,123.06A8,8,0,0,1,224,128H184v80a16,16,0,0,1-16,16H88a16,16,0,0,1-16-16V128H32a8,8,0,0,1-5.66-13.66l96-96a8,8,0,0,1,11.32,0l96,96A8,8,0,0,1,231.39,123.06Z"/></symbol>
 <symbol id="p-lightning" viewBox="0 0 256 256"><path d="M213.85,125.46l-112,120a8,8,0,0,1-13.69-7l14.66-73.33L45.19,143.49a8,8,0,0,1-3-13l112-120a8,8,0,0,1,13.69,7L153.18,90.9l57.63,21.61a8,8,0,0,1,3,12.95Z"/></symbol>
+<symbol id="p-question" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,168a12,12,0,1,1,12-12A12,12,0,0,1,128,192Zm8-48.72V144a8,8,0,0,1-16,0v-8a8,8,0,0,1,8-8c13.23,0,24-9,24-20s-10.77-20-24-20-24,9-24,20v4a8,8,0,0,1-16,0v-4c0-19.85,17.94-36,40-36s40,16.15,40,36C168,125.38,154.24,139.93,136,143.28Z"/></symbol>
 <symbol id="p-gift" viewBox="0 0 256 256"><path d="M216,72H180.92c.39-.33.79-.65,1.17-1A29.53,29.53,0,0,0,192,49.57,32.62,32.62,0,0,0,158.44,16,29.53,29.53,0,0,0,137,25.91a54.94,54.94,0,0,0-9,14.48,54.94,54.94,0,0,0-9-14.48A29.53,29.53,0,0,0,97.56,16,32.62,32.62,0,0,0,64,49.57,29.53,29.53,0,0,0,73.91,71c.38.33.78.65,1.17,1H40A16,16,0,0,0,24,88v32a16,16,0,0,0,16,16v64a16,16,0,0,0,16,16h60a4,4,0,0,0,4-4V120H40V88h80v32h16V88h80v32H136v92a4,4,0,0,0,4,4h60a16,16,0,0,0,16-16V136a16,16,0,0,0,16-16V88A16,16,0,0,0,216,72ZM84.51,59a13.69,13.69,0,0,1-4.5-10A16.62,16.62,0,0,1,96.59,32h.49a13.69,13.69,0,0,1,10,4.5c8.39,9.48,11.35,25.2,12.39,34.92C109.71,70.39,94,67.43,84.51,59Zm87,0c-9.49,8.4-25.24,11.36-35,12.4C137.7,60.89,141,45.5,149,36.51a13.69,13.69,0,0,1,10-4.5h.49A16.62,16.62,0,0,1,176,49.08,13.69,13.69,0,0,1,171.49,59Z"/></symbol>
 </svg>
   <div class="topbar">
@@ -312,6 +356,18 @@
       <div class="cg-track"><div class="cg-fill" id="charge-fill"></div></div>
       <span class="cg-label" id="charge-label">충전 0%</span>
     </div>
+    <!-- 아이템 상세 설명 (원하는 사람만 여는 도감 — 직관 우선, 설명은 opt-in) -->
+    <button id="help-btn" aria-label="아이템 설명 보기"><svg class="ki"><use href="#p-question"/></svg></button>
+  </div>
+
+  <!-- 아이템 도감 오버레이 (내용은 game.js가 ITEM_DEF에서 생성 — 라벨 싱크 유지) -->
+  <div id="guide" hidden>
+    <div class="guide-card">
+      <h2>아이템 도감</h2>
+      <p class="g-fuse"><svg class="ki sm"><use href="#p-star"/></svg> 같은 아이템 2개를 모으면 <b>합치기</b> — 더 강한 아이템이 돼요</p>
+      <div id="guide-list"></div>
+      <button id="guide-close">닫기</button>
+    </div>
   </div>
 
   <div id="credit">손가락으로 조준 · 떼면 떨어져요 · 아이템 탭해서 사용</div>
@@ -337,7 +393,7 @@
 
 <script src="matter.js"></script>
 <!-- v 쿼리 = 배포 캐시버스터: index.html은 no-cache라 새 버전이 즉시 새 game.js를 당긴다 (game.js max-age=600 함정 해소) -->
-<script src="game.js?v=r3"></script>
+<script src="game.js?v=r3.1"></script>
 <script>
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
     navigator.serviceWorker.register('./sw.js').catch(()=>{});
